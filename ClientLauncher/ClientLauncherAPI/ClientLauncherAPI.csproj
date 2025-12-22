@@ -26,4 +26,8 @@
     <ProjectReference Include="..\ClientLancher.Implement\ClientLancher.Implement.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Packages\APP001\" />
+  </ItemGroup>
+
 </Project>

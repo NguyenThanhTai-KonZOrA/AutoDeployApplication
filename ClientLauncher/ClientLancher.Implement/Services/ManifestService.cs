@@ -1,5 +1,6 @@
 ﻿using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.ViewModels.Request;
+using ClientLancher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -59,7 +60,11 @@ namespace ClientLancher.Implement.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error creating folder structure or fetching manifest for {AppCode}", appCode);
-                    return null;
+
+                    // FALLBACK: Create default manifest on error
+                    var fallbackManifest = CreateDefaultManifest(appCode);
+                    await UpdateManifestAsync(appCode, fallbackManifest);
+                    return fallbackManifest;
                 }
             }
 
@@ -67,7 +72,10 @@ namespace ClientLancher.Implement.Services
             try
             {
                 var json = await File.ReadAllTextAsync(manifestPath);
-                var manifest = JsonSerializer.Deserialize<AppManifest>(json);
+                var manifest = JsonSerializer.Deserialize<AppManifest>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
                 _logger.LogInformation("Manifest loaded from local path for {AppCode}", appCode);
                 return manifest;
             }
@@ -93,25 +101,81 @@ namespace ClientLancher.Implement.Services
             _logger.LogInformation("Manifest updated for {AppCode} at {Path}", appCode, manifestPath);
         }
 
-        private async Task<AppManifest?> FetchManifestFromServerAsync(string appCode)
+        private async Task<AppManifest?> FetchManifestFromServerAsync(string appCode, int retryCount = 0, int maxRetries = 3)
         {
+            // ✅ FIX: Kiểm tra retry count ngay từ đầu
+            if (retryCount >= maxRetries)
+            {
+                _logger.LogError("Max retries ({MaxRetries}) reached for fetching manifest of {AppCode}", maxRetries, appCode);
+                return null;
+            }
+
             try
             {
                 var manifestUrl = $"{_serverUrl}/api/apps/{appCode}/manifest";
-                _logger.LogInformation("Fetching manifest from {Url}", manifestUrl);
+                _logger.LogInformation("Fetching manifest from {Url} (Attempt {Attempt}/{MaxRetries})", manifestUrl, retryCount + 1, maxRetries);
 
                 var response = await _httpClient.GetAsync(manifestUrl);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to fetch manifest from server: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("Failed to fetch manifest from server: {StatusCode}. Retry {Retry}/{MaxRetries}",
+                        response.StatusCode, retryCount + 1, maxRetries);
+
+                    // ✅ FIX: Chỉ retry nếu chưa đạt maxRetries
+                    if (retryCount + 1 < maxRetries)
+                    {
+                        await Task.Delay(1000 * (retryCount + 1)); // Exponential backoff
+                        return await FetchManifestFromServerAsync(appCode, retryCount + 1, maxRetries);
+                    }
+
+                    // ✅ Đã hết retry, return null
+                    _logger.LogError("All retry attempts failed for {AppCode}", appCode);
                     return null;
                 }
 
-                var manifestJson = await response.Content.ReadAsStringAsync();
-                var manifest = JsonSerializer.Deserialize<AppManifest>(manifestJson);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("Server response: {Response}", responseContent);
 
-                return manifest;
+                // Try to deserialize as ApiBaseResponse first
+                try
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<AppManifest>>(
+            responseContent,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    {
+                        return apiResponse.Data;
+                    }
+
+                    return null;
+                }
+                catch (JsonException)
+                {
+                    // If ApiBaseResponse deserialization fails, try direct deserialization
+                    _logger.LogDebug("Failed to deserialize as ApiBaseResponse, trying direct deserialization");
+
+                    var manifest = JsonSerializer.Deserialize<AppManifest>(
+                        responseContent,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (manifest != null)
+                    {
+                        _logger.LogInformation("Manifest successfully fetched (direct) from server for {AppCode}", appCode);
+                        return manifest;
+                    }
+                }
+
+                _logger.LogWarning("Could not deserialize manifest response from server");
+                return null;
+            }
+            catch (HttpRequestException httpEx)
+            {
+                _logger.LogError(httpEx, "HTTP error fetching manifest from server for {AppCode}", appCode);
+                return null;
             }
             catch (Exception ex)
             {

@@ -15,28 +15,28 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     new Application
                     {
                         AppCode = "APP001",
-                        Name = "Sales Management System",
-                        Description = "Application for managing sales and customers",
-                        IconUrl = "/icons/sales.png",
-                        Category = "Business",
+                        Name = "Levy Ticket Monitor",
+                        Description = "Application for monitoring levy tickets",
+                        IconUrl = "/icons/levy.png",
+                        Category = "Cage",
                         IsActive = true
                     },
                     new Application
                     {
                         AppCode = "APP002",
-                        Name = "HR Management System",
-                        Description = "Human Resources management application",
-                        IconUrl = "/icons/hr.png",
-                        Category = "Business",
+                        Name = "CSEntry",
+                        Description = "Application for checking Patron In/Out ",
+                        IconUrl = "/icons/levy.png",
+                        Category = "HTR",
                         IsActive = true
                     },
                     new Application
                     {
                         AppCode = "APP003",
-                        Name = "Inventory Manager",
-                        Description = "Warehouse and inventory management",
-                        IconUrl = "/icons/inventory.png",
-                        Category = "Logistics",
+                        Name = "Inventory Tracker",
+                        Description = "Application for managing inventory and stock levels",
+                        IconUrl = "/icons/levy.png",
+                        Category = "Finance",
                         IsActive = true
                     }
                 };

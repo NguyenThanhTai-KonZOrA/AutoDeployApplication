@@ -3,6 +3,7 @@ using ClientLauncher.Models;
 using ClientLauncher.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace ClientLauncher.ViewModels
 {
@@ -12,6 +13,7 @@ namespace ClientLauncher.ViewModels
 
         // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
+        private DispatcherTimer _clockTimer;
         public ObservableCollection<ApplicationDto> Applications
         {
             get => _applications;
@@ -67,6 +69,43 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _installationSuccess, value);
         }
 
+        private string _currentTime;
+        private string _currentDate;
+        public string CurrentTime
+        {
+            get => _currentTime;
+            set { _currentTime = value; OnPropertyChanged(); }
+        }
+
+        public string CurrentDate
+        {
+            get => DateTime.Now.ToString("dddd, dd MMMM yyyy");
+            set { _currentDate = value; OnPropertyChanged(); }
+        }
+
+        private void InitializeClockTimer()
+        {
+            try
+            {
+                _clockTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(1)
+                };
+
+                _clockTimer.Tick += (s, e) =>
+                {
+                    CurrentTime = DateTime.Now.ToString("HH:mm:ss");
+                };
+
+                _clockTimer.Start();
+                CurrentTime = DateTime.Now.ToString("HH:mm:ss");
+
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
         // Visibility for Steps
         public bool IsStep1Visible => CurrentStep == 1;
         public bool IsStep2Visible => CurrentStep == 2;
@@ -90,6 +129,7 @@ namespace ClientLauncher.ViewModels
 
             // Load applications on startup
             _ = LoadApplicationsAsync();
+            InitializeClockTimer();
         }
 
         private async Task LoadApplicationsAsync()

@@ -50,7 +50,7 @@ namespace ClientLancher.Implement.Services
                 {
                     return new InstallationResult
                     {
-                        Success = false,
+                        Success = true,
                         Message = "Application is already installed. Use Update instead."
                     };
                 }
@@ -234,24 +234,74 @@ namespace ClientLancher.Implement.Services
 
         private async Task DownloadAndExtractAsync(string appCode, string packageName, string targetPath)
         {
-            var packageUrl = $"{_serverUrl}/apps/{appCode}/{packageName}";
+            // ✅ FIX: Thêm /api/ vào URL và sử dụng endpoint download
+            var packageUrl = $"{_serverUrl}/api/apps/{appCode}/download/{packageName}";
             var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_{Guid.NewGuid()}.zip");
 
             try
             {
-                _logger.LogInformation("Downloading from {Url}", packageUrl);
-                var packageData = await _httpClient.GetByteArrayAsync(packageUrl);
+                _logger.LogInformation("Downloading package {PackageName} from {Url}", packageName, packageUrl);
+
+                // ✅ Thêm error handling chi tiết hơn
+                var response = await _httpClient.GetAsync(packageUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to download package. Status: {StatusCode}, Response: {Response}",
+                        response.StatusCode, errorContent);
+                    throw new HttpRequestException(
+                        $"Failed to download package '{packageName}'. Status: {response.StatusCode}. " +
+                        $"URL: {packageUrl}. Response: {errorContent}");
+                }
+
+                var packageData = await response.Content.ReadAsByteArrayAsync();
+
+                if (packageData == null || packageData.Length == 0)
+                {
+                    throw new Exception($"Downloaded package '{packageName}' is empty");
+                }
+
+                _logger.LogInformation("Downloaded {Size} bytes", packageData.Length);
+
                 await File.WriteAllBytesAsync(tempZip, packageData);
 
                 _logger.LogInformation("Extracting to {Path}", targetPath);
+
+                // ✅ Đảm bảo thư mục target tồn tại và trống
+                if (Directory.Exists(targetPath))
+                {
+                    Directory.Delete(targetPath, true);
+                }
                 Directory.CreateDirectory(targetPath);
+
                 ZipFile.ExtractToDirectory(tempZip, targetPath, overwriteFiles: true);
+
+                _logger.LogInformation("Successfully extracted package to {Path}", targetPath);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error downloading package {PackageName} from {Url}", packageName, packageUrl);
+                throw new Exception($"Failed to download package '{packageName}' from server. Check if the file exists and the URL is correct: {packageUrl}", ex);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading or extracting package {PackageName}", packageName);
+                throw;
             }
             finally
             {
                 if (File.Exists(tempZip))
                 {
-                    File.Delete(tempZip);
+                    try
+                    {
+                        File.Delete(tempZip);
+                        _logger.LogDebug("Cleaned up temporary file: {TempZip}", tempZip);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to delete temporary file: {TempZip}", tempZip);
+                    }
                 }
             }
         }

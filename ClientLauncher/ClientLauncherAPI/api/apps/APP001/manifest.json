@@ -1,12 +1,12 @@
 {
-  "appCode": "V_1.2.5",
+  "appCode": "APP001",
   "binary": {
     "version": "V_1.2.5",
-    "package": "build_20251222.7z"
+    "package": "APP001_v1.0.0.zip"
   },
   "config": {
     "version": "V_1.2.3",
-    "package": "build_20251222.7z",
+    "package": "APP001_v1.0.0.zip",
     "mergeStrategy": "preserveLocal"
   },
   "updatePolicy": {

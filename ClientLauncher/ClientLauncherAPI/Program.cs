@@ -3,6 +3,7 @@ using ClientLancher.Implement.Services;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,11 +22,34 @@ builder.Services.AddScoped<IAppCatalogService, AppCatalogService>();
 builder.Services.AddScoped<IInstallationService, InstallationService>();
 builder.Services.AddHttpClient();
 
+// Add CORS if needed
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "Client Launcher API", Version = "v1" });
+});
 
 var app = builder.Build();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Packages")),
+    RequestPath = "/packages"
+});
+// Enable CORS
+app.UseCors("AllowAll");
 
 // Seed database
 using (var scope = app.Services.CreateScope())
