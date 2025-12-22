@@ -1,0 +1,198 @@
+﻿using ClientLauncher.Helpers;
+using ClientLauncher.Models;
+using ClientLauncher.Services;
+using System.Collections.ObjectModel;
+using System.Windows;
+
+namespace ClientLauncher.ViewModels
+{
+    public class MainViewModel : ViewModelBase
+    {
+        private readonly IApiService _apiService;
+
+        // Properties
+        private ObservableCollection<ApplicationDto> _applications = new();
+        public ObservableCollection<ApplicationDto> Applications
+        {
+            get => _applications;
+            set => SetProperty(ref _applications, value);
+        }
+
+        private ApplicationDto? _selectedApplication;
+        public ApplicationDto? SelectedApplication
+        {
+            get => _selectedApplication;
+            set => SetProperty(ref _selectedApplication, value);
+        }
+
+        private int _currentStep = 1;
+        public int CurrentStep
+        {
+            get => _currentStep;
+            set => SetProperty(ref _currentStep, value);
+        }
+
+        private bool _isProcessing;
+        public bool IsProcessing
+        {
+            get => _isProcessing;
+            set => SetProperty(ref _isProcessing, value);
+        }
+
+        private string _statusMessage = string.Empty;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        private double _progressValue;
+        public double ProgressValue
+        {
+            get => _progressValue;
+            set => SetProperty(ref _progressValue, value);
+        }
+
+        private string _installationResult = string.Empty;
+        public string InstallationResult
+        {
+            get => _installationResult;
+            set => SetProperty(ref _installationResult, value);
+        }
+
+        private bool _installationSuccess;
+        public bool InstallationSuccess
+        {
+            get => _installationSuccess;
+            set => SetProperty(ref _installationSuccess, value);
+        }
+
+        // Visibility for Steps
+        public bool IsStep1Visible => CurrentStep == 1;
+        public bool IsStep2Visible => CurrentStep == 2;
+        public bool IsStep3Visible => CurrentStep == 3;
+
+        // Commands
+        public AsyncRelayCommand LoadApplicationsCommand { get; }
+        public AsyncRelayCommand InstallCommand { get; }
+        public RelayCommand BackToListCommand { get; }
+
+        public MainViewModel()
+        {
+            _apiService = new ApiService();
+
+            LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
+            InstallCommand = new AsyncRelayCommand(
+                async _ => await InstallApplicationAsync(),
+                _ => SelectedApplication != null && !IsProcessing
+            );
+            BackToListCommand = new RelayCommand(_ => BackToList());
+
+            // Load applications on startup
+            _ = LoadApplicationsAsync();
+        }
+
+        private async Task LoadApplicationsAsync()
+        {
+            try
+            {
+                StatusMessage = "Loading applications...";
+                IsProcessing = true;
+
+                var apps = await _apiService.GetAllApplicationsAsync();
+                Applications = new ObservableCollection<ApplicationDto>(apps);
+
+                StatusMessage = $"Loaded {apps.Count} applications";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Error: {ex.Message}";
+                MessageBox.Show($"Failed to load applications: {ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        private async Task InstallApplicationAsync()
+        {
+            if (SelectedApplication == null) return;
+
+            try
+            {
+                // Move to Step 2 - Processing
+                CurrentStep = 2;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                IsProcessing = true;
+                ProgressValue = 0;
+                StatusMessage = "Preparing installation...";
+
+                await Task.Delay(500); // Simulate preparation
+                ProgressValue = 20;
+
+                StatusMessage = "Downloading application...";
+                await Task.Delay(1000); // Simulate download
+                ProgressValue = 50;
+
+                StatusMessage = "Installing...";
+                var userName = Environment.UserName;
+                var result = await _apiService.InstallApplicationAsync(
+                    SelectedApplication.AppCode,
+                    userName
+                );
+
+                ProgressValue = 80;
+                await Task.Delay(500);
+
+                StatusMessage = "Finalizing...";
+                ProgressValue = 100;
+
+                // Move to Step 3 - Finish
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = result.Success;
+                InstallationResult = result.Success
+                    ? $"✓ {SelectedApplication.Name} installed successfully!\n\nVersion: {result.InstalledVersion}\nInstalled by: {userName}"
+                    : $"✗ Installation failed\n\n{result.Message}\n{result.ErrorDetails}";
+            }
+            catch (Exception ex)
+            {
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Installation failed\n\n{ex.Message}";
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        private void BackToList()
+        {
+            CurrentStep = 1;
+            SelectedApplication = null;
+            StatusMessage = string.Empty;
+            ProgressValue = 0;
+            InstallationResult = string.Empty;
+
+            OnPropertyChanged(nameof(IsStep1Visible));
+            OnPropertyChanged(nameof(IsStep2Visible));
+            OnPropertyChanged(nameof(IsStep3Visible));
+
+            // Reload applications
+            _ = LoadApplicationsAsync();
+        }
+    }
+}

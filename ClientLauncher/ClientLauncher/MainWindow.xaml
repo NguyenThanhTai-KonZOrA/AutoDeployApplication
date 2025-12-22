@@ -3,10 +3,368 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ClientLauncher"
+        xmlns:vm="clr-namespace:ClientLauncher.ViewModels"
+        xmlns:local="clr-namespace:ClientLauncher.Converters"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Application Launcher" 
+        Height="600" 
+        Width="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
 
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+    
+    <Window.Resources>
+        <!-- Bool to Visibility Converter -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+        <!-- Success to Emoji Converter -->
+        <local:SuccessToEmojiConverter x:Key="SuccessToEmojiConverter"/>
+
+        <!-- Success to Title Converter -->
+        <local:SuccessToTitleConverter x:Key="SuccessToTitleConverter"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#2C3E50" Padding="20">
+            <StackPanel>
+                <TextBlock Text="Company Application Launcher" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           Foreground="White"/>
+                <TextBlock Text="Install and manage your company applications" 
+                           FontSize="12" 
+                           Foreground="#ECF0F1"
+                           Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="20">
+
+            <!-- STEP 1: Application List -->
+            <Grid Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Search and Filter -->
+                <Border Grid.Row="0" 
+                        Background="White" 
+                        BorderBrush="#BDC3C7" 
+                        BorderThickness="1" 
+                        Padding="15" 
+                        Margin="0,0,0,10"
+                        CornerRadius="5">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Available Applications" 
+                                       FontSize="18" 
+                                       FontWeight="SemiBold"
+                                       Foreground="#2C3E50"/>
+                            <TextBlock Text="{Binding StatusMessage}" 
+                                       FontSize="11" 
+                                       Foreground="#7F8C8D"
+                                       Margin="0,5,0,0"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" 
+                                Content="🔄 Refresh" 
+                                Command="{Binding LoadApplicationsCommand}"
+                                Padding="15,8"
+                                Background="#3498DB"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                FontWeight="SemiBold">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="5" 
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#2980B9"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- Application List -->
+                <ListBox Grid.Row="1" 
+                         ItemsSource="{Binding Applications}"
+                         SelectedItem="{Binding SelectedApplication}"
+                         Background="White"
+                         BorderBrush="#BDC3C7"
+                         BorderThickness="1"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="15" 
+                                    Margin="5" 
+                                    Background="#FAFAFA" 
+                                    BorderBrush="#E0E0E0" 
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#ECF0F1"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Icon -->
+                                    <Border Grid.Column="0" 
+                                            Width="50" 
+                                            Height="50" 
+                                            Background="#3498DB" 
+                                            CornerRadius="8"
+                                            VerticalAlignment="Top">
+                                        <TextBlock Text="📦" 
+                                                   FontSize="28" 
+                                                   HorizontalAlignment="Center" 
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- Info -->
+                                    <StackPanel Grid.Column="1" Margin="15,0,0,0">
+                                        <TextBlock Text="{Binding Name}" 
+                                                   FontSize="16" 
+                                                   FontWeight="SemiBold"
+                                                   Foreground="#2C3E50"/>
+                                        <TextBlock Text="{Binding Description}" 
+                                                   FontSize="12" 
+                                                   Foreground="#7F8C8D"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,5,0,0"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Border Background="#E74C3C" 
+                                                    Padding="6,3" 
+                                                    CornerRadius="3"
+                                                    Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding Category}" 
+                                                           FontSize="10" 
+                                                           Foreground="White"
+                                                           FontWeight="SemiBold"/>
+                                            </Border>
+                                            <Border Background="#95A5A6" 
+                                                    Padding="6,3" 
+                                                    CornerRadius="3">
+                                                <TextBlock Text="{Binding AppCode}" 
+                                                           FontSize="10" 
+                                                           Foreground="White"
+                                                           FontWeight="SemiBold"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+
+            <!-- STEP 2: Processing -->
+            <Grid Visibility="{Binding IsStep2Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Border Background="White" 
+                        BorderBrush="#BDC3C7" 
+                        BorderThickness="1" 
+                        CornerRadius="10"
+                        Padding="40">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="⚙️" 
+                                   FontSize="64" 
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,20"/>
+
+                        <TextBlock Text="Installing Application..." 
+                                   FontSize="24" 
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#2C3E50"
+                                   Margin="0,0,0,10"/>
+
+                        <TextBlock Text="{Binding SelectedApplication.Name}" 
+                                   FontSize="16" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="#7F8C8D"
+                                   Margin="0,0,0,30"/>
+
+                        <ProgressBar Width="400" 
+                                     Height="30" 
+                                     Value="{Binding ProgressValue}"
+                                     Maximum="100"
+                                     Margin="0,0,0,15"/>
+
+                        <TextBlock Text="{Binding StatusMessage}" 
+                                   FontSize="14" 
+                                   HorizontalAlignment="Center"
+                                   Foreground="#34495E"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- STEP 3: Finish -->
+            <Grid Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Border Background="White" 
+                        BorderBrush="#BDC3C7" 
+                        BorderThickness="1" 
+                        CornerRadius="10"
+                        Padding="40">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding InstallationSuccess, Converter={StaticResource SuccessToEmojiConverter}}" 
+                                   FontSize="64" 
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,20"/>
+
+                        <TextBlock Text="{Binding InstallationSuccess, Converter={StaticResource SuccessToTitleConverter}}" 
+                                   FontSize="24" 
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,20">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding InstallationSuccess}" Value="True">
+                                            <Setter Property="Foreground" Value="#27AE60"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding InstallationSuccess}" Value="False">
+                                            <Setter Property="Foreground" Value="#E74C3C"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <TextBlock Text="{Binding InstallationResult}" 
+                                   FontSize="14" 
+                                   TextAlignment="Center"
+                                   Foreground="#34495E"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="500"
+                                   LineHeight="22"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!-- Footer / Action Buttons -->
+        <Border Grid.Row="2" 
+                Background="White" 
+                BorderBrush="#BDC3C7" 
+                BorderThickness="0,1,0,0"
+                Padding="20,10">
+            <Grid>
+                <Button Content="⬅ Back to Applications" 
+                        Command="{Binding BackToListCommand}"
+                        HorizontalAlignment="Left"
+                        Padding="15,8"
+                        Background="#95A5A6"
+                        Foreground="White"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontWeight="SemiBold"
+                        Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" 
+                                                CornerRadius="5" 
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#7F8C8D"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <Button Content="▶ Install Selected Application" 
+                        Command="{Binding InstallCommand}"
+                        HorizontalAlignment="Right"
+                        Padding="20,10"
+                        Background="#27AE60"
+                        Foreground="White"
+                        BorderThickness="0"
+                        Cursor="Hand"
+                        FontSize="14"
+                        FontWeight="SemiBold"
+                        Visibility="{Binding IsStep1Visible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" 
+                                                CornerRadius="5" 
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#229954"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#BDC3C7"/>
+                                    <Setter Property="Cursor" Value="No"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+        </Border>
     </Grid>
+
+   
 </Window>
