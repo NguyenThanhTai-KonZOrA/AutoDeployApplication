@@ -1,10 +1,8 @@
 ﻿using ClientLauncher.Helpers;
-using ClientLauncher.Models;
 using ClientLauncher.Services;
-using System;
+using ClientLauncher.Services.Interface;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace ClientLauncher.ViewModels
@@ -66,7 +64,7 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _canCancel, value);
         }
 
-        // ✅ NEW: Properties for update prompt
+        // Properties for update prompt
         private bool _showUpdatePrompt;
         public bool ShowUpdatePrompt
         {
@@ -116,7 +114,7 @@ namespace ClientLauncher.ViewModels
                 await GetAppInfoAsync();
                 await Task.Delay(500);
 
-                // ✅ Step 2: Check for updates
+                // Step 2: Check for updates
                 StatusEmoji = "🔍";
                 StatusMessage = "Checking for updates...";
                 ProgressValue = 20;
@@ -125,7 +123,7 @@ namespace ClientLauncher.ViewModels
 
                 ProgressValue = 40;
 
-                // ✅ If update available, show prompt
+                // If update available, show prompt
                 if (versionCheck.UpdateAvailable)
                 {
                     StatusEmoji = "⚠️";
@@ -146,7 +144,7 @@ namespace ClientLauncher.ViewModels
 
                     StatusMessage = versionCheck.Message;
 
-                    // ✅ If force update, disable skip option
+                    // If force update, disable skip option
                     if (versionCheck.ForceUpdate)
                     {
                         CanCancel = false; // Can't cancel if force update
@@ -155,7 +153,7 @@ namespace ClientLauncher.ViewModels
                     return; // Wait for user action
                 }
 
-                // ✅ No update needed, continue to launch
+                // No update needed, continue to launch
                 ProgressValue = 60;
                 await LaunchApplicationSequenceAsync();
             }

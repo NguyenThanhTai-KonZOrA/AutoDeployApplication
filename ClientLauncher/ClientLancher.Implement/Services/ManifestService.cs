@@ -27,7 +27,7 @@ namespace ClientLancher.Implement.Services
             var appFolder = Path.Combine(_appsBasePath, appCode);
             var manifestPath = Path.Combine(appFolder, "manifest.json");
 
-            // ✅ STEP 1: Check if manifest exists locally
+            // STEP 1: Check if manifest exists locally
             if (!File.Exists(manifestPath))
             {
                 _logger.LogWarning("Manifest not found locally at {Path}. Creating folder structure and downloading from server...", manifestPath);
@@ -71,7 +71,7 @@ namespace ClientLancher.Implement.Services
                 }
             }
 
-            // ✅ STEP 2: Local manifest exists - Download from server to check version
+            // STEP 2: Local manifest exists - Download from server to check version
             try
             {
                 _logger.LogInformation("Local manifest found for {AppCode}. Downloading latest manifest from server to check version...", appCode);
@@ -92,10 +92,10 @@ namespace ClientLancher.Implement.Services
                 var localVersion = localManifest.data?.binary?.version ?? "0.0.0";
                 _logger.LogInformation("Current local version for {AppCode}: {Version}", appCode, localVersion);
 
-                // ✅ Create temp path for server manifest
+                // Create temp path for server manifest
                 var tempManifestPath = Path.Combine(appFolder, "manifest.tmp.json");
 
-                // ✅ Download manifest file from server to temp location
+                // Download manifest file from server to temp location
                 bool downloaded = await DownloadManifestFileAsync(appCode, tempManifestPath);
 
                 if (!downloaded)
@@ -111,7 +111,7 @@ namespace ClientLancher.Implement.Services
                     return localManifest.data;
                 }
 
-                // ✅ Read downloaded server manifest
+                // Read downloaded server manifest
                 var serverJson = await File.ReadAllTextAsync(tempManifestPath);
                 var serverManifest = JsonSerializer.Deserialize<ManifestVersionReponse>(serverJson, new JsonSerializerOptions
                 {
@@ -136,12 +136,12 @@ namespace ClientLancher.Implement.Services
                 _logger.LogInformation("Version comparison for {AppCode}: Local={LocalVersion}, Server={ServerVersion}",
                     appCode, localVersion, serverVersion);
 
-                // ✅ Compare versions
+                // Compare versions
                 if (IsNewerVersion(serverVersion, localVersion))
                 {
                     _logger.LogInformation("Server has newer version for {AppCode}. Replacing local manifest...", appCode);
 
-                    // ✅ Replace old manifest with new one
+                    // Replace old manifest with new one
                     File.Copy(tempManifestPath, manifestPath, overwrite: true);
 
                     // Clean up temp file
@@ -173,7 +173,7 @@ namespace ClientLancher.Implement.Services
             {
                 _logger.LogError(ex, "Error checking or updating manifest for {AppCode}", appCode);
 
-                // ✅ Fallback: Try to return local manifest on error
+                // Fallback: Try to return local manifest on error
                 try
                 {
                     var json = await File.ReadAllTextAsync(manifestPath);
@@ -300,7 +300,7 @@ namespace ClientLancher.Implement.Services
         }
 
         /// <summary>
-        /// ✅ Compare version strings
+        /// Compare version strings
         /// </summary>
         private bool IsNewerVersion(string serverVersion, string localVersion)
         {

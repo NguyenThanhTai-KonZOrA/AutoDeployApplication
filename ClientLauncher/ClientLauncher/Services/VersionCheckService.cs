@@ -1,4 +1,7 @@
 ﻿using ClientLauncher.Models;
+using ClientLauncher.Models.Response;
+using ClientLauncher.Services.Interface;
+using System.Configuration;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -83,7 +86,7 @@ namespace ClientLauncher.Services
         {
             try
             {
-                var url = $"{_serverUrl}/api/apps/{appCode}/version";
+                var url = $"{_serverUrl}/apps/{appCode}/version";
                 var response = await _httpClient.GetAsync(url);
 
                 if (!response.IsSuccessStatusCode)

@@ -1,4 +1,4 @@
-﻿namespace ClientLauncher.Models
+﻿namespace ClientLauncher.Models.Response
 {
     public class ApiBaseResponse<T>
     {

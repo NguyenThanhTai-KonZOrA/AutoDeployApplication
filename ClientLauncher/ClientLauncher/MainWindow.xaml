@@ -10,6 +10,7 @@
         Height="600" 
         Width="900"
         WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/Images/NewLogo-01.png"
         Background="#F5F5F5">
 
     <Window.DataContext>
@@ -25,7 +26,8 @@
 
         <!-- Success to Title Converter -->
         <local:SuccessToTitleConverter x:Key="SuccessToTitleConverter"/>
-
+        <!-- Success to Icon Converter -->
+        <local:IconConverter x:Key="IconConverter"/>
         <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,0">
             <GradientStop Color="#1A2D30" Offset="0"/>
             <GradientStop Color="#274549" Offset="0.5"/>
@@ -237,15 +239,19 @@
 
                                     <!-- Icon -->
                                     <Border Grid.Column="0" 
-                        Width="50" 
-                        Height="50" 
-                        Background="#3498DB" 
-                        CornerRadius="8"
-                        VerticalAlignment="Top">
-                                        <TextBlock Text="📦" 
-                               FontSize="28" 
-                               HorizontalAlignment="Center" 
-                               VerticalAlignment="Center"/>
+           Width="50" 
+           Height="50" 
+           Background="Transparent" 
+           CornerRadius="8"
+           VerticalAlignment="Top">
+                                        <Image Stretch="Uniform">
+                                            <Image.Source>
+                                                <MultiBinding Converter="{StaticResource IconConverter}">
+                                                    <Binding Path="IconUrl"/>
+                                                    <Binding Path="Category"/>
+                                                </MultiBinding>
+                                            </Image.Source>
+                                        </Image>
                                     </Border>
 
                                     <!-- Info -->
@@ -260,7 +266,7 @@
                                TextWrapping="Wrap"
                                Margin="0,5,0,0"/>
 
-                                        <!-- ✅ NEW: Status and Version Info -->
+                                        <!-- Status and Version Info -->
                                         <TextBlock Text="{Binding StatusText}" 
                                FontSize="20" 
                                FontWeight="SemiBold"
@@ -302,7 +308,7 @@
                                        FontWeight="SemiBold"/>
                                             </Border>
 
-                                            <!-- ✅ NEW: Update Available Badge -->
+                                            <!-- Update Available Badge -->
                                             <Border Background="#F39C12" 
                                 Padding="6,3" 
                                 CornerRadius="3"
@@ -316,7 +322,7 @@
                                         </StackPanel>
                                     </StackPanel>
 
-                                    <!-- ✅ NEW: Uninstall Button (only for installed apps) -->
+                                    <!-- Uninstall Button (only for installed apps) -->
                                     <Button Grid.Column="2"
                                         Content="🗑️ Uninstall"
                                         Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"

@@ -77,7 +77,7 @@ namespace ClientLancher.Implement.Services
                     _versionService.SaveConfigVersion(appCode, manifest.config.version);
                 }
 
-                // ✅ 6. Update local manifest file after successful installation
+                // 6. Update local manifest file after successful installation
                 await UpdateLocalManifestAsync(appCode, manifest);
 
                 stopwatch.Stop();
@@ -154,7 +154,7 @@ namespace ClientLancher.Implement.Services
                     await DownloadAndExtractAsync(appCode, manifest.binary.package, appPath);
                     _versionService.SaveBinaryVersion(appCode, manifest.binary.version);
 
-                    // ✅ Update local manifest file after successful update
+                    // Update local manifest file after successful update
                     await UpdateLocalManifestAsync(appCode, manifest);
 
                     // Delete backup if successful

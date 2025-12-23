@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Windows.Input;
+﻿using System.Windows.Input;
 
 namespace ClientLauncher.Helpers
 {
@@ -47,7 +45,7 @@ namespace ClientLauncher.Helpers
         }
 
         /// <summary>
-        /// ✅ NEW: Manually raise CanExecuteChanged event
+        /// Manually raise CanExecuteChanged event
         /// </summary>
         public void RaiseCanExecuteChanged()
         {

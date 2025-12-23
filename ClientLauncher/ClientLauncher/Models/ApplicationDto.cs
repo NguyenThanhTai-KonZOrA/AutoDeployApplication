@@ -12,7 +12,7 @@
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        // ✅ NEW: Properties for version tracking
+        // Properties for version tracking
         public bool IsInstalled { get; set; }
         public string? InstalledVersion { get; set; }
         public string? ServerVersion { get; set; }

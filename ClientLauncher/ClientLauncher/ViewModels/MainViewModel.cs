@@ -1,8 +1,9 @@
-﻿using ClientLauncher.Helpers;
+﻿using NLog;
+using ClientLauncher.Helpers;
 using ClientLauncher.Models;
 using ClientLauncher.Services;
+using ClientLauncher.Services.Interface;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
@@ -13,6 +14,7 @@ namespace ClientLauncher.ViewModels
     {
         private readonly IApiService _apiService;
         private readonly IShortcutService _shortcutService;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
@@ -122,7 +124,7 @@ namespace ClientLauncher.ViewModels
         // Commands
         public AsyncRelayCommand LoadApplicationsCommand { get; }
         public AsyncRelayCommand InstallCommand { get; }
-        public AsyncRelayCommand UninstallCommand { get; } // ✅ NEW
+        public AsyncRelayCommand UninstallCommand { get; } 
         public RelayCommand BackToListCommand { get; }
 
         public MainViewModel()
@@ -135,7 +137,7 @@ namespace ClientLauncher.ViewModels
                 async _ => await InstallApplicationAsync(),
                 _ => SelectedApplication != null && !IsProcessing
             );
-            UninstallCommand = new AsyncRelayCommand( // ✅ NEW
+            UninstallCommand = new AsyncRelayCommand( 
                 async _ => await UninstallApplicationAsync(),
                 _ => SelectedApplication != null && SelectedApplication.IsInstalled && !IsProcessing
             );
@@ -147,57 +149,53 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// ✅ UPDATED: Load applications with version check
+        /// UPDATED: Load applications with version check
         /// </summary>
         private async Task LoadApplicationsAsync()
         {
             try
             {
+                Logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
                 var apps = await _apiService.GetAllApplicationsAsync();
 
-                // ✅ Check installation status and versions for each app
                 foreach (var app in apps)
                 {
-                    // Check if installed
+                    Logger.Debug("Checking status for application: {AppCode}", app.AppCode);
+
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
 
                     if (app.IsInstalled)
                     {
-                        // Get installed version
                         app.InstalledVersion = await _apiService.GetInstalledVersionAsync(app.AppCode);
-
-                        // Get server version
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
+
                         if (serverVersionInfo != null)
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
 
-                            // Check if update available
                             if (!string.IsNullOrEmpty(app.InstalledVersion) &&
                                 !string.IsNullOrEmpty(app.ServerVersion))
                             {
                                 app.HasUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+
+                                if (app.HasUpdate)
+                                {
+                                    Logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
+                                        app.AppCode, app.InstalledVersion, app.ServerVersion);
+                                }
                             }
                         }
 
-                        // Set status text
-                        if (app.HasUpdate)
-                        {
-                            app.StatusText = $"📦 Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available";
-                        }
-                        else
-                        {
-                            app.StatusText = $"✅ Installed v{app.InstalledVersion}";
-                        }
+                        app.StatusText = app.HasUpdate
+                            ? $"📦 Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available"
+                            : $"Installed v{app.InstalledVersion}";
                     }
                     else
                     {
                         app.StatusText = "❌ Not Installed";
-
-                        // Still get server version for display
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
                         if (serverVersionInfo != null)
                         {
@@ -208,9 +206,11 @@ namespace ClientLauncher.ViewModels
 
                 Applications = new ObservableCollection<ApplicationDto>(apps);
                 StatusMessage = $"Loaded {apps.Count} applications";
+                Logger.Info("Successfully loaded {Count} applications", apps.Count);
             }
             catch (Exception ex)
             {
+                Logger.Error(ex, "Failed to load applications");
                 StatusMessage = $"Error: {ex.Message}";
                 MessageBox.Show($"Failed to load applications: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -222,7 +222,7 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// ✅ Helper method to compare versions
+        /// Helper method to compare versions
         /// </summary>
         private bool IsNewerVersion(string serverVersion, string localVersion)
         {
@@ -308,7 +308,7 @@ namespace ClientLauncher.ViewModels
                     ? $"✓ {SelectedApplication.Name} installed successfully!\n\n" +
                       $"Version: {result.InstalledVersion}\n" +
                       $"Installed by: {userName}\n\n" +
-                      $"✅ Desktop shortcut created successfully!"
+                      $"Desktop shortcut created successfully!"
                     : $"✗ Installation failed\n\n{result.Message}\n{result.ErrorDetails}";
             }
             catch (Exception ex)
@@ -328,7 +328,7 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// ✅ NEW: Uninstall application
+        /// Uninstall application
         /// </summary>
         private async Task UninstallApplicationAsync()
         {

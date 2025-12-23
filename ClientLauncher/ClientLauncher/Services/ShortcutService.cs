@@ -1,10 +1,6 @@
-﻿using IWshRuntimeLibrary;
-using System;
-using System.Collections.Generic;
+﻿using ClientLauncher.Services.Interface;
+using IWshRuntimeLibrary;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ClientLauncher.Services
 {
@@ -29,7 +25,7 @@ namespace ClientLauncher.Services
 
                 // Set shortcut properties
                 shortcut.TargetPath = launcherPath;
-                shortcut.Arguments = $"--app={appCode}"; // ✅ Pass appCode as argument
+                shortcut.Arguments = $"--app={appCode}"; // Pass appCode as argument
                 shortcut.WorkingDirectory = Path.GetDirectoryName(launcherPath) ?? string.Empty;
                 shortcut.Description = $"Launch {appName}";
 

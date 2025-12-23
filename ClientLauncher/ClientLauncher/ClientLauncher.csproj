@@ -6,15 +6,35 @@
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
+		<ApplicationIcon>Assets\Icons\app_default.ico</ApplicationIcon>
 		<!--<ApplicationIcon>Assets\Images\app.png</ApplicationIcon>-->
-	</PropertyGroup>
+    <!-- ClickOnce Settings -->
+    <PublishUrl>publish\</PublishUrl>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MinimumRequiredVersion>1.0.0.0</MinimumRequiredVersion>
+    <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
+    <WebPage>publish.htm</WebPage>
+    <ApplicationRevision>1</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<Resource Include="Assets\Images\app.png" />
 		<Resource Include="Assets\Images\NewLogo-01.png" />
+		<Resource Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
+    
 	</ItemGroup>
 
-	<!-- ✅ Add COM Reference for Shortcut Creation -->
+	<!-- Add COM Reference for Shortcut Creation -->
 	<ItemGroup>
 		<COMReference Include="IWshRuntimeLibrary">
 			<WrapperTool>tlbimp</WrapperTool>
@@ -27,7 +47,16 @@
 		</COMReference>
 	</ItemGroup>
 	<ItemGroup>
-	  <Content Include="Assets\Images\app.png" />
+	  <Content Include="Assets\Icons\app_cage.ico" /> <!-- Added cage icon -->
+	  <Content Include="Assets\Icons\app_htr.ico" /> <!-- Added HTR icon -->
+	  <Content Include="Assets\Icons\app_finance.ico" /> <!-- Added finance icon -->
+	  <Content Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Models\Request\" />
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Include="NLog" Version="6.0.5" />
 	</ItemGroup>
 
 </Project>

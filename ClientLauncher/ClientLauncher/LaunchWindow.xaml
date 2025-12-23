@@ -9,12 +9,13 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
+        Icon="pack://application:,,,/Assets/Images/NewLogo-01.png"
         ResizeMode="NoResize">
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
-        <!-- ✅ ADDED: Inverted converter for ShowUpdatePrompt -->
+        <!-- ADDED: Inverted converter for ShowUpdatePrompt -->
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
     </Window.Resources>
 
@@ -43,7 +44,7 @@
                            Margin="0,5,0,0"/>
             </StackPanel>
 
-            <!-- ✅ FIXED: Normal Status (Checking/Launching) - Show when NOT showing update prompt -->
+            <!-- FIXED: Normal Status (Checking/Launching) - Show when NOT showing update prompt -->
             <StackPanel Grid.Row="1" 
                         VerticalAlignment="Center"
                         Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource InverseBoolToVisibilityConverter}}">
@@ -66,7 +67,7 @@
                              Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
             </StackPanel>
 
-            <!-- ✅ FIXED: Update Prompt - Show only when ShowUpdatePrompt is true -->
+            <!-- FIXED: Update Prompt - Show only when ShowUpdatePrompt is true -->
             <Grid Grid.Row="1" 
                   Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center">

@@ -49,7 +49,7 @@ namespace AppServer.API.Controllers
         }
 
         /// <summary>
-        /// ✅ NEW: Get only version info from server manifest
+        /// NEW: Get only version info from server manifest
         /// </summary>
         [HttpGet("{appCode}/version")]
         public async Task<IActionResult> GetManifestVersion(string appCode)

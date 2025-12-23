@@ -1,4 +1,4 @@
-﻿namespace ClientLauncher.Services
+﻿namespace ClientLauncher.Services.Interface
 {
     public interface IShortcutService
     {
