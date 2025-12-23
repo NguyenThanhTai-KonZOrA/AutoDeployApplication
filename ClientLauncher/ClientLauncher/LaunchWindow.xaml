@@ -3,14 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:ClientLauncher.ViewModels"
         Title="Launching Application" 
-        Height="400" 
-        Width="600"
+        Height="500" 
+        Width="650"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize">
-    
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Window.Resources>
@@ -40,8 +40,10 @@
                            Margin="0,5,0,0"/>
             </StackPanel>
 
-            <!-- Status -->
-            <StackPanel Grid.Row="1" VerticalAlignment="Center">
+            <!-- ✅ Normal Status (Checking/Launching) -->
+            <StackPanel Grid.Row="1" 
+                        VerticalAlignment="Center"
+                        Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource BoolToVisibilityConverter}}">
                 <TextBlock Text="{Binding StatusEmoji}" 
                            FontSize="64" 
                            HorizontalAlignment="Center"
@@ -61,6 +63,105 @@
                              Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
             </StackPanel>
 
+            <!-- ✅ Update Prompt -->
+            <Grid Grid.Row="1" 
+                  Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource BoolToVisibilityConverter}}">
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding StatusEmoji}" 
+                               FontSize="64" 
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20"/>
+
+                    <Border Background="#FFF3CD" 
+                            BorderBrush="#FFE5A1" 
+                            BorderThickness="2"
+                            CornerRadius="5"
+                            Padding="20"
+                            Margin="0,0,0,20">
+                        <TextBlock Text="{Binding UpdateMessage}" 
+                                   FontSize="14" 
+                                   TextAlignment="Center"
+                                   Foreground="#856404"
+                                   TextWrapping="Wrap"
+                                   LineHeight="22"/>
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Center"
+                                Margin="0,20,0,0">
+                        <!-- Update Button -->
+                        <Button Content="📥 Update Now" 
+                                Command="{Binding UpdateAndLaunchCommand}"
+                                Padding="25,10"
+                                Background="#27AE60"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                FontSize="14"
+                                FontWeight="SemiBold"
+                                Margin="0,0,15,0">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="5" 
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#229954"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Skip Button (only if not force update) -->
+                        <Button Content="⏭️ Skip for Now" 
+                                Command="{Binding LaunchWithoutUpdateCommand}"
+                                Padding="25,10"
+                                Background="#95A5A6"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                FontSize="14"
+                                FontWeight="SemiBold">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" 
+                                                        CornerRadius="5" 
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" 
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#7F8C8D"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding ForceUpdate}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
             <!-- Footer -->
             <Button Grid.Row="2" 
                     Content="Cancel" 
@@ -74,6 +175,4 @@
                     Cursor="Hand"/>
         </Grid>
     </Border>
-
-    
 </Window>

@@ -14,9 +14,9 @@ namespace AppServer.API.Controllers
         private readonly IWebHostEnvironment _environment;
 
         public ManifestController(
-            IManifestService manifestService,
-            ILogger<ManifestController> logger,
-            IWebHostEnvironment environment)
+               IManifestService manifestService,
+               ILogger<ManifestController> logger,
+               IWebHostEnvironment environment)
         {
             _manifestService = manifestService;
             _logger = logger;
@@ -49,7 +49,48 @@ namespace AppServer.API.Controllers
         }
 
         /// <summary>
-        /// Download manifest.json file (NEW ENDPOINT)
+        /// ✅ NEW: Get only version info from server manifest
+        /// </summary>
+        [HttpGet("{appCode}/version")]
+        public async Task<IActionResult> GetManifestVersion(string appCode)
+        {
+            try
+            {
+                var manifest = await _manifestService.GetManifestAsync(appCode);
+                if (manifest == null)
+                {
+                    return NotFound($"Manifest not found for app: {appCode}");
+                }
+
+                //var versionInfo = new
+                //{
+                //    appCode = manifest.appCode,
+                //    binaryVersion = manifest.binary?.version ?? "0.0.0",
+                //    configVersion = manifest.config?.version ?? "0.0.0",
+                //    updateType = manifest.updatePolicy?.type ?? "none",
+                //    forceUpdate = manifest.updatePolicy?.force ?? false
+                //};
+
+                var versionInfo = new
+                {
+                    appCode = manifest.appCode,
+                    binaryVersion = "1.0.0",
+                    configVersion = "0.0.0",
+                    updateType = "none",
+                    forceUpdate = true
+                };
+
+                return Ok(versionInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving manifest version for {AppCode}", appCode);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Download manifest.json file
         /// </summary>
         [HttpGet("{appCode}/manifest/download")]
         public async Task<IActionResult> DownloadManifest(string appCode)
@@ -58,7 +99,6 @@ namespace AppServer.API.Controllers
             {
                 _logger.LogInformation("Download manifest request for {AppCode}", appCode);
 
-                // Security: Validate appCode
                 if (string.IsNullOrWhiteSpace(appCode) || appCode.Contains("..") ||
                     appCode.Contains("/") || appCode.Contains("\\"))
                 {
@@ -66,15 +106,14 @@ namespace AppServer.API.Controllers
                     return BadRequest("Invalid application code");
                 }
 
-                // Construct file path
-                var manifestPath = Path.Combine(_manifestsBasePath, appCode, "manifest.json");
+                var manifestsBasePath = Path.Combine(Directory.GetCurrentDirectory(), "Manifests");
+                var manifestPath = Path.Combine(manifestsBasePath, appCode, "manifest.json");
 
                 _logger.LogInformation("Looking for manifest at: {Path}", manifestPath);
 
                 if (!System.IO.File.Exists(manifestPath))
                 {
                     _logger.LogWarning("Manifest file not found: {Path}", manifestPath);
-
                     // List available manifests for debugging
                     var appManifestDir = Path.Combine(_manifestsBasePath, appCode);
                     if (Directory.Exists(appManifestDir))
@@ -95,16 +134,13 @@ namespace AppServer.API.Controllers
                                 string.Join(", ", dirs.Select(Path.GetFileName)));
                         }
                     }
-
                     return NotFound($"Manifest file not found for app: {appCode}");
                 }
 
-                // Read file
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(manifestPath);
                 _logger.LogInformation("Successfully read {Size} bytes from manifest.json for {AppCode}",
                     fileBytes.Length, appCode);
 
-                // Return file with proper content type
                 return File(fileBytes, "application/json", "manifest.json");
             }
             catch (Exception ex)

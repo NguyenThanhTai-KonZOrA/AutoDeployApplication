@@ -1,10 +1,9 @@
 ﻿using ClientLauncher.Helpers;
+using ClientLauncher.Models;
 using ClientLauncher.Services;
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -14,8 +13,8 @@ namespace ClientLauncher.ViewModels
     {
         private readonly string _appCode;
         private readonly Window _window;
-        private readonly HttpClient _httpClient;
-        private readonly string _serverUrl = "https://localhost:7172";
+        private readonly IVersionCheckService _versionCheckService;
+        private readonly IApiService _apiService;
         private readonly string _appsBasePath = @"C:\CompanyApps";
 
         private string _appName = "Loading...";
@@ -67,15 +66,42 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _canCancel, value);
         }
 
+        // ✅ NEW: Properties for update prompt
+        private bool _showUpdatePrompt;
+        public bool ShowUpdatePrompt
+        {
+            get => _showUpdatePrompt;
+            set => SetProperty(ref _showUpdatePrompt, value);
+        }
+
+        private string _updateMessage = string.Empty;
+        public string UpdateMessage
+        {
+            get => _updateMessage;
+            set => SetProperty(ref _updateMessage, value);
+        }
+
+        private bool _forceUpdate;
+        public bool ForceUpdate
+        {
+            get => _forceUpdate;
+            set => SetProperty(ref _forceUpdate, value);
+        }
+
         public RelayCommand CancelCommand { get; }
+        public AsyncRelayCommand UpdateAndLaunchCommand { get; }
+        public RelayCommand LaunchWithoutUpdateCommand { get; }
 
         public LaunchViewModel(string appCode, Window window)
         {
             _appCode = appCode;
             _window = window;
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            _versionCheckService = new VersionCheckService();
+            _apiService = new ApiService();
 
             CancelCommand = new RelayCommand(_ => Cancel());
+            UpdateAndLaunchCommand = new AsyncRelayCommand(async _ => await UpdateAndLaunchAsync());
+            LaunchWithoutUpdateCommand = new RelayCommand(_ => LaunchWithoutUpdate());
 
             // Start the launch sequence
             _ = LaunchSequenceAsync();
@@ -88,50 +114,50 @@ namespace ClientLauncher.ViewModels
                 // Step 1: Get app info
                 StatusMessage = "Loading application information...";
                 await GetAppInfoAsync();
-
                 await Task.Delay(500);
 
-                // Step 2: Check for updates
+                // ✅ Step 2: Check for updates
                 StatusEmoji = "🔍";
                 StatusMessage = "Checking for updates...";
                 ProgressValue = 20;
 
-                var hasUpdate = await CheckForUpdatesAsync();
+                var versionCheck = await _versionCheckService.CheckForUpdatesAsync(_appCode);
 
-                if (hasUpdate)
+                ProgressValue = 40;
+
+                // ✅ If update available, show prompt
+                if (versionCheck.UpdateAvailable)
                 {
-                    // Step 3: Download and apply updates
-                    StatusEmoji = "⬇️";
-                    StatusMessage = "Downloading updates...";
-                    ProgressValue = 40;
+                    StatusEmoji = "⚠️";
+                    IsProcessing = false;
+                    IsIndeterminate = false;
+                    ShowUpdatePrompt = true;
+                    ForceUpdate = versionCheck.ForceUpdate;
 
-                    await ApplyUpdatesAsync();
+                    UpdateMessage = versionCheck.ForceUpdate
+                        ? $"🔴 CRITICAL UPDATE REQUIRED\n\n" +
+                          $"Current version: {versionCheck.LocalVersion}\n" +
+                          $"New version: {versionCheck.ServerVersion}\n\n" +
+                          $"This update is mandatory and must be installed before launching."
+                        : $"📦 New version available!\n\n" +
+                          $"Current version: {versionCheck.LocalVersion}\n" +
+                          $"New version: {versionCheck.ServerVersion}\n\n" +
+                          $"Would you like to update now?";
 
-                    ProgressValue = 80;
-                    await Task.Delay(300);
+                    StatusMessage = versionCheck.Message;
+
+                    // ✅ If force update, disable skip option
+                    if (versionCheck.ForceUpdate)
+                    {
+                        CanCancel = false; // Can't cancel if force update
+                    }
+
+                    return; // Wait for user action
                 }
-                else
-                {
-                    ProgressValue = 60;
-                }
 
-                // Step 4: Launch application
-                StatusEmoji = "🚀";
-                StatusMessage = "Launching application...";
-                ProgressValue = 90;
-
-                await Task.Delay(500);
-
-                LaunchApplication();
-
-                ProgressValue = 100;
-                StatusEmoji = "✅";
-                StatusMessage = "Application launched successfully!";
-
-                await Task.Delay(1000);
-
-                // Close launcher window
-                _window.Close();
+                // ✅ No update needed, continue to launch
+                ProgressValue = 60;
+                await LaunchApplicationSequenceAsync();
             }
             catch (Exception ex)
             {
@@ -139,28 +165,103 @@ namespace ClientLauncher.ViewModels
                 StatusMessage = $"Error: {ex.Message}";
                 IsProcessing = false;
                 CanCancel = true;
+
+                _window.WindowState = WindowState.Normal;
+                _window.Show();
             }
+        }
+
+        private async Task UpdateAndLaunchAsync()
+        {
+            try
+            {
+                ShowUpdatePrompt = false;
+                IsProcessing = true;
+                IsIndeterminate = true;
+
+                StatusEmoji = "⬇️";
+                StatusMessage = "Downloading update...";
+                ProgressValue = 50;
+
+                // Call update API
+                var userName = Environment.UserName;
+                var result = await _apiService.InstallApplicationAsync(_appCode, userName);
+
+                if (!result.Success)
+                {
+                    throw new Exception($"Update failed: {result.Message}");
+                }
+
+                ProgressValue = 80;
+                StatusMessage = "Update completed successfully";
+                await Task.Delay(3000);
+
+                // Continue to launch
+                await LaunchApplicationSequenceAsync();
+            }
+            catch (Exception ex)
+            {
+                StatusEmoji = "❌";
+                StatusMessage = $"Update failed: {ex.Message}";
+                IsProcessing = false;
+                CanCancel = true;
+
+                _window.WindowState = WindowState.Normal;
+                _window.Show();
+            }
+        }
+
+        private void LaunchWithoutUpdate()
+        {
+            if (ForceUpdate)
+            {
+                MessageBox.Show(
+                    "This update is mandatory. You cannot launch the application without updating.",
+                    "Update Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+                return;
+            }
+
+            ShowUpdatePrompt = false;
+            IsProcessing = true;
+            IsIndeterminate = true;
+
+            _ = LaunchApplicationSequenceAsync();
+        }
+
+        private async Task LaunchApplicationSequenceAsync()
+        {
+            StatusEmoji = "🚀";
+            StatusMessage = "Launching application...";
+            ProgressValue = 90;
+
+            await Task.Delay(2000);
+
+            LaunchApplication();
+
+            _window.WindowState = WindowState.Minimized;
+            _window.Hide();
+
+            await Task.Delay(100);
+            _window.Close();
         }
 
         private async Task GetAppInfoAsync()
         {
             try
             {
-                var url = $"{_serverUrl}/api/AppCatalog/applications/{_appCode}";
-                var response = await _httpClient.GetAsync(url);
+                var apps = await _apiService.GetAllApplicationsAsync();
+                var app = apps.FirstOrDefault(a => a.AppCode == _appCode);
 
-                if (response.IsSuccessStatusCode)
+                if (app != null)
                 {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<ApplicationInfo>>(
-                        json,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (apiResponse?.Success == true && apiResponse.Data != null)
-                    {
-                        AppName = apiResponse.Data.Name;
-                    }
+                    AppName = app.Name;
+                }
+                else
+                {
+                    AppName = _appCode;
                 }
             }
             catch
@@ -169,64 +270,12 @@ namespace ClientLauncher.ViewModels
             }
         }
 
-        private async Task<bool> CheckForUpdatesAsync()
-        {
-            try
-            {
-                // Get local version
-                var versionFile = Path.Combine(_appsBasePath, _appCode, "App", "version.txt");
-                var localVersion = File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "0.0.0";
-
-                // Get server manifest
-                var manifestUrl = $"{_serverUrl}/api/apps/{_appCode}/manifest";
-                var response = await _httpClient.GetAsync(manifestUrl);
-
-                if (!response.IsSuccessStatusCode)
-                    return false;
-
-                var json = await response.Content.ReadAsStringAsync();
-                var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<ManifestInfo>>(
-                    json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-
-                if (apiResponse?.Success == true && apiResponse.Data != null)
-                {
-                    var serverVersion = apiResponse.Data.Binary?.Version ?? "0.0.0";
-
-                    // Compare versions
-                    var server = new Version(serverVersion);
-                    var local = new Version(localVersion);
-
-                    return server > local;
-                }
-
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private async Task ApplyUpdatesAsync()
-        {
-            // Call Installation Service to update
-            var apiService = new ApiService();
-            var userName = Environment.UserName;
-
-            // In a real scenario, you'd call UpdateApplicationAsync
-            // For now, we just simulate
-            await Task.Delay(2000);
-        }
-
         private void LaunchApplication()
         {
             try
             {
                 var appPath = Path.Combine(_appsBasePath, _appCode, "App");
 
-                // Find the main executable (assume first .exe file)
                 var exeFiles = Directory.GetFiles(appPath, "*.exe", SearchOption.TopDirectoryOnly);
 
                 if (exeFiles.Length > 0)
@@ -257,28 +306,5 @@ namespace ClientLauncher.ViewModels
         {
             _window.Close();
         }
-    }
-
-    // Helper classes
-    public class ApplicationInfo
-    {
-        public string Name { get; set; } = string.Empty;
-        public string AppCode { get; set; } = string.Empty;
-    }
-
-    public class ManifestInfo
-    {
-        public BinaryVersionInfo? Binary { get; set; }
-    }
-
-    public class BinaryVersionInfo
-    {
-        public string Version { get; set; } = string.Empty;
-    }
-
-    public class ApiBaseResponse<T>
-    {
-        public bool Success { get; set; }
-        public T? Data { get; set; }
     }
 }

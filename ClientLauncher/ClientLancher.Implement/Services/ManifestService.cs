@@ -27,25 +27,23 @@ namespace ClientLancher.Implement.Services
             var appFolder = Path.Combine(_appsBasePath, appCode);
             var manifestPath = Path.Combine(appFolder, "manifest.json");
 
-            // Check if manifest exists locally
+            // ✅ STEP 1: Check if manifest exists locally
             if (!File.Exists(manifestPath))
             {
                 _logger.LogWarning("Manifest not found locally at {Path}. Creating folder structure and downloading from server...", manifestPath);
 
                 try
                 {
-                    // Create folder structure
                     Directory.CreateDirectory(appFolder);
                     _logger.LogInformation("Created app folder: {AppFolder}", appFolder);
 
-                    // ✅ Download manifest file from server
+                    // Download manifest file from server
                     bool downloaded = await DownloadManifestFileAsync(appCode, manifestPath);
 
                     if (downloaded)
                     {
                         _logger.LogInformation("Manifest downloaded successfully for {AppCode}", appCode);
 
-                        // Read and return the downloaded manifest
                         var json = await File.ReadAllTextAsync(manifestPath);
                         var manifest = JsonSerializer.Deserialize<AppManifest>(json, new JsonSerializerOptions
                         {
@@ -58,7 +56,6 @@ namespace ClientLancher.Implement.Services
                     {
                         _logger.LogWarning("Could not download manifest from server for {AppCode}. Creating default manifest.", appCode);
 
-                        // Create default manifest
                         var defaultManifest = CreateDefaultManifest(appCode);
                         await UpdateManifestAsync(appCode, defaultManifest);
                         return defaultManifest;
@@ -68,28 +65,127 @@ namespace ClientLancher.Implement.Services
                 {
                     _logger.LogError(ex, "Error downloading manifest for {AppCode}", appCode);
 
-                    // FALLBACK: Create default manifest on error
                     var fallbackManifest = CreateDefaultManifest(appCode);
                     await UpdateManifestAsync(appCode, fallbackManifest);
                     return fallbackManifest;
                 }
             }
 
-            // Read existing manifest
+            // ✅ STEP 2: Local manifest exists - Download from server to check version
             try
             {
-                var json = await File.ReadAllTextAsync(manifestPath);
-                var manifest = JsonSerializer.Deserialize<AppManifest>(json, new JsonSerializerOptions
+                _logger.LogInformation("Local manifest found for {AppCode}. Downloading latest manifest from server to check version...", appCode);
+
+                // Read local manifest first
+                var localJson = await File.ReadAllTextAsync(manifestPath);
+                var localManifest = JsonSerializer.Deserialize<AppManifest>(localJson, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
-                _logger.LogInformation("Manifest loaded from local path for {AppCode}", appCode);
-                return manifest;
+
+                if (localManifest == null)
+                {
+                    _logger.LogError("Failed to deserialize local manifest for {AppCode}", appCode);
+                    return null;
+                }
+
+                var localVersion = localManifest.binary?.version ?? "0.0.0";
+                _logger.LogInformation("Current local version for {AppCode}: {Version}", appCode, localVersion);
+
+                // ✅ Create temp path for server manifest
+                var tempManifestPath = Path.Combine(appFolder, "manifest.tmp.json");
+
+                // ✅ Download manifest file from server to temp location
+                bool downloaded = await DownloadManifestFileAsync(appCode, tempManifestPath);
+
+                if (!downloaded)
+                {
+                    _logger.LogWarning("Could not download server manifest for {AppCode}. Using local manifest.", appCode);
+
+                    // Clean up temp file if exists
+                    if (File.Exists(tempManifestPath))
+                    {
+                        File.Delete(tempManifestPath);
+                    }
+
+                    return localManifest;
+                }
+
+                // ✅ Read downloaded server manifest
+                var serverJson = await File.ReadAllTextAsync(tempManifestPath);
+                var serverManifest = JsonSerializer.Deserialize<AppManifest>(serverJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (serverManifest == null)
+                {
+                    _logger.LogError("Failed to deserialize server manifest for {AppCode}", appCode);
+
+                    // Clean up temp file
+                    if (File.Exists(tempManifestPath))
+                    {
+                        File.Delete(tempManifestPath);
+                    }
+
+                    return localManifest;
+                }
+
+                var serverVersion = serverManifest.binary?.version ?? "0.0.0";
+
+                _logger.LogInformation("Version comparison for {AppCode}: Local={LocalVersion}, Server={ServerVersion}",
+                    appCode, localVersion, serverVersion);
+
+                // ✅ Compare versions
+                if (IsNewerVersion(serverVersion, localVersion))
+                {
+                    _logger.LogInformation("Server has newer version for {AppCode}. Replacing local manifest...", appCode);
+
+                    // ✅ Replace old manifest with new one
+                    File.Copy(tempManifestPath, manifestPath, overwrite: true);
+
+                    // Clean up temp file
+                    if (File.Exists(tempManifestPath))
+                    {
+                        File.Delete(tempManifestPath);
+                    }
+
+                    _logger.LogInformation("Manifest updated successfully for {AppCode} to version {Version}",
+                        appCode, serverVersion);
+
+                    return serverManifest;
+                }
+                else
+                {
+                    _logger.LogInformation("Local manifest for {AppCode} is up-to-date (version {Version})",
+                        appCode, localVersion);
+
+                    // Clean up temp file
+                    if (File.Exists(tempManifestPath))
+                    {
+                        File.Delete(tempManifestPath);
+                    }
+
+                    return localManifest;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error reading manifest file for {AppCode}", appCode);
-                return null;
+                _logger.LogError(ex, "Error checking or updating manifest for {AppCode}", appCode);
+
+                // ✅ Fallback: Try to return local manifest on error
+                try
+                {
+                    var json = await File.ReadAllTextAsync(manifestPath);
+                    return JsonSerializer.Deserialize<AppManifest>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch
+                {
+                    return null;
+                }
             }
         }
 
@@ -109,8 +205,7 @@ namespace ClientLancher.Implement.Services
         }
 
         /// <summary>
-        /// ✅ NEW METHOD: Download manifest.json file from server
-        /// Similar to DownloadPackage logic
+        /// Download manifest.json file from server
         /// </summary>
         private async Task<bool> DownloadManifestFileAsync(string appCode, string destinationPath, int retryCount = 0, int maxRetries = 3)
         {
@@ -122,7 +217,6 @@ namespace ClientLancher.Implement.Services
 
             try
             {
-                // ✅ Use download endpoint instead of manifest endpoint
                 var downloadUrl = $"{_serverUrl}/api/apps/{appCode}/manifest/download";
                 _logger.LogInformation("Downloading manifest from {Url} (Attempt {Attempt}/{MaxRetries})",
                     downloadUrl, retryCount + 1, maxRetries);
@@ -134,24 +228,21 @@ namespace ClientLancher.Implement.Services
                     _logger.LogWarning("Failed to download manifest: {StatusCode}. Retry {Retry}/{MaxRetries}",
                         response.StatusCode, retryCount + 1, maxRetries);
 
-                    // Only retry on server errors (5xx)
                     if ((int)response.StatusCode >= 500 && retryCount + 1 < maxRetries)
                     {
-                        await Task.Delay(1000 * (retryCount + 1)); // Exponential backoff
+                        await Task.Delay(1000 * (retryCount + 1));
                         return await DownloadManifestFileAsync(appCode, destinationPath, retryCount + 1, maxRetries);
                     }
 
-                    // Don't retry on 404, 400, etc.
                     _logger.LogError("Manifest not found or client error for {AppCode}: {StatusCode}",
                         appCode, response.StatusCode);
                     return false;
                 }
 
-                // ✅ Read file content as bytes (similar to DownloadPackage)
                 var fileBytes = await response.Content.ReadAsByteArrayAsync();
                 _logger.LogInformation("Downloaded {Size} bytes for manifest.json", fileBytes.Length);
 
-                // ✅ Validate that it's valid JSON before saving
+                // Validate JSON
                 try
                 {
                     var jsonString = System.Text.Encoding.UTF8.GetString(fileBytes);
@@ -172,7 +263,6 @@ namespace ClientLancher.Implement.Services
                     return false;
                 }
 
-                // ✅ Save file to disk
                 await File.WriteAllBytesAsync(destinationPath, fileBytes);
                 _logger.LogInformation("Manifest file saved to {Path}", destinationPath);
 
@@ -182,7 +272,6 @@ namespace ClientLancher.Implement.Services
             {
                 _logger.LogError(httpEx, "HTTP error downloading manifest for {AppCode}", appCode);
 
-                // Retry on network errors
                 if (retryCount + 1 < maxRetries)
                 {
                     await Task.Delay(1000 * (retryCount + 1));
@@ -195,7 +284,6 @@ namespace ClientLancher.Implement.Services
             {
                 _logger.LogError(ex, "Request timeout downloading manifest for {AppCode}", appCode);
 
-                // Retry on timeout
                 if (retryCount + 1 < maxRetries)
                 {
                     await Task.Delay(1000 * (retryCount + 1));
@@ -208,6 +296,24 @@ namespace ClientLancher.Implement.Services
             {
                 _logger.LogError(ex, "Unexpected error downloading manifest for {AppCode}", appCode);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// ✅ Compare version strings
+        /// </summary>
+        private bool IsNewerVersion(string serverVersion, string localVersion)
+        {
+            try
+            {
+                var server = new Version(serverVersion);
+                var local = new Version(localVersion);
+                return server > local;
+            }
+            catch
+            {
+                // Fallback to string comparison if not valid version format
+                return serverVersion != localVersion;
             }
         }
 
