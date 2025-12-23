@@ -1,0 +1,16 @@
+{
+  "appCode": "APP001",
+  "binary": {
+    "version": "v1.1.0",
+    "package": "APP001_v1.1.0.zip"
+  },
+  "config": {
+    "version": "v1.1.0",
+    "package": "APP001_v1.1.0.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

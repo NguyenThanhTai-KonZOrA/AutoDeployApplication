@@ -1,0 +1,16 @@
+{
+  "appCode": "APP003",
+  "binary": {
+    "version": "V_1.2.5",
+    "package": "APP003_v1.0.0.zip"
+  },
+  "config": {
+    "version": "V_1.2.3",
+    "package": "APP003_v1.0.0.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}
