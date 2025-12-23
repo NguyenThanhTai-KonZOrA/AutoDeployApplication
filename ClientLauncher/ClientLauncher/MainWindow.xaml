@@ -209,14 +209,15 @@
                          BorderBrush="#BDC3C7"
                          BorderThickness="1"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <!-- Update the application list item template to show version info and uninstall button -->
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="15" 
-                                    Margin="5" 
-                                    Background="#FAFAFA" 
-                                    BorderBrush="#E0E0E0" 
-                                    BorderThickness="1"
-                                    CornerRadius="8">
+                            <Border Padding="20" 
+                Margin="15" 
+                Background="#FAFAFA" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="1"
+                CornerRadius="8">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
@@ -236,48 +237,122 @@
 
                                     <!-- Icon -->
                                     <Border Grid.Column="0" 
-                                            Width="50" 
-                                            Height="50" 
-                                            Background="#3498DB" 
-                                            CornerRadius="8"
-                                            VerticalAlignment="Top">
+                        Width="50" 
+                        Height="50" 
+                        Background="#3498DB" 
+                        CornerRadius="8"
+                        VerticalAlignment="Top">
                                         <TextBlock Text="📦" 
-                                                   FontSize="28" 
-                                                   HorizontalAlignment="Center" 
-                                                   VerticalAlignment="Center"/>
+                               FontSize="28" 
+                               HorizontalAlignment="Center" 
+                               VerticalAlignment="Center"/>
                                     </Border>
 
                                     <!-- Info -->
                                     <StackPanel Grid.Column="1" Margin="15,0,0,0">
                                         <TextBlock Text="{Binding Name}" 
-                                                   FontSize="16" 
-                                                   FontWeight="SemiBold"
-                                                   Foreground="#2C3E50"/>
+                               FontSize="25" 
+                               FontWeight="SemiBold"
+                               Foreground="#2C3E50"/>
                                         <TextBlock Text="{Binding Description}" 
-                                                   FontSize="12" 
-                                                   Foreground="#7F8C8D"
-                                                   TextWrapping="Wrap"
-                                                   Margin="0,5,0,0"/>
+                               FontSize="20" 
+                               Foreground="#7F8C8D"
+                               TextWrapping="Wrap"
+                               Margin="0,5,0,0"/>
+
+                                        <!-- ✅ NEW: Status and Version Info -->
+                                        <TextBlock Text="{Binding StatusText}" 
+                               FontSize="20" 
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                            <Setter Property="Foreground" Value="#27AE60"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsInstalled}" Value="False">
+                                                            <Setter Property="Foreground" Value="#E74C3C"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                                            <Setter Property="Foreground" Value="#F39C12"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
                                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                             <Border Background="#E74C3C" 
-                                                    Padding="6,3" 
-                                                    CornerRadius="3"
-                                                    Margin="0,0,8,0">
+                                Padding="6,3" 
+                                CornerRadius="3"
+                                Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Category}" 
-                                                           FontSize="10" 
-                                                           Foreground="White"
-                                                           FontWeight="SemiBold"/>
+                                       FontSize="15" 
+                                       Foreground="White"
+                                       FontWeight="SemiBold"/>
                                             </Border>
                                             <Border Background="#95A5A6" 
-                                                    Padding="6,3" 
-                                                    CornerRadius="3">
+                                Padding="6,3" 
+                                CornerRadius="3">
                                                 <TextBlock Text="{Binding AppCode}" 
-                                                           FontSize="10" 
-                                                           Foreground="White"
-                                                           FontWeight="SemiBold"/>
+                                       FontSize="15" 
+                                       Foreground="White"
+                                       FontWeight="SemiBold"/>
+                                            </Border>
+
+                                            <!-- ✅ NEW: Update Available Badge -->
+                                            <Border Background="#F39C12" 
+                                Padding="6,3" 
+                                CornerRadius="3"
+                                Margin="8,0,0,0"
+                                Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                <TextBlock Text="🆕 UPDATE" 
+                                       FontSize="10" 
+                                       Foreground="White"
+                                       FontWeight="Bold"/>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
+
+                                    <!-- ✅ NEW: Uninstall Button (only for installed apps) -->
+                                    <Button Grid.Column="2"
+                                        Content="🗑️ Uninstall"
+                                        Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="12,12"
+                                        Background="#E74C3C"
+                                            Margin="30 90 10 10"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        Cursor="Hand"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" 
+                                                CornerRadius="5" 
+                                                Padding="{TemplateBinding Padding}">
+                                                                <ContentPresenter HorizontalAlignment="Center" 
+                                                              VerticalAlignment="Center"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#C0392B"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </DataTemplate>

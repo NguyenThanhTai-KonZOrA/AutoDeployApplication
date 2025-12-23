@@ -62,23 +62,23 @@ namespace AppServer.API.Controllers
                     return NotFound($"Manifest not found for app: {appCode}");
                 }
 
-                //var versionInfo = new
-                //{
-                //    appCode = manifest.appCode,
-                //    binaryVersion = manifest.binary?.version ?? "0.0.0",
-                //    configVersion = manifest.config?.version ?? "0.0.0",
-                //    updateType = manifest.updatePolicy?.type ?? "none",
-                //    forceUpdate = manifest.updatePolicy?.force ?? false
-                //};
-
                 var versionInfo = new
                 {
                     appCode = manifest.appCode,
-                    binaryVersion = "1.0.0",
-                    configVersion = "0.0.0",
-                    updateType = "none",
-                    forceUpdate = true
+                    binaryVersion = manifest.binary?.version ?? "0.0.0",
+                    configVersion = manifest.config?.version ?? "0.0.0",
+                    updateType = manifest.updatePolicy?.type ?? "none",
+                    forceUpdate = manifest.updatePolicy?.force ?? false
                 };
+
+                //var versionInfo = new
+                //{
+                //    appCode = manifest.appCode,
+                //    binaryVersion = "1.0.0",
+                //    configVersion = "0.0.0",
+                //    updateType = "none",
+                //    forceUpdate = true
+                //};
 
                 return Ok(versionInfo);
             }

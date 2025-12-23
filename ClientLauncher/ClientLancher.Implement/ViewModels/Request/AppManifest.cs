@@ -1,4 +1,6 @@
-﻿namespace ClientLancher.Implement.ViewModels.Request
+﻿using ClientLancher.Implement.ViewModels.Response;
+
+namespace ClientLancher.Implement.ViewModels.Request
 {
     public class AppManifest
     {
@@ -25,5 +27,12 @@
     {
         public string type { get; set; } = "both"; // both, config, binary, none
         public bool force { get; set; } = false;
+    }
+
+    public class ManifestVersionReponse
+    {
+        public int status { get; set; }
+        public AppManifest data { get; set; }
+        public bool success { get; set; }
     }
 }

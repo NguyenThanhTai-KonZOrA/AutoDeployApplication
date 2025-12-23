@@ -78,7 +78,7 @@ namespace ClientLancher.Implement.Services
 
                 // Read local manifest first
                 var localJson = await File.ReadAllTextAsync(manifestPath);
-                var localManifest = JsonSerializer.Deserialize<AppManifest>(localJson, new JsonSerializerOptions
+                var localManifest = JsonSerializer.Deserialize<ManifestVersionReponse>(localJson, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
@@ -89,7 +89,7 @@ namespace ClientLancher.Implement.Services
                     return null;
                 }
 
-                var localVersion = localManifest.binary?.version ?? "0.0.0";
+                var localVersion = localManifest.data?.binary?.version ?? "0.0.0";
                 _logger.LogInformation("Current local version for {AppCode}: {Version}", appCode, localVersion);
 
                 // ✅ Create temp path for server manifest
@@ -108,12 +108,12 @@ namespace ClientLancher.Implement.Services
                         File.Delete(tempManifestPath);
                     }
 
-                    return localManifest;
+                    return localManifest.data;
                 }
 
                 // ✅ Read downloaded server manifest
                 var serverJson = await File.ReadAllTextAsync(tempManifestPath);
-                var serverManifest = JsonSerializer.Deserialize<AppManifest>(serverJson, new JsonSerializerOptions
+                var serverManifest = JsonSerializer.Deserialize<ManifestVersionReponse>(serverJson, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
                 });
@@ -128,10 +128,10 @@ namespace ClientLancher.Implement.Services
                         File.Delete(tempManifestPath);
                     }
 
-                    return localManifest;
+                    return localManifest.data;
                 }
 
-                var serverVersion = serverManifest.binary?.version ?? "0.0.0";
+                var serverVersion = serverManifest.data?.binary?.version ?? "0.0.0";
 
                 _logger.LogInformation("Version comparison for {AppCode}: Local={LocalVersion}, Server={ServerVersion}",
                     appCode, localVersion, serverVersion);
@@ -153,7 +153,7 @@ namespace ClientLancher.Implement.Services
                     _logger.LogInformation("Manifest updated successfully for {AppCode} to version {Version}",
                         appCode, serverVersion);
 
-                    return serverManifest;
+                    return serverManifest.data;
                 }
                 else
                 {
@@ -166,7 +166,7 @@ namespace ClientLancher.Implement.Services
                         File.Delete(tempManifestPath);
                     }
 
-                    return localManifest;
+                    return localManifest.data;
                 }
             }
             catch (Exception ex)
@@ -246,12 +246,12 @@ namespace ClientLancher.Implement.Services
                 try
                 {
                     var jsonString = System.Text.Encoding.UTF8.GetString(fileBytes);
-                    var testManifest = JsonSerializer.Deserialize<AppManifest>(jsonString, new JsonSerializerOptions
+                    var testManifest = JsonSerializer.Deserialize<ManifestVersionReponse>(jsonString, new JsonSerializerOptions
                     {
                         PropertyNameCaseInsensitive = true
                     });
 
-                    if (testManifest == null || string.IsNullOrEmpty(testManifest.appCode))
+                    if (testManifest == null || string.IsNullOrEmpty(testManifest.data.appCode))
                     {
                         _logger.LogError("Downloaded manifest is invalid (null or empty appCode)");
                         return false;

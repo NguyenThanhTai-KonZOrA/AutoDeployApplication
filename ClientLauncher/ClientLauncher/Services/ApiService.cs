@@ -85,6 +85,45 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// ✅ NEW: Uninstall application
+        /// </summary>
+        public async Task<InstallationResultDto> UninstallApplicationAsync(string appCode, string userName)
+        {
+            try
+            {
+                var request = new InstallationRequestDto
+                {
+                    AppCode = appCode,
+                    UserName = userName
+                };
+
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync("/api/Installation/uninstall", content);
+                response.EnsureSuccessStatusCode();
+
+                var apiResponse = await response.Content.ReadFromJsonAsync<ApiBaseResponse<InstallationResultDto>>();
+
+                if (apiResponse?.Success == true && apiResponse.Data != null)
+                {
+                    return apiResponse.Data;
+                }
+
+                return new InstallationResultDto { Success = false, Message = "Unknown error" };
+            }
+            catch (Exception ex)
+            {
+                return new InstallationResultDto
+                {
+                    Success = false,
+                    Message = "Uninstallation failed",
+                    ErrorDetails = ex.Message
+                };
+            }
+        }
+
         public async Task<bool> IsApplicationInstalledAsync(string appCode)
         {
             try
@@ -100,11 +139,71 @@ namespace ClientLauncher.Services
                 return false;
             }
         }
+
+        /// <summary>
+        /// ✅ NEW: Get server version from manifest
+        /// </summary>
+        public async Task<VersionInfoDto?> GetServerVersionAsync(string appCode)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/apps/{appCode}/version");
+
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                var versionInfo = await response.Content.ReadFromJsonAsync<VersionInfoDto>();
+                return versionInfo;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Get installed version
+        /// </summary>
+        public async Task<string?> GetInstalledVersionAsync(string appCode)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/AppCatalog/applications/{appCode}/version");
+
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                var result = await response.Content.ReadFromJsonAsync<InstalledVersionResponse>();
+                return result?.Version;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 
     public class IsInstalledResponse
     {
         public string AppCode { get; set; } = string.Empty;
         public bool IsInstalled { get; set; }
+    }
+
+    /// <summary>
+    /// ✅ NEW: Version info DTO
+    /// </summary>
+    public class VersionInfoDto
+    {
+        public string AppCode { get; set; } = string.Empty;
+        public string BinaryVersion { get; set; } = string.Empty;
+        public string ConfigVersion { get; set; } = string.Empty;
+        public string UpdateType { get; set; } = string.Empty;
+        public bool ForceUpdate { get; set; }
+    }
+
+    public class InstalledVersionResponse
+    {
+        public string AppCode { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
     }
 }

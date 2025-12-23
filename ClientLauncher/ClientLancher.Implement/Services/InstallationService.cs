@@ -55,7 +55,7 @@ namespace ClientLancher.Implement.Services
                     };
                 }
 
-                // 2. Get manifest
+                // 2. Get manifest from server
                 var manifest = await _manifestService.GetManifestAsync(appCode);
                 if (manifest == null)
                 {
@@ -76,6 +76,9 @@ namespace ClientLancher.Implement.Services
                     await DownloadAndExtractAsync(appCode, manifest.config.package, configPath);
                     _versionService.SaveConfigVersion(appCode, manifest.config.version);
                 }
+
+                // ✅ 6. Update local manifest file after successful installation
+                await UpdateLocalManifestAsync(appCode, manifest);
 
                 stopwatch.Stop();
                 await CompleteInstallationLogAsync(log, "Success", null, manifest.binary.version, stopwatch.Elapsed);
@@ -121,6 +124,7 @@ namespace ClientLancher.Implement.Services
 
                 log.OldVersion = oldVersion;
 
+                // Get latest manifest from server
                 var manifest = await _manifestService.GetManifestAsync(appCode);
                 if (manifest == null)
                 {
@@ -149,6 +153,9 @@ namespace ClientLancher.Implement.Services
                 {
                     await DownloadAndExtractAsync(appCode, manifest.binary.package, appPath);
                     _versionService.SaveBinaryVersion(appCode, manifest.binary.version);
+
+                    // ✅ Update local manifest file after successful update
+                    await UpdateLocalManifestAsync(appCode, manifest);
 
                     // Delete backup if successful
                     if (Directory.Exists(backupPath))
@@ -206,6 +213,7 @@ namespace ClientLancher.Implement.Services
                 if (Directory.Exists(appFolder))
                 {
                     Directory.Delete(appFolder, true);
+                    _logger.LogInformation("Deleted application folder: {AppFolder}", appFolder);
                 }
 
                 stopwatch.Stop();
@@ -229,6 +237,36 @@ namespace ClientLancher.Implement.Services
                     Message = "Uninstallation failed",
                     ErrorDetails = ex.Message
                 };
+            }
+        }
+
+        /// <summary>
+        /// Update local manifest file with server manifest
+        /// </summary>
+        private async Task UpdateLocalManifestAsync(string appCode, ViewModels.Request.AppManifest manifest)
+        {
+            try
+            {
+                var manifestPath = Path.Combine(_appsBasePath, appCode, "manifest.json");
+                var manifestDir = Path.GetDirectoryName(manifestPath);
+
+                if (!string.IsNullOrEmpty(manifestDir) && !Directory.Exists(manifestDir))
+                {
+                    Directory.CreateDirectory(manifestDir);
+                }
+
+                var json = System.Text.Json.JsonSerializer.Serialize(manifest, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                await File.WriteAllTextAsync(manifestPath, json);
+                _logger.LogInformation("Local manifest updated for {AppCode} at {Path}", appCode, manifestPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update local manifest for {AppCode}", appCode);
+                // Don't throw - manifest update failure shouldn't fail installation
             }
         }
 

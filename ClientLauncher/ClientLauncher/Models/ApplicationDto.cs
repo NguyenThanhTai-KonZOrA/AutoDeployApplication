@@ -11,5 +11,12 @@
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+
+        // ✅ NEW: Properties for version tracking
+        public bool IsInstalled { get; set; }
+        public string? InstalledVersion { get; set; }
+        public string? ServerVersion { get; set; }
+        public bool HasUpdate { get; set; }
+        public string StatusText { get; set; } = "Not Installed";
     }
 }

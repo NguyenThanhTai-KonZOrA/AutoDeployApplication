@@ -12,7 +12,7 @@ namespace ClientLauncher.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly IApiService _apiService;
-        private readonly IShortcutService _shortcutService; // ✅ Add this
+        private readonly IShortcutService _shortcutService;
 
         // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
@@ -27,7 +27,13 @@ namespace ClientLauncher.ViewModels
         public ApplicationDto? SelectedApplication
         {
             get => _selectedApplication;
-            set => SetProperty(ref _selectedApplication, value);
+            set
+            {
+                SetProperty(ref _selectedApplication, value);
+                // Update command can execute state
+                InstallCommand?.RaiseCanExecuteChanged();
+                UninstallCommand?.RaiseCanExecuteChanged();
+            }
         }
 
         private int _currentStep = 1;
@@ -102,7 +108,6 @@ namespace ClientLauncher.ViewModels
 
                 _clockTimer.Start();
                 CurrentTime = DateTime.Now.ToString("HH:mm:ss");
-
             }
             catch (Exception ex)
             {
@@ -117,17 +122,22 @@ namespace ClientLauncher.ViewModels
         // Commands
         public AsyncRelayCommand LoadApplicationsCommand { get; }
         public AsyncRelayCommand InstallCommand { get; }
+        public AsyncRelayCommand UninstallCommand { get; } // ✅ NEW
         public RelayCommand BackToListCommand { get; }
 
         public MainViewModel()
         {
             _apiService = new ApiService();
-            _shortcutService = new ShortcutService(); // ✅ Initialize
+            _shortcutService = new ShortcutService();
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
                 async _ => await InstallApplicationAsync(),
                 _ => SelectedApplication != null && !IsProcessing
+            );
+            UninstallCommand = new AsyncRelayCommand( // ✅ NEW
+                async _ => await UninstallApplicationAsync(),
+                _ => SelectedApplication != null && SelectedApplication.IsInstalled && !IsProcessing
             );
             BackToListCommand = new RelayCommand(_ => BackToList());
 
@@ -136,6 +146,9 @@ namespace ClientLauncher.ViewModels
             InitializeClockTimer();
         }
 
+        /// <summary>
+        /// ✅ UPDATED: Load applications with version check
+        /// </summary>
         private async Task LoadApplicationsAsync()
         {
             try
@@ -144,8 +157,56 @@ namespace ClientLauncher.ViewModels
                 IsProcessing = true;
 
                 var apps = await _apiService.GetAllApplicationsAsync();
-                Applications = new ObservableCollection<ApplicationDto>(apps);
 
+                // ✅ Check installation status and versions for each app
+                foreach (var app in apps)
+                {
+                    // Check if installed
+                    app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
+
+                    if (app.IsInstalled)
+                    {
+                        // Get installed version
+                        app.InstalledVersion = await _apiService.GetInstalledVersionAsync(app.AppCode);
+
+                        // Get server version
+                        var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
+                        if (serverVersionInfo != null)
+                        {
+                            app.ServerVersion = serverVersionInfo.BinaryVersion;
+
+                            // Check if update available
+                            if (!string.IsNullOrEmpty(app.InstalledVersion) &&
+                                !string.IsNullOrEmpty(app.ServerVersion))
+                            {
+                                app.HasUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+                            }
+                        }
+
+                        // Set status text
+                        if (app.HasUpdate)
+                        {
+                            app.StatusText = $"📦 Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available";
+                        }
+                        else
+                        {
+                            app.StatusText = $"✅ Installed v{app.InstalledVersion}";
+                        }
+                    }
+                    else
+                    {
+                        app.StatusText = "❌ Not Installed";
+
+                        // Still get server version for display
+                        var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
+                        if (serverVersionInfo != null)
+                        {
+                            app.ServerVersion = serverVersionInfo.BinaryVersion;
+                        }
+                    }
+                }
+
+                Applications = new ObservableCollection<ApplicationDto>(apps);
                 StatusMessage = $"Loaded {apps.Count} applications";
             }
             catch (Exception ex)
@@ -157,6 +218,23 @@ namespace ClientLauncher.ViewModels
             finally
             {
                 IsProcessing = false;
+            }
+        }
+
+        /// <summary>
+        /// ✅ Helper method to compare versions
+        /// </summary>
+        private bool IsNewerVersion(string serverVersion, string localVersion)
+        {
+            try
+            {
+                var server = new Version(serverVersion);
+                var local = new Version(localVersion);
+                return server > local;
+            }
+            catch
+            {
+                return serverVersion != localVersion;
             }
         }
 
@@ -191,7 +269,7 @@ namespace ClientLauncher.ViewModels
 
                 ProgressValue = 70;
 
-                // ✅ Create desktop shortcut if installation succeeded
+                // Create desktop shortcut if installation succeeded
                 if (result.Success)
                 {
                     StatusMessage = "Creating desktop shortcut...";
@@ -242,6 +320,84 @@ namespace ClientLauncher.ViewModels
 
                 InstallationSuccess = false;
                 InstallationResult = $"✗ Installation failed\n\n{ex.Message}";
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Uninstall application
+        /// </summary>
+        private async Task UninstallApplicationAsync()
+        {
+            if (SelectedApplication == null || !SelectedApplication.IsInstalled) return;
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to uninstall '{SelectedApplication.Name}'?",
+                "Confirm Uninstall",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning
+            );
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                CurrentStep = 2;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                IsProcessing = true;
+                ProgressValue = 0;
+                StatusMessage = "Preparing uninstallation...";
+
+                await Task.Delay(500);
+                ProgressValue = 30;
+
+                StatusMessage = "Removing application files...";
+                var userName = Environment.UserName;
+                var uninstallResult = await _apiService.UninstallApplicationAsync(
+                    SelectedApplication.AppCode,
+                    userName
+                );
+
+                ProgressValue = 80;
+
+                // Remove desktop shortcut
+                if (uninstallResult.Success)
+                {
+                    StatusMessage = "Removing desktop shortcut...";
+                    _shortcutService.RemoveDesktopShortcut(SelectedApplication.Name);
+                    ProgressValue = 90;
+                }
+
+                StatusMessage = "Finalizing...";
+                ProgressValue = 100;
+
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = uninstallResult.Success;
+                InstallationResult = uninstallResult.Success
+                    ? $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
+                      $"Uninstalled by: {userName}"
+                    : $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
+            }
+            catch (Exception ex)
+            {
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Uninstallation failed\n\n{ex.Message}";
             }
             finally
             {

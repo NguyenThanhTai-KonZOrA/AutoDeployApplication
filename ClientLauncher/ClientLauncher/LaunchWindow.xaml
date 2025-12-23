@@ -1,7 +1,7 @@
 ﻿<Window x:Class="ClientLauncher.Windows.LaunchWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:ClientLauncher.ViewModels"
+        xmlns:vm="clr-namespace:ClientLauncher.ViewModels" xmlns:local="clr-namespace:ClientLauncher.Converters"
         Title="Launching Application" 
         Height="500" 
         Width="650"
@@ -13,6 +13,9 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+        <!-- ✅ ADDED: Inverted converter for ShowUpdatePrompt -->
+        <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
     </Window.Resources>
 
     <Border Background="White" 
@@ -40,10 +43,10 @@
                            Margin="0,5,0,0"/>
             </StackPanel>
 
-            <!-- ✅ Normal Status (Checking/Launching) -->
+            <!-- ✅ FIXED: Normal Status (Checking/Launching) - Show when NOT showing update prompt -->
             <StackPanel Grid.Row="1" 
                         VerticalAlignment="Center"
-                        Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource BoolToVisibilityConverter}}">
+                        Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource InverseBoolToVisibilityConverter}}">
                 <TextBlock Text="{Binding StatusEmoji}" 
                            FontSize="64" 
                            HorizontalAlignment="Center"
@@ -63,7 +66,7 @@
                              Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVisibilityConverter}}"/>
             </StackPanel>
 
-            <!-- ✅ Update Prompt -->
+            <!-- ✅ FIXED: Update Prompt - Show only when ShowUpdatePrompt is true -->
             <Grid Grid.Row="1" 
                   Visibility="{Binding ShowUpdatePrompt, Converter={StaticResource BoolToVisibilityConverter}}">
                 <StackPanel VerticalAlignment="Center">
