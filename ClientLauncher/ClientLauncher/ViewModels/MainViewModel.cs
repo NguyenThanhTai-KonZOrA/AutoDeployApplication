@@ -2,6 +2,8 @@
 using ClientLauncher.Models;
 using ClientLauncher.Services;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -10,6 +12,7 @@ namespace ClientLauncher.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly IApiService _apiService;
+        private readonly IShortcutService _shortcutService; // ✅ Add this
 
         // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
@@ -119,6 +122,7 @@ namespace ClientLauncher.ViewModels
         public MainViewModel()
         {
             _apiService = new ApiService();
+            _shortcutService = new ShortcutService(); // ✅ Initialize
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
@@ -162,7 +166,6 @@ namespace ClientLauncher.ViewModels
 
             try
             {
-                // Move to Step 2 - Processing
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -172,11 +175,11 @@ namespace ClientLauncher.ViewModels
                 ProgressValue = 0;
                 StatusMessage = "Preparing installation...";
 
-                await Task.Delay(500); // Simulate preparation
+                await Task.Delay(500);
                 ProgressValue = 20;
 
                 StatusMessage = "Downloading application...";
-                await Task.Delay(1000); // Simulate download
+                await Task.Delay(1000);
                 ProgressValue = 50;
 
                 StatusMessage = "Installing...";
@@ -186,13 +189,37 @@ namespace ClientLauncher.ViewModels
                     userName
                 );
 
-                ProgressValue = 80;
-                await Task.Delay(500);
+                ProgressValue = 70;
+
+                // ✅ Create desktop shortcut if installation succeeded
+                if (result.Success)
+                {
+                    StatusMessage = "Creating desktop shortcut...";
+                    await Task.Delay(300);
+
+                    var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+                    var shortcutCreated = _shortcutService.CreateDesktopShortcut(
+                        SelectedApplication.AppCode,
+                        SelectedApplication.Name,
+                        launcherPath
+                    );
+
+                    if (!shortcutCreated)
+                    {
+                        MessageBox.Show(
+                            "Application installed successfully but failed to create desktop shortcut.",
+                            "Warning",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning
+                        );
+                    }
+
+                    ProgressValue = 90;
+                }
 
                 StatusMessage = "Finalizing...";
                 ProgressValue = 100;
 
-                // Move to Step 3 - Finish
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -200,7 +227,10 @@ namespace ClientLauncher.ViewModels
 
                 InstallationSuccess = result.Success;
                 InstallationResult = result.Success
-                    ? $"✓ {SelectedApplication.Name} installed successfully!\n\nVersion: {result.InstalledVersion}\nInstalled by: {userName}"
+                    ? $"✓ {SelectedApplication.Name} installed successfully!\n\n" +
+                      $"Version: {result.InstalledVersion}\n" +
+                      $"Installed by: {userName}\n\n" +
+                      $"✅ Desktop shortcut created successfully!"
                     : $"✗ Installation failed\n\n{result.Message}\n{result.ErrorDetails}";
             }
             catch (Exception ex)

@@ -25,7 +25,6 @@ namespace ClientLauncherAPI.Controllers
             _logger = logger;
             _environment = environment;
 
-            // ✅ Sử dụng ContentRootPath để lấy đường dẫn solution
             _packagesBasePath = Path.Combine(_environment.ContentRootPath, "Packages");
             _manifestsBasePath = Path.Combine(_environment.ContentRootPath, "Manifests");
 

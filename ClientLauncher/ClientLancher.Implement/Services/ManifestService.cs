@@ -18,6 +18,7 @@ namespace ClientLancher.Implement.Services
             _appsBasePath = "C:\\CompanyApps";
             _logger = logger;
             _httpClient = httpClient;
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
             _serverUrl = "https://localhost:7172"; // Load from config
         }
 
@@ -29,27 +30,33 @@ namespace ClientLancher.Implement.Services
             // Check if manifest exists locally
             if (!File.Exists(manifestPath))
             {
-                _logger.LogWarning("Manifest not found locally at {Path}. Creating folder structure and fetching from server...", manifestPath);
+                _logger.LogWarning("Manifest not found locally at {Path}. Creating folder structure and downloading from server...", manifestPath);
 
-                // Create folder structure
                 try
                 {
+                    // Create folder structure
                     Directory.CreateDirectory(appFolder);
                     _logger.LogInformation("Created app folder: {AppFolder}", appFolder);
 
-                    // Try to fetch manifest from server
-                    var manifest = await FetchManifestFromServerAsync(appCode);
+                    // ✅ Download manifest file from server
+                    bool downloaded = await DownloadManifestFileAsync(appCode, manifestPath);
 
-                    if (manifest != null)
+                    if (downloaded)
                     {
-                        // Save manifest locally
-                        await UpdateManifestAsync(appCode, manifest);
-                        _logger.LogInformation("Manifest fetched from server and saved locally for {AppCode}", appCode);
+                        _logger.LogInformation("Manifest downloaded successfully for {AppCode}", appCode);
+
+                        // Read and return the downloaded manifest
+                        var json = await File.ReadAllTextAsync(manifestPath);
+                        var manifest = JsonSerializer.Deserialize<AppManifest>(json, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+
                         return manifest;
                     }
                     else
                     {
-                        _logger.LogWarning("Could not fetch manifest from server for {AppCode}. Creating default manifest.", appCode);
+                        _logger.LogWarning("Could not download manifest from server for {AppCode}. Creating default manifest.", appCode);
 
                         // Create default manifest
                         var defaultManifest = CreateDefaultManifest(appCode);
@@ -59,7 +66,7 @@ namespace ClientLancher.Implement.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error creating folder structure or fetching manifest for {AppCode}", appCode);
+                    _logger.LogError(ex, "Error downloading manifest for {AppCode}", appCode);
 
                     // FALLBACK: Create default manifest on error
                     var fallbackManifest = CreateDefaultManifest(appCode);
@@ -101,86 +108,106 @@ namespace ClientLancher.Implement.Services
             _logger.LogInformation("Manifest updated for {AppCode} at {Path}", appCode, manifestPath);
         }
 
-        private async Task<AppManifest?> FetchManifestFromServerAsync(string appCode, int retryCount = 0, int maxRetries = 3)
+        /// <summary>
+        /// ✅ NEW METHOD: Download manifest.json file from server
+        /// Similar to DownloadPackage logic
+        /// </summary>
+        private async Task<bool> DownloadManifestFileAsync(string appCode, string destinationPath, int retryCount = 0, int maxRetries = 3)
         {
-            // ✅ FIX: Kiểm tra retry count ngay từ đầu
             if (retryCount >= maxRetries)
             {
-                _logger.LogError("Max retries ({MaxRetries}) reached for fetching manifest of {AppCode}", maxRetries, appCode);
-                return null;
+                _logger.LogError("Max retries ({MaxRetries}) reached for downloading manifest of {AppCode}", maxRetries, appCode);
+                return false;
             }
 
             try
             {
-                var manifestUrl = $"{_serverUrl}/api/apps/{appCode}/manifest";
-                _logger.LogInformation("Fetching manifest from {Url} (Attempt {Attempt}/{MaxRetries})", manifestUrl, retryCount + 1, maxRetries);
+                // ✅ Use download endpoint instead of manifest endpoint
+                var downloadUrl = $"{_serverUrl}/api/apps/{appCode}/manifest/download";
+                _logger.LogInformation("Downloading manifest from {Url} (Attempt {Attempt}/{MaxRetries})",
+                    downloadUrl, retryCount + 1, maxRetries);
 
-                var response = await _httpClient.GetAsync(manifestUrl);
+                var response = await _httpClient.GetAsync(downloadUrl);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to fetch manifest from server: {StatusCode}. Retry {Retry}/{MaxRetries}",
+                    _logger.LogWarning("Failed to download manifest: {StatusCode}. Retry {Retry}/{MaxRetries}",
                         response.StatusCode, retryCount + 1, maxRetries);
 
-                    // ✅ FIX: Chỉ retry nếu chưa đạt maxRetries
-                    if (retryCount + 1 < maxRetries)
+                    // Only retry on server errors (5xx)
+                    if ((int)response.StatusCode >= 500 && retryCount + 1 < maxRetries)
                     {
                         await Task.Delay(1000 * (retryCount + 1)); // Exponential backoff
-                        return await FetchManifestFromServerAsync(appCode, retryCount + 1, maxRetries);
+                        return await DownloadManifestFileAsync(appCode, destinationPath, retryCount + 1, maxRetries);
                     }
 
-                    // ✅ Đã hết retry, return null
-                    _logger.LogError("All retry attempts failed for {AppCode}", appCode);
-                    return null;
+                    // Don't retry on 404, 400, etc.
+                    _logger.LogError("Manifest not found or client error for {AppCode}: {StatusCode}",
+                        appCode, response.StatusCode);
+                    return false;
                 }
 
-                var responseContent = await response.Content.ReadAsStringAsync();
-                _logger.LogDebug("Server response: {Response}", responseContent);
+                // ✅ Read file content as bytes (similar to DownloadPackage)
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                _logger.LogInformation("Downloaded {Size} bytes for manifest.json", fileBytes.Length);
 
-                // Try to deserialize as ApiBaseResponse first
+                // ✅ Validate that it's valid JSON before saving
                 try
                 {
-                    var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<AppManifest>>(
-            responseContent,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
-
-                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    var jsonString = System.Text.Encoding.UTF8.GetString(fileBytes);
+                    var testManifest = JsonSerializer.Deserialize<AppManifest>(jsonString, new JsonSerializerOptions
                     {
-                        return apiResponse.Data;
-                    }
+                        PropertyNameCaseInsensitive = true
+                    });
 
-                    return null;
+                    if (testManifest == null || string.IsNullOrEmpty(testManifest.appCode))
+                    {
+                        _logger.LogError("Downloaded manifest is invalid (null or empty appCode)");
+                        return false;
+                    }
                 }
-                catch (JsonException)
+                catch (JsonException ex)
                 {
-                    // If ApiBaseResponse deserialization fails, try direct deserialization
-                    _logger.LogDebug("Failed to deserialize as ApiBaseResponse, trying direct deserialization");
-
-                    var manifest = JsonSerializer.Deserialize<AppManifest>(
-                        responseContent,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
-
-                    if (manifest != null)
-                    {
-                        _logger.LogInformation("Manifest successfully fetched (direct) from server for {AppCode}", appCode);
-                        return manifest;
-                    }
+                    _logger.LogError(ex, "Downloaded content is not valid JSON");
+                    return false;
                 }
 
-                _logger.LogWarning("Could not deserialize manifest response from server");
-                return null;
+                // ✅ Save file to disk
+                await File.WriteAllBytesAsync(destinationPath, fileBytes);
+                _logger.LogInformation("Manifest file saved to {Path}", destinationPath);
+
+                return true;
             }
             catch (HttpRequestException httpEx)
             {
-                _logger.LogError(httpEx, "HTTP error fetching manifest from server for {AppCode}", appCode);
-                return null;
+                _logger.LogError(httpEx, "HTTP error downloading manifest for {AppCode}", appCode);
+
+                // Retry on network errors
+                if (retryCount + 1 < maxRetries)
+                {
+                    await Task.Delay(1000 * (retryCount + 1));
+                    return await DownloadManifestFileAsync(appCode, destinationPath, retryCount + 1, maxRetries);
+                }
+
+                return false;
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Request timeout downloading manifest for {AppCode}", appCode);
+
+                // Retry on timeout
+                if (retryCount + 1 < maxRetries)
+                {
+                    await Task.Delay(1000 * (retryCount + 1));
+                    return await DownloadManifestFileAsync(appCode, destinationPath, retryCount + 1, maxRetries);
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching manifest from server for {AppCode}", appCode);
-                return null;
+                _logger.LogError(ex, "Unexpected error downloading manifest for {AppCode}", appCode);
+                return false;
             }
         }
 
@@ -199,7 +226,7 @@ namespace ClientLancher.Implement.Services
                 config = new ConfigInfo
                 {
                     version = "0.0.1",
-                    package = "config.json",
+                    package = $"{appCode}_v0.0.1.zip",
                     mergeStrategy = "preserveLocal"
                 },
                 updatePolicy = new UpdatePolicy

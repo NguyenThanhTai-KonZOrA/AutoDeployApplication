@@ -1,11 +1,11 @@
 {
   "appCode": "APP001",
   "binary": {
-    "version": "V_1.2.5",
+    "version": "v1.0.0",
     "package": "APP001_v1.0.0.zip"
   },
   "config": {
-    "version": "V_1.2.3",
+    "version": "v1.0.0",
     "package": "APP001_v1.0.0.zip",
     "mergeStrategy": "preserveLocal"
   },

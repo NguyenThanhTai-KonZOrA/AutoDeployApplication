@@ -234,7 +234,6 @@ namespace ClientLancher.Implement.Services
 
         private async Task DownloadAndExtractAsync(string appCode, string packageName, string targetPath)
         {
-            // ✅ FIX: Thêm /api/ vào URL và sử dụng endpoint download
             var packageUrl = $"{_serverUrl}/api/apps/{appCode}/download/{packageName}";
             var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_{Guid.NewGuid()}.zip");
 
@@ -242,7 +241,6 @@ namespace ClientLancher.Implement.Services
             {
                 _logger.LogInformation("Downloading package {PackageName} from {Url}", packageName, packageUrl);
 
-                // ✅ Thêm error handling chi tiết hơn
                 var response = await _httpClient.GetAsync(packageUrl);
 
                 if (!response.IsSuccessStatusCode)
@@ -268,7 +266,6 @@ namespace ClientLancher.Implement.Services
 
                 _logger.LogInformation("Extracting to {Path}", targetPath);
 
-                // ✅ Đảm bảo thư mục target tồn tại và trống
                 if (Directory.Exists(targetPath))
                 {
                     Directory.Delete(targetPath, true);
