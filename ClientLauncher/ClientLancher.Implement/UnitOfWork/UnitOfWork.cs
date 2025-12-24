@@ -10,28 +10,37 @@ namespace ClientLancher.Implement.UnitOfWork
         private readonly ClientLancherDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        // Lazy initialization for repositories
-        private IApplicationRepository? _applications;
-        private IInstallationLogRepository? _installationLogs;
+        public IApplicationRepository Applications { get; }
+        public IInstallationLogRepository InstallationLogs { get; }
 
-        public UnitOfWork(ClientLancherDbContext context)
+        // ✅ NEW
+        public IPackageVersionRepository PackageVersions { get; }
+        public IDeploymentHistoryRepository DeploymentHistories { get; }
+        public IApplicationCategoryRepository ApplicationCategories { get; }
+        public IDownloadStatisticRepository DownloadStatistics { get; }
+
+        public UnitOfWork(
+            ClientLancherDbContext context,
+            IApplicationRepository applications,
+            IInstallationLogRepository installationLogs,
+            IPackageVersionRepository packageVersions,
+            IDeploymentHistoryRepository deploymentHistories,
+            IApplicationCategoryRepository applicationCategories,
+            IDownloadStatisticRepository downloadStatistics)
         {
             _context = context;
+            Applications = applications;
+            InstallationLogs = installationLogs;
+            PackageVersions = packageVersions;
+            DeploymentHistories = deploymentHistories;
+            ApplicationCategories = applicationCategories;
+            DownloadStatistics = downloadStatistics;
         }
-
-        // Repository properties with lazy initialization
-        public IApplicationRepository Applications =>
-            _applications ??= new ApplicationRepository(_context);
-
-        public IInstallationLogRepository InstallationLogs =>
-            _installationLogs ??= new InstallationLogRepository(_context);
 
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
         }
-
-        public async Task<int> CompleteAsync() => await SaveChangesAsync();
 
         public async Task BeginTransactionAsync()
         {

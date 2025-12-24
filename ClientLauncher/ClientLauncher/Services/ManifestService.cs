@@ -18,7 +18,7 @@ namespace ClientLauncher.Services
         public ManifestService()
         {
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            _serverUrl = System.Configuration.ConfigurationManager.AppSettings["ServerUrl"] ?? "http://10.21.10.1:8102";
+            _serverUrl = System.Configuration.ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
             _appsBasePath = System.Configuration.ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
         }
 

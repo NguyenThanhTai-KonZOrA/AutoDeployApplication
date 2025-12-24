@@ -30,9 +30,15 @@ namespace ClientLancher.Implement.Repositories
         public async Task<IEnumerable<Application>> GetApplicationsByCategoryAsync(string category)
         {
             return await _dbSet
-                .Where(a => a.IsActive && a.Category == category)
+                .Where(a => a.IsActive && a.Category.Name == category)
                 .OrderBy(a => a.Name)
                 .ToListAsync();
+        }
+
+        public void Delete(Application application)
+        {
+            _dbSet.Remove(application);
+            _context.SaveChanges();
         }
     }
 }

@@ -305,7 +305,7 @@ namespace ClientLauncher.ViewModels
                 StatusMessage = "Creating desktop shortcut...";
 
                 var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
-                var iconPath = GetIconPathForCategory(SelectedApplication.Category);
+                var iconPath = GetIconPathForCategory("Case");
 
                 var shortcutCreated = _shortcutService.CreateDesktopShortcut(
                     SelectedApplication.AppCode,

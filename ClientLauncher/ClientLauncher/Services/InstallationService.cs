@@ -22,7 +22,7 @@ namespace ClientLauncher.Services
             _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
 
             // Load from config
-            _serverUrl = System.Configuration.ConfigurationManager.AppSettings["ServerUrl"] ?? "http://10.21.10.1:8102";
+            _serverUrl = System.Configuration.ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
             _appsBasePath = System.Configuration.ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
 
             _logger.Info($"InstallationService initialized. Server: {_serverUrl}, AppsPath: {_appsBasePath}");

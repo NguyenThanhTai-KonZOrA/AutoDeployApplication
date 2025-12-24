@@ -1,4 +1,6 @@
 ﻿using ClientLancher.Implement.ApplicationDbContext;
+using ClientLancher.Implement.Repositories;
+using ClientLancher.Implement.Repositories.Interface;
 using ClientLancher.Implement.Services;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
@@ -42,16 +44,28 @@ try
     builder.Services.AddDbContext<ClientLancherDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-    // Unit of Work
+    // ✅ REPOSITORIES
+    builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
+    builder.Services.AddScoped<IInstallationLogRepository, InstallationLogRepository>();
+    builder.Services.AddScoped<IPackageVersionRepository, PackageVersionRepository>();
+    builder.Services.AddScoped<IDeploymentHistoryRepository, DeploymentHistoryRepository>();
+    builder.Services.AddScoped<IApplicationCategoryRepository, ApplicationCategoryRepository>();
+    builder.Services.AddScoped<IDownloadStatisticRepository, DownloadStatisticRepository>();
+
+    // ✅ UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-    // Services
+    // ✅ SERVICES
+    builder.Services.AddScoped<IAppCatalogService, AppCatalogService>();
     builder.Services.AddScoped<IManifestService, ManifestService>();
     builder.Services.AddScoped<IServerManifestService, ServerManifestService>();
-    builder.Services.AddScoped<IUpdateService, UpdateService>();
     builder.Services.AddScoped<IVersionService, VersionService>();
-    builder.Services.AddScoped<IAppCatalogService, AppCatalogService>();
     builder.Services.AddScoped<IInstallationService, InstallationService>();
+    builder.Services.AddScoped<IPackageVersionService, PackageVersionService>();
+    builder.Services.AddScoped<IApplicationManagementService, ApplicationManagementService>();
+    builder.Services.AddScoped<ICategoryService, CategoryService>();
+    builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+    builder.Services.AddScoped<IDeploymentService, DeploymentService>();
     builder.Services.AddHttpClient();
 
     // Add CORS if needed
