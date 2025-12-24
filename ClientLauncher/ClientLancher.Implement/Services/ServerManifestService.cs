@@ -14,7 +14,7 @@ namespace ClientLancher.Implement.Services
         public ServerManifestService(Microsoft.AspNetCore.Hosting.IHostingEnvironment environment, ILogger<ServerManifestService> logger)
         {
             _logger = logger;
-            // ✅ Use server's local storage (relative to application root)
+            // Use server's local storage (relative to application root)
             _manifestsBasePath = Path.Combine(environment.ContentRootPath, "Manifests");
 
             // Ensure directory exists

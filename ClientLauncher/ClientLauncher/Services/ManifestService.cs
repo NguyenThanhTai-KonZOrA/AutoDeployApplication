@@ -40,7 +40,7 @@ namespace ClientLauncher.Services
                     PropertyNameCaseInsensitive = true
                 });
 
-                _logger.Info($"Loaded local manifest for {appCode}: v{manifest?.Binary?.Version}");
+                _logger.Info($"Loaded local manifest for {appCode}: {manifest?.Binary?.Version}");
                 return manifest;
             }
             catch (Exception ex)

@@ -3,10 +3,8 @@ using ClientLauncher.Models;
 using ClientLauncher.Services;
 using ClientLauncher.Services.Interface;
 using NLog;
-using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace ClientLauncher.ViewModels
@@ -123,7 +121,7 @@ namespace ClientLauncher.ViewModels
                 await GetAppInfoAsync();
                 await Task.Delay(500);
 
-                // ✅ Step 2: Load local manifest
+                // Step 2: Load local manifest
                 StatusEmoji = "📄";
                 StatusMessage = "Loading manifest...";
                 ProgressValue = 10;
@@ -140,7 +138,7 @@ namespace ClientLauncher.ViewModels
 
                 ProgressValue = 20;
 
-                // ✅ Step 3: Download server manifest to check version
+                // Step 3: Download server manifest to check version
                 StatusEmoji = "🔍";
                 StatusMessage = "Checking for updates...";
 
@@ -149,7 +147,7 @@ namespace ClientLauncher.ViewModels
                 if (serverManifest == null)
                 {
                     _logger.Warn("Could not fetch server manifest, proceeding with local version");
-                    
+
                     // Check if app binary exists
                     var appPath = Path.Combine(_appsBasePath, _appCode, "App");
                     if (!Directory.Exists(appPath) || Directory.GetFiles(appPath, "*.exe").Length == 0)
@@ -168,24 +166,24 @@ namespace ClientLauncher.ViewModels
 
                 ProgressValue = 40;
 
-                // ✅ Step 4: Compare versions
+                // Step 4: Compare versions
                 var hasUpdate = IsNewerVersion(serverVersion, localVersion);
 
-                // ✅ Check if binary exists
+                // Check if binary exists
                 var binaryPath = Path.Combine(_appsBasePath, _appCode, "App");
                 var binaryExists = Directory.Exists(binaryPath) && Directory.GetFiles(binaryPath, "*.exe").Length > 0;
 
                 if (!binaryExists)
                 {
-                    // ✅ First run - download package
+                    // First run - download package
                     _logger.Info("First run detected, downloading package...");
-                    
+
                     StatusEmoji = "⬇️";
                     StatusMessage = "Downloading application (first run)...";
                     ProgressValue = 50;
 
                     await DownloadAndInstallPackageAsync(serverManifest);
-                    
+
                     // Save updated manifest
                     await _manifestService.SaveManifestAsync(_appCode, serverManifest);
 
@@ -195,7 +193,7 @@ namespace ClientLauncher.ViewModels
 
                 if (hasUpdate)
                 {
-                    // ✅ Show update prompt
+                    // Show update prompt
                     var forceUpdate = serverManifest.UpdatePolicy?.Force ?? false;
 
                     StatusEmoji = "⚠️";
@@ -224,7 +222,7 @@ namespace ClientLauncher.ViewModels
                     return; // Wait for user action
                 }
 
-                // ✅ No update needed, launch directly
+                // No update needed, launch directly
                 _logger.Info("Application is up to date, launching...");
                 ProgressValue = 60;
                 await LaunchApplicationSequenceAsync();
@@ -254,7 +252,7 @@ namespace ClientLauncher.ViewModels
                 StatusMessage = "Downloading update...";
                 ProgressValue = 50;
 
-                // ✅ Get server manifest
+                // Get server manifest
                 var serverManifest = await _manifestService.DownloadManifestFromServerAsync(_appCode);
 
                 if (serverManifest == null)
@@ -264,10 +262,10 @@ namespace ClientLauncher.ViewModels
 
                 _logger.Info($"Starting update: {_appCode} to v{serverManifest.Binary?.Version}");
 
-                // ✅ Download and install package
+                // Download and install package
                 await DownloadAndInstallPackageAsync(serverManifest);
 
-                // ✅ Save updated manifest
+                // Save updated manifest
                 await _manifestService.SaveManifestAsync(_appCode, serverManifest);
 
                 ProgressValue = 80;
@@ -328,14 +326,14 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// ✅ Download and install package using manifest info
+        /// Download and install package using manifest info
         /// </summary>
         private async Task DownloadAndInstallPackageAsync(ManifestDto manifest)
         {
             try
             {
                 var packageName = _manifestService.GetPackageName(manifest);
-                
+
                 if (string.IsNullOrEmpty(packageName))
                 {
                     throw new Exception("Package name not found in manifest");
@@ -344,7 +342,7 @@ namespace ClientLauncher.ViewModels
                 _logger.Info($"Installing package: {packageName}");
 
                 StatusMessage = $"Downloading {packageName}...";
-                
+
                 var result = await _installationService.InstallApplicationAsync(_appCode, packageName);
 
                 if (!result.Success)

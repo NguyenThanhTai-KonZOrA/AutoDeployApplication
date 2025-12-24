@@ -13,15 +13,16 @@ namespace ClientLauncher.Services
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "https://localhost:7172/api";
+        private readonly string _baseUrl;
+        private readonly IInstallationChecker _installationChecker; // Add
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public ApiService()
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(_baseUrl)
-            };
+            _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102/api";
+            _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
+            _installationChecker = new InstallationChecker(); // Initialize
+
             Logger.Debug("ApiService initialized with base URL: {BaseUrl}", _baseUrl);
         }
 
@@ -142,20 +143,55 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// Check installation on LOCAL machine
+        /// </summary>
         public async Task<bool> IsApplicationInstalledAsync(string appCode)
         {
             try
             {
-                Logger.Debug("Checking if application {AppCode} is installed", appCode);
-                var result = await GetApiDataAsync<IsInstalledResponse>(
-                    $"/api/AppCatalog/applications/{appCode}/installed"
-                );
-                return result?.IsInstalled ?? false;
+                Logger.Debug("Checking if application {AppCode} is installed locally", appCode);
+
+                // Check local installation instead of calling API
+                var isInstalled = _installationChecker.IsApplicationInstalled(appCode);
+
+                Logger.Info("Application {AppCode} installation status: {IsInstalled}", appCode, isInstalled);
+                return isInstalled;
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Failed to check installation status for {AppCode}", appCode);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Get installed version from LOCAL file
+        /// </summary>
+        public async Task<string?> GetInstalledVersionAsync(string appCode)
+        {
+            try
+            {
+                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+
+                // Get version from local file instead of calling API
+                var version = _installationChecker.GetInstalledVersion(appCode);
+
+                if (version != null)
+                {
+                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                }
+                else
+                {
+                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                }
+
+                return version;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to get installed version for {AppCode}", appCode);
+                return null;
             }
         }
 
@@ -173,37 +209,44 @@ namespace ClientLauncher.Services
                     return null;
                 }
 
-                var versionInfo = await response.Content.ReadFromJsonAsync<VersionInfoDto>();
-                Logger.Debug("Server version for {AppCode}: {Version}", appCode, versionInfo?.BinaryVersion);
-                return versionInfo;
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+
+                // Try with ApiBaseResponse wrapper
+                try
+                {
+                    var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<VersionInfoDto>>(
+                        jsonResponse,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (apiResponse?.Success == true && apiResponse.Data != null)
+                    {
+                        Logger.Debug("Server version for {AppCode}: {Version}",
+                            appCode, apiResponse.Data.BinaryVersion);
+                        return apiResponse.Data;
+                    }
+                }
+                catch
+                {
+                    // Try direct deserialization
+                    var versionInfo = JsonSerializer.Deserialize<VersionInfoDto>(
+                        jsonResponse,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                    );
+
+                    if (versionInfo != null)
+                    {
+                        Logger.Debug("Server version for {AppCode}: {Version}",
+                            appCode, versionInfo.BinaryVersion);
+                        return versionInfo;
+                    }
+                }
+
+                return null;
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Failed to get server version for {AppCode}", appCode);
-                return null;
-            }
-        }
-
-        public async Task<string?> GetInstalledVersionAsync(string appCode)
-        {
-            try
-            {
-                Logger.Debug("Getting installed version for application {AppCode}", appCode);
-                var response = await _httpClient.GetAsync($"/api/AppCatalog/applications/{appCode}/version");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Logger.Warn("Application {AppCode} is not installed", appCode);
-                    return null;
-                }
-
-                var result = await response.Content.ReadFromJsonAsync<InstalledVersionResponse>();
-                Logger.Debug("Installed version for {AppCode}: {Version}", appCode, result?.Version);
-                return result?.Version;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Failed to get installed version for {AppCode}", appCode);
                 return null;
             }
         }

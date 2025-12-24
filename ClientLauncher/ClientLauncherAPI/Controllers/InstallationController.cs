@@ -91,7 +91,7 @@ namespace ClientLauncherAPI.Controllers
         }
 
         /// <summary>
-        /// ✅ Receive installation logs from clients (DOES NOT INSTALL)
+        /// Receive installation logs from clients (DOES NOT INSTALL)
         /// </summary>
         [HttpPost("log")]
         public async Task<IActionResult> LogInstallation([FromBody] InstallationLogRequest request)

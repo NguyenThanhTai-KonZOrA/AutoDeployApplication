@@ -15,7 +15,7 @@ namespace ClientLauncher.ViewModels
     {
         private readonly IApiService _apiService;
         private readonly IShortcutService _shortcutService;
-        private readonly IManifestService _manifestService; // ✅ Add
+        private readonly IManifestService _manifestService;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         // Properties
@@ -126,14 +126,14 @@ namespace ClientLauncher.ViewModels
         // Commands
         public AsyncRelayCommand LoadApplicationsCommand { get; }
         public AsyncRelayCommand InstallCommand { get; }
-        public AsyncRelayCommand UninstallCommand { get; } 
+        public AsyncRelayCommand UninstallCommand { get; }
         public RelayCommand BackToListCommand { get; }
 
         public MainViewModel()
         {
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
-            _manifestService = new ManifestService(); // ✅ Initialize
+            _manifestService = new ManifestService();
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
@@ -147,7 +147,7 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// UPDATED: Load applications with version check
+        /// UPDATED: Load applications with LOCAL installation check
         /// </summary>
         private async Task LoadApplicationsAsync()
         {
@@ -163,11 +163,15 @@ namespace ClientLauncher.ViewModels
                 {
                     _logger.Debug("Checking status for application: {AppCode}", app.AppCode);
 
+                    // Check LOCAL installation (no API call)
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
 
                     if (app.IsInstalled)
                     {
+                        // Get LOCAL installed version
                         app.InstalledVersion = await _apiService.GetInstalledVersionAsync(app.AppCode);
+
+                        // Get server version to check for updates
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
 
                         if (serverVersionInfo != null)
@@ -188,18 +192,24 @@ namespace ClientLauncher.ViewModels
                         }
 
                         app.StatusText = app.HasUpdate
-                            ? $"📦 Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available"
+                            ? $"Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available"
                             : $"Installed v{app.InstalledVersion}";
                     }
                     else
                     {
                         app.StatusText = "❌ Not Installed";
+
+                        // Still get server version for display
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
                         if (serverVersionInfo != null)
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
+                            app.StatusText = $"❌ Not Installed (Latest: v{app.ServerVersion})";
                         }
                     }
+
+                    _logger.Debug("App {AppCode}: IsInstalled={IsInstalled}, Version={Version}, HasUpdate={HasUpdate}",
+                        app.AppCode, app.IsInstalled, app.InstalledVersion, app.HasUpdate);
                 }
 
                 Applications = new ObservableCollection<ApplicationDto>(apps);
@@ -237,7 +247,7 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// ✅ NEW INSTALL FLOW: Download manifest → Create shortcut (NO package download yet)
+        /// NEW INSTALL FLOW: Download manifest → Create shortcut (NO package download yet)
         /// </summary>
         private async Task InstallApplicationAsync()
         {
@@ -259,14 +269,14 @@ namespace ClientLauncher.ViewModels
                 await Task.Delay(500);
                 ProgressValue = 20;
 
-                // ✅ STEP 1: Check if manifest exists locally
+                // STEP 1: Check if manifest exists locally
                 StatusMessage = "Checking manifest...";
                 var localManifest = await _manifestService.GetLocalManifestAsync(SelectedApplication.AppCode);
 
                 if (localManifest == null)
                 {
                     _logger.Info($"No local manifest found, downloading from server for {SelectedApplication.AppCode}");
-                    
+
                     ProgressValue = 40;
                     StatusMessage = "Downloading manifest from server...";
 
@@ -291,12 +301,12 @@ namespace ClientLauncher.ViewModels
 
                 ProgressValue = 60;
 
-                // ✅ STEP 2: Create desktop shortcut
+                // STEP 2: Create desktop shortcut
                 StatusMessage = "Creating desktop shortcut...";
-                
+
                 var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
                 var iconPath = GetIconPathForCategory(SelectedApplication.Category);
-                
+
                 var shortcutCreated = _shortcutService.CreateDesktopShortcut(
                     SelectedApplication.AppCode,
                     SelectedApplication.Name,
@@ -327,7 +337,7 @@ namespace ClientLauncher.ViewModels
                 InstallationResult = $"✓ {SelectedApplication.Name} setup completed!\n\n" +
                       $"Version: {localManifest.Binary?.Version}\n" +
                       $"📦 The application package will be downloaded when you first run it.\n\n" +
-                      $"✅ Desktop shortcut created!\n\n" +
+                      $"Desktop shortcut created!\n\n" +
                       $"Click the desktop icon to download and launch the application.";
 
                 _logger.Info($"Installation setup completed for {SelectedApplication.AppCode}");
@@ -356,7 +366,7 @@ namespace ClientLauncher.ViewModels
         private string? GetIconPathForCategory(string category)
         {
             var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            
+
             var iconMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "Cage", "Assets\\Icons\\app_cage.ico" },

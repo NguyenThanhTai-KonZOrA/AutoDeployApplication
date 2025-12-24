@@ -21,7 +21,7 @@ if (config == null)
 }
 else
 {
-    Console.WriteLine($"✅ NLog configuration loaded. Targets: {string.Join(", ", config.AllTargets.Select(t => t.Name))}");
+    Console.WriteLine($"NLog configuration loaded. Targets: {string.Join(", ", config.AllTargets.Select(t => t.Name))}");
 }
 
 try

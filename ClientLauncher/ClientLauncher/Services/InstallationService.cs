@@ -55,7 +55,7 @@ namespace ClientLauncher.Services
                 // 3. Extract to app folder
                 var appPath = Path.Combine(_appsBasePath, appCode, "App");
 
-                // ✅ If exists, this is an UPDATE - backup first
+                // If exists, this is an UPDATE - backup first
                 string? backupPath = null;
                 if (Directory.Exists(appPath))
                 {
