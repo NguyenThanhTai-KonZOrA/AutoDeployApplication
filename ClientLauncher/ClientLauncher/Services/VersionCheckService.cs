@@ -11,7 +11,7 @@ namespace ClientLauncher.Services
     public class VersionCheckService : IVersionCheckService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _serverUrl = "https://localhost:7172";
+        private readonly string _serverUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "https://localhost:7172/api";
         private readonly string _appsBasePath = @"C:\CompanyApps";
 
         public VersionCheckService()

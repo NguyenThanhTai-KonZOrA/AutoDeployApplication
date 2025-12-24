@@ -214,12 +214,12 @@
                     <!-- Update the application list item template to show version info and uninstall button -->
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="20" 
-                Margin="15" 
-                Background="#FAFAFA" 
-                BorderBrush="#E0E0E0" 
-                BorderThickness="1"
-                CornerRadius="8">
+                            <Border Padding="10" 
+                                    Margin="3" 
+                                    Background="#FAFAFA" 
+                                    BorderBrush="#E0E0E0" 
+                                    BorderThickness="1"
+                                    CornerRadius="8">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
@@ -232,18 +232,18 @@
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="10"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- Icon -->
                                     <Border Grid.Column="0" 
-           Width="50" 
-           Height="50" 
-           Background="Transparent" 
-           CornerRadius="8"
-           VerticalAlignment="Top">
+                                            Width="50" 
+                                            Height="50" 
+                                            Background="Transparent" 
+                                            CornerRadius="8"
+                                            VerticalAlignment="Top">
                                         <Image Stretch="Uniform">
                                             <Image.Source>
                                                 <MultiBinding Converter="{StaticResource IconConverter}">
@@ -255,20 +255,20 @@
                                     </Border>
 
                                     <!-- Info -->
-                                    <StackPanel Grid.Column="1" Margin="15,0,0,0">
+                                    <StackPanel Grid.Column="1" Margin="5,0,0,0">
                                         <TextBlock Text="{Binding Name}" 
-                               FontSize="25" 
+                               FontSize="20" 
                                FontWeight="SemiBold"
                                Foreground="#2C3E50"/>
                                         <TextBlock Text="{Binding Description}" 
-                               FontSize="20" 
+                               FontSize="15" 
                                Foreground="#7F8C8D"
                                TextWrapping="Wrap"
                                Margin="0,5,0,0"/>
 
                                         <!-- Status and Version Info -->
                                         <TextBlock Text="{Binding StatusText}" 
-                               FontSize="20" 
+                               FontSize="15" 
                                FontWeight="SemiBold"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0">
@@ -295,7 +295,7 @@
                                 CornerRadius="3"
                                 Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Category}" 
-                                       FontSize="15" 
+                                       FontSize="14" 
                                        Foreground="White"
                                        FontWeight="SemiBold"/>
                                             </Border>
@@ -327,9 +327,9 @@
                                         Content="🗑️ Uninstall"
                                         Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                         CommandParameter="{Binding}"
-                                        Padding="12,12"
+                                        Padding="10,10"
                                         Background="#E74C3C"
-                                            Margin="30 90 10 10"
+                                            Margin="40 70 5 5"
                                         Foreground="White"
                                         BorderThickness="0"
                                         Cursor="Hand"

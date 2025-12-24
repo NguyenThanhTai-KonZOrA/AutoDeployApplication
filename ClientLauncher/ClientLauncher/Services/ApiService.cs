@@ -2,6 +2,7 @@
 using ClientLauncher.Models.Response;
 using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
@@ -12,7 +13,7 @@ namespace ClientLauncher.Services
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _baseUrl = "https://localhost:7172/api";
+        private readonly string _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "https://localhost:7172/api";
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public ApiService()
