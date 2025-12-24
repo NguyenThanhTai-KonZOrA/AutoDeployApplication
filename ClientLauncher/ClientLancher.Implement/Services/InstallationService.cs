@@ -33,7 +33,7 @@ namespace ClientLancher.Implement.Services
             _appCatalogService = appCatalogService;
             _httpClient = httpClient;
             _logger = logger;
-            _serverUrl = "https://localhost:7172"; // Load from config
+            _serverUrl = "http://10.21.10.1:8102"; // Load from config
             _appsBasePath = "C:\\CompanyApps";
         }
 

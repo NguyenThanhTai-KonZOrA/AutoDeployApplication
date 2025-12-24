@@ -18,7 +18,7 @@ namespace ClientLancher.Implement.Services
             _httpClient = httpClient;
             _versionService = versionService;
             _logger = logger;
-            _serverUrl = "https://localhost:7172"; // Load from config
+            _serverUrl = "http://10.21.10.1:8102"; // Load from config
         }
 
         public async Task<bool> CheckAndApplyUpdatesAsync(string appCode)

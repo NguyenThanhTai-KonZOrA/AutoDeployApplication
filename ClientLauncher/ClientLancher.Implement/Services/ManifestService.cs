@@ -19,7 +19,7 @@ namespace ClientLancher.Implement.Services
             _logger = logger;
             _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _serverUrl = "https://localhost:7172"; // Load from config
+            _serverUrl = "http://10.21.10.1:8102"; // Load from config
         }
 
         public async Task<AppManifest?> GetManifestAsync(string appCode)
@@ -327,12 +327,12 @@ namespace ClientLancher.Implement.Services
                 binary = new BinaryInfo
                 {
                     version = "0.0.1",
-                    package = $"{appCode}_v0.0.1.zip"
+                    package = $"{appCode}_v1.1.0.zip"
                 },
                 config = new ConfigInfo
                 {
                     version = "0.0.1",
-                    package = $"{appCode}_v0.0.1.zip",
+                    package = $"{appCode}_v1.1.0.zip",
                     mergeStrategy = "preserveLocal"
                 },
                 updatePolicy = new UpdatePolicy

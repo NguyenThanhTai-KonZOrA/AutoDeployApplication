@@ -14,7 +14,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 {
                     new Application
                     {
-                        AppCode = "APP001",
+                        AppCode = "LevyTicketMonitor",
                         Name = "Levy Ticket Monitor",
                         Description = "Application for monitoring levy tickets",
                         IconUrl = "/icons/levy.png",
@@ -23,8 +23,8 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     },
                     new Application
                     {
-                        AppCode = "APP002",
-                        Name = "CSEntry",
+                        AppCode = "HTCasinoEntry",
+                        Name = "HT Casino Entry",
                         Description = "Application for checking Patron In/Out ",
                         IconUrl = "/icons/levy.png",
                         Category = "HTR",
@@ -32,9 +32,9 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     },
                     new Application
                     {
-                        AppCode = "APP003",
-                        Name = "Inventory Tracker",
-                        Description = "Application for managing inventory and stock levels",
+                        AppCode = "QueueTicketDisplay",
+                        Name = "Queue Ticket Display",
+                        Description = "Application for display queue ticket",
                         IconUrl = "/icons/levy.png",
                         Category = "Finance",
                         IsActive = true

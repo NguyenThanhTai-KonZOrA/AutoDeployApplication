@@ -8,26 +8,24 @@ namespace AppServer.API.Controllers
     [Route("api/apps")]
     public class ManifestController : ControllerBase
     {
-        private readonly IManifestService _manifestService;
+        private readonly IServerManifestService _manifestService;
         private readonly ILogger<ManifestController> _logger;
         private readonly string _manifestsBasePath;
         private readonly IWebHostEnvironment _environment;
 
         public ManifestController(
-               IManifestService manifestService,
-               ILogger<ManifestController> logger,
-               IWebHostEnvironment environment)
+            IServerManifestService manifestService,
+            ILogger<ManifestController> logger,
+            IWebHostEnvironment environment)
         {
             _manifestService = manifestService;
             _logger = logger;
             _environment = environment;
             _manifestsBasePath = Path.Combine(_environment.ContentRootPath, "Manifests");
-
-            Directory.CreateDirectory(_manifestsBasePath);
         }
 
         /// <summary>
-        /// Get manifest as JSON object (existing endpoint)
+        /// Get manifest as JSON object
         /// </summary>
         [HttpGet("{appCode}/manifest")]
         public async Task<ActionResult<AppManifest>> GetManifest(string appCode)
@@ -49,7 +47,7 @@ namespace AppServer.API.Controllers
         }
 
         /// <summary>
-        /// NEW: Get only version info from server manifest
+        /// Get only version info from server manifest
         /// </summary>
         [HttpGet("{appCode}/version")]
         public async Task<IActionResult> GetManifestVersion(string appCode)
@@ -70,15 +68,6 @@ namespace AppServer.API.Controllers
                     updateType = manifest.updatePolicy?.type ?? "none",
                     forceUpdate = manifest.updatePolicy?.force ?? false
                 };
-
-                //var versionInfo = new
-                //{
-                //    appCode = manifest.appCode,
-                //    binaryVersion = "1.0.0",
-                //    configVersion = "0.0.0",
-                //    updateType = "none",
-                //    forceUpdate = true
-                //};
 
                 return Ok(versionInfo);
             }
@@ -106,34 +95,13 @@ namespace AppServer.API.Controllers
                     return BadRequest("Invalid application code");
                 }
 
-                var manifestsBasePath = Path.Combine(Directory.GetCurrentDirectory(), "Manifests");
-                var manifestPath = Path.Combine(manifestsBasePath, appCode, "manifest.json");
+                var manifestPath = Path.Combine(_manifestsBasePath, appCode, "manifest.json");
 
                 _logger.LogInformation("Looking for manifest at: {Path}", manifestPath);
 
                 if (!System.IO.File.Exists(manifestPath))
                 {
                     _logger.LogWarning("Manifest file not found: {Path}", manifestPath);
-                    // List available manifests for debugging
-                    var appManifestDir = Path.Combine(_manifestsBasePath, appCode);
-                    if (Directory.Exists(appManifestDir))
-                    {
-                        var files = Directory.GetFiles(appManifestDir);
-                        _logger.LogInformation("Available files in {AppCode}: {Files}",
-                            appCode, string.Join(", ", files.Select(Path.GetFileName)));
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Manifest directory does not exist: {Dir}", appManifestDir);
-
-                        // List all app directories
-                        if (Directory.Exists(_manifestsBasePath))
-                        {
-                            var dirs = Directory.GetDirectories(_manifestsBasePath);
-                            _logger.LogInformation("Available app directories: {Dirs}",
-                                string.Join(", ", dirs.Select(Path.GetFileName)));
-                        }
-                    }
                     return NotFound($"Manifest file not found for app: {appCode}");
                 }
 
