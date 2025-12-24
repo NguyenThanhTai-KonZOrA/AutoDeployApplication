@@ -1,0 +1,16 @@
+{
+  "appCode": "QueueTicketDisplay",
+  "binary": {
+    "version": "v1.2.0",
+    "package": "QueueTicketDisplay_v1.1.zip"
+  },
+  "config": {
+    "version": "v1.2.0",
+    "package": "QueueTicketDisplay_v1.1.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

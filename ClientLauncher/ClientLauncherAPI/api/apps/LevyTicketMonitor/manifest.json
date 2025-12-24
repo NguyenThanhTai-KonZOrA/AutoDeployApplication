@@ -1,0 +1,16 @@
+{
+  "appCode": "LevyTicketMonitor",
+  "binary": {
+    "version": "v1.2.0",
+    "package": "LevyTicketMonitor_v1.1.0.zip"
+  },
+  "config": {
+    "version": "v1.1.0",
+    "package": "LevyTicketMonitor_v1.1.0.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

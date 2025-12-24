@@ -7,6 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Page Include="api\apps\HTCasinoEntry\manifest.json" />
+    <Page Include="api\apps\LevyTicketMonitor\manifest.json" />
+    <Page Include="api\apps\QueueTicketDisplay\manifest.json" />
+    <Page Include="Manifests\HTCasinoEntry\manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Page>
+    <Page Include="Manifests\LevyTicketMonitor\manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Page>
+    <Page Include="Manifests\QueueTicketDisplay\manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Page>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
@@ -24,6 +39,30 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ClientLancher.Implement\ClientLancher.Implement.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Packages\HTCasinoEntry\manifest.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Packages\LevyTicketMonitor\manifest.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Packages\QueueTicketDisplay\manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Packages\HTCasinoEntry\HTCasinoEntry_v1.1.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Packages\LevyTicketMonitor\LevyTicketMonitor_v1.1.0.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Packages\QueueTicketDisplay\QueueTicketDisplay_v1.1.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
