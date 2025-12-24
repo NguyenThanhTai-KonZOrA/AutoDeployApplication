@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="Manifests\HTCasinoEntry\manifest.json" />
+    <Content Remove="Manifests\LevyTicketMonitor\manifest.json" />
+    <Content Remove="Manifests\QueueTicketDisplay\manifest.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Page Include="api\apps\HTCasinoEntry\manifest.json" />
     <Page Include="api\apps\LevyTicketMonitor\manifest.json" />
     <Page Include="api\apps\QueueTicketDisplay\manifest.json" />
@@ -54,13 +60,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Packages\HTCasinoEntry\HTCasinoEntry_v1.1.zip">
+    <None Update="Packages\HTCasinoEntry\HTCasinoEntry_v1.2.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Packages\LevyTicketMonitor\LevyTicketMonitor_v1.1.0.zip">
+    <None Update="Packages\LevyTicketMonitor\LevyTicketMonitor_v1.2.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Packages\QueueTicketDisplay\QueueTicketDisplay_v1.1.zip">
+    <None Update="Packages\QueueTicketDisplay\QueueTicketDisplay_v1.2.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

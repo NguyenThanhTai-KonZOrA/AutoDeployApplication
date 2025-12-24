@@ -1,9 +1,10 @@
-﻿using NLog;
-using ClientLauncher.Helpers;
+﻿using ClientLauncher.Helpers;
 using ClientLauncher.Models;
 using ClientLauncher.Services;
 using ClientLauncher.Services.Interface;
+using NLog;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
@@ -14,7 +15,8 @@ namespace ClientLauncher.ViewModels
     {
         private readonly IApiService _apiService;
         private readonly IShortcutService _shortcutService;
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private readonly IManifestService _manifestService; // ✅ Add
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
@@ -131,19 +133,15 @@ namespace ClientLauncher.ViewModels
         {
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
+            _manifestService = new ManifestService(); // ✅ Initialize
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
                 async _ => await InstallApplicationAsync(),
                 _ => SelectedApplication != null && !IsProcessing
             );
-            UninstallCommand = new AsyncRelayCommand( 
-                async _ => await UninstallApplicationAsync(),
-                _ => SelectedApplication != null && SelectedApplication.IsInstalled && !IsProcessing
-            );
             BackToListCommand = new RelayCommand(_ => BackToList());
 
-            // Load applications on startup
             _ = LoadApplicationsAsync();
             InitializeClockTimer();
         }
@@ -155,7 +153,7 @@ namespace ClientLauncher.ViewModels
         {
             try
             {
-                Logger.Info("Loading applications list");
+                _logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
@@ -163,7 +161,7 @@ namespace ClientLauncher.ViewModels
 
                 foreach (var app in apps)
                 {
-                    Logger.Debug("Checking status for application: {AppCode}", app.AppCode);
+                    _logger.Debug("Checking status for application: {AppCode}", app.AppCode);
 
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
 
@@ -183,7 +181,7 @@ namespace ClientLauncher.ViewModels
 
                                 if (app.HasUpdate)
                                 {
-                                    Logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
+                                    _logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
                                         app.AppCode, app.InstalledVersion, app.ServerVersion);
                                 }
                             }
@@ -206,11 +204,11 @@ namespace ClientLauncher.ViewModels
 
                 Applications = new ObservableCollection<ApplicationDto>(apps);
                 StatusMessage = $"Loaded {apps.Count} applications";
-                Logger.Info("Successfully loaded {Count} applications", apps.Count);
+                _logger.Info("Successfully loaded {Count} applications", apps.Count);
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Failed to load applications");
+                _logger.Error(ex, "Failed to load applications");
                 StatusMessage = $"Error: {ex.Message}";
                 MessageBox.Show($"Failed to load applications: {ex.Message}",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -238,12 +236,17 @@ namespace ClientLauncher.ViewModels
             }
         }
 
+        /// <summary>
+        /// ✅ NEW INSTALL FLOW: Download manifest → Create shortcut (NO package download yet)
+        /// </summary>
         private async Task InstallApplicationAsync()
         {
             if (SelectedApplication == null) return;
 
             try
             {
+                _logger.Info($"Starting installation setup for {SelectedApplication.Name} ({SelectedApplication.AppCode})");
+
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -256,46 +259,63 @@ namespace ClientLauncher.ViewModels
                 await Task.Delay(500);
                 ProgressValue = 20;
 
-                StatusMessage = "Downloading application...";
-                await Task.Delay(1000);
-                ProgressValue = 50;
+                // ✅ STEP 1: Check if manifest exists locally
+                StatusMessage = "Checking manifest...";
+                var localManifest = await _manifestService.GetLocalManifestAsync(SelectedApplication.AppCode);
 
-                StatusMessage = "Installing...";
-                var userName = Environment.UserName;
-                var result = await _apiService.InstallApplicationAsync(
-                    SelectedApplication.AppCode,
-                    userName
-                );
-
-                ProgressValue = 70;
-
-                // Create desktop shortcut if installation succeeded
-                if (result.Success)
+                if (localManifest == null)
                 {
-                    StatusMessage = "Creating desktop shortcut...";
-                    await Task.Delay(300);
+                    _logger.Info($"No local manifest found, downloading from server for {SelectedApplication.AppCode}");
+                    
+                    ProgressValue = 40;
+                    StatusMessage = "Downloading manifest from server...";
 
-                    var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
-                    var shortcutCreated = _shortcutService.CreateDesktopShortcut(
-                        SelectedApplication.AppCode,
-                        SelectedApplication.Name,
-                        launcherPath
-                    );
+                    // Download manifest from server
+                    var serverManifest = await _manifestService.DownloadManifestFromServerAsync(SelectedApplication.AppCode);
 
-                    if (!shortcutCreated)
+                    if (serverManifest == null)
                     {
-                        MessageBox.Show(
-                            "Application installed successfully but failed to create desktop shortcut.",
-                            "Warning",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Warning
-                        );
+                        throw new Exception("Failed to download manifest from server");
                     }
 
-                    ProgressValue = 90;
+                    // Save manifest locally
+                    await _manifestService.SaveManifestAsync(SelectedApplication.AppCode, serverManifest);
+                    localManifest = serverManifest;
+
+                    _logger.Info($"Manifest downloaded and saved for {SelectedApplication.AppCode}");
+                }
+                else
+                {
+                    _logger.Info($"Using existing local manifest for {SelectedApplication.AppCode}");
                 }
 
+                ProgressValue = 60;
+
+                // ✅ STEP 2: Create desktop shortcut
+                StatusMessage = "Creating desktop shortcut...";
+                
+                var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+                var iconPath = GetIconPathForCategory(SelectedApplication.Category);
+                
+                var shortcutCreated = _shortcutService.CreateDesktopShortcut(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.Name,
+                    launcherPath,
+                    iconPath
+                );
+
+                if (!shortcutCreated)
+                {
+                    _logger.Warn("Failed to create desktop shortcut");
+                    throw new Exception("Failed to create desktop shortcut");
+                }
+
+                _logger.Info($"Desktop shortcut created for {SelectedApplication.AppCode}");
+
+                ProgressValue = 90;
                 StatusMessage = "Finalizing...";
+                await Task.Delay(300);
+
                 ProgressValue = 100;
 
                 CurrentStep = 3;
@@ -303,28 +323,54 @@ namespace ClientLauncher.ViewModels
                 OnPropertyChanged(nameof(IsStep2Visible));
                 OnPropertyChanged(nameof(IsStep3Visible));
 
-                InstallationSuccess = result.Success;
-                InstallationResult = result.Success
-                    ? $"✓ {SelectedApplication.Name} installed successfully!\n\n" +
-                      $"Version: {result.InstalledVersion}\n" +
-                      $"Installed by: {userName}\n\n" +
-                      $"Desktop shortcut created successfully!"
-                    : $"✗ Installation failed\n\n{result.Message}\n{result.ErrorDetails}";
+                InstallationSuccess = true;
+                InstallationResult = $"✓ {SelectedApplication.Name} setup completed!\n\n" +
+                      $"Version: {localManifest.Binary?.Version}\n" +
+                      $"📦 The application package will be downloaded when you first run it.\n\n" +
+                      $"✅ Desktop shortcut created!\n\n" +
+                      $"Click the desktop icon to download and launch the application.";
+
+                _logger.Info($"Installation setup completed for {SelectedApplication.AppCode}");
             }
             catch (Exception ex)
             {
+                _logger.Error(ex, "Installation setup failed");
+
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
                 OnPropertyChanged(nameof(IsStep3Visible));
 
                 InstallationSuccess = false;
-                InstallationResult = $"✗ Installation failed\n\n{ex.Message}";
+                InstallationResult = $"✗ Installation setup failed\n\n{ex.Message}";
             }
             finally
             {
                 IsProcessing = false;
             }
+        }
+
+        /// <summary>
+        /// Get icon path based on category
+        /// </summary>
+        private string? GetIconPathForCategory(string category)
+        {
+            var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            
+            var iconMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "Cage", "Assets\\Icons\\app_cage.ico" },
+                { "HTR", "Assets\\Icons\\app_htr.ico" },
+                { "Finance", "Assets\\Icons\\app_finance.ico" }
+            };
+
+            if (iconMap.TryGetValue(category, out var iconPath))
+            {
+                var fullPath = Path.Combine(basePath ?? string.Empty, iconPath);
+                return File.Exists(fullPath) ? fullPath : null;
+            }
+
+            return null;
         }
 
         /// <summary>

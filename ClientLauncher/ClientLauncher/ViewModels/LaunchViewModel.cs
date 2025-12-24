@@ -1,8 +1,12 @@
 ﻿using ClientLauncher.Helpers;
+using ClientLauncher.Models;
 using ClientLauncher.Services;
 using ClientLauncher.Services.Interface;
+using NLog;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace ClientLauncher.ViewModels
@@ -11,9 +15,11 @@ namespace ClientLauncher.ViewModels
     {
         private readonly string _appCode;
         private readonly Window _window;
-        private readonly IVersionCheckService _versionCheckService;
+        private readonly IManifestService _manifestService;
+        private readonly IInstallationService _installationService;
         private readonly IApiService _apiService;
         private readonly string _appsBasePath = @"C:\CompanyApps";
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         private string _appName = "Loading...";
         public string AppName
@@ -94,12 +100,15 @@ namespace ClientLauncher.ViewModels
         {
             _appCode = appCode;
             _window = window;
-            _versionCheckService = new VersionCheckService();
+            _manifestService = new ManifestService();
+            _installationService = new InstallationService();
             _apiService = new ApiService();
 
             CancelCommand = new RelayCommand(_ => Cancel());
             UpdateAndLaunchCommand = new AsyncRelayCommand(async _ => await UpdateAndLaunchAsync());
             LaunchWithoutUpdateCommand = new RelayCommand(_ => LaunchWithoutUpdate());
+
+            _logger.Info($"LaunchViewModel initialized for {appCode}");
 
             // Start the launch sequence
             _ = LaunchSequenceAsync();
@@ -114,51 +123,115 @@ namespace ClientLauncher.ViewModels
                 await GetAppInfoAsync();
                 await Task.Delay(500);
 
-                // Step 2: Check for updates
-                StatusEmoji = "🔍";
-                StatusMessage = "Checking for updates...";
+                // ✅ Step 2: Load local manifest
+                StatusEmoji = "📄";
+                StatusMessage = "Loading manifest...";
+                ProgressValue = 10;
+
+                var localManifest = await _manifestService.GetLocalManifestAsync(_appCode);
+
+                if (localManifest == null)
+                {
+                    throw new Exception("Manifest not found. Please reinstall the application.");
+                }
+
+                var localVersion = localManifest.Binary?.Version ?? "0.0.0";
+                _logger.Info($"Local manifest loaded: {_appCode} v{localVersion}");
+
                 ProgressValue = 20;
 
-                var versionCheck = await _versionCheckService.CheckForUpdatesAsync(_appCode);
+                // ✅ Step 3: Download server manifest to check version
+                StatusEmoji = "🔍";
+                StatusMessage = "Checking for updates...";
+
+                var serverManifest = await _manifestService.DownloadManifestFromServerAsync(_appCode);
+
+                if (serverManifest == null)
+                {
+                    _logger.Warn("Could not fetch server manifest, proceeding with local version");
+                    
+                    // Check if app binary exists
+                    var appPath = Path.Combine(_appsBasePath, _appCode, "App");
+                    if (!Directory.Exists(appPath) || Directory.GetFiles(appPath, "*.exe").Length == 0)
+                    {
+                        // No binary installed, must download
+                        _logger.Info("No binary found, downloading initial package...");
+                        await DownloadAndInstallPackageAsync(localManifest);
+                    }
+
+                    await LaunchApplicationSequenceAsync();
+                    return;
+                }
+
+                var serverVersion = serverManifest.Binary?.Version ?? "0.0.0";
+                _logger.Info($"Server manifest loaded: {_appCode} v{serverVersion}");
 
                 ProgressValue = 40;
 
-                // If update available, show prompt
-                if (versionCheck.UpdateAvailable)
+                // ✅ Step 4: Compare versions
+                var hasUpdate = IsNewerVersion(serverVersion, localVersion);
+
+                // ✅ Check if binary exists
+                var binaryPath = Path.Combine(_appsBasePath, _appCode, "App");
+                var binaryExists = Directory.Exists(binaryPath) && Directory.GetFiles(binaryPath, "*.exe").Length > 0;
+
+                if (!binaryExists)
                 {
+                    // ✅ First run - download package
+                    _logger.Info("First run detected, downloading package...");
+                    
+                    StatusEmoji = "⬇️";
+                    StatusMessage = "Downloading application (first run)...";
+                    ProgressValue = 50;
+
+                    await DownloadAndInstallPackageAsync(serverManifest);
+                    
+                    // Save updated manifest
+                    await _manifestService.SaveManifestAsync(_appCode, serverManifest);
+
+                    await LaunchApplicationSequenceAsync();
+                    return;
+                }
+
+                if (hasUpdate)
+                {
+                    // ✅ Show update prompt
+                    var forceUpdate = serverManifest.UpdatePolicy?.Force ?? false;
+
                     StatusEmoji = "⚠️";
                     IsProcessing = false;
                     IsIndeterminate = false;
                     ShowUpdatePrompt = true;
-                    ForceUpdate = versionCheck.ForceUpdate;
+                    ForceUpdate = forceUpdate;
 
-                    UpdateMessage = versionCheck.ForceUpdate
+                    UpdateMessage = forceUpdate
                         ? $"🔴 CRITICAL UPDATE REQUIRED\n\n" +
-                          $"Current version: {versionCheck.LocalVersion}\n" +
-                          $"New version: {versionCheck.ServerVersion}\n\n" +
+                          $"Current version: {localVersion}\n" +
+                          $"New version: {serverVersion}\n\n" +
                           $"This update is mandatory and must be installed before launching."
                         : $"📦 New version available!\n\n" +
-                          $"Current version: {versionCheck.LocalVersion}\n" +
-                          $"New version: {versionCheck.ServerVersion}\n\n" +
+                          $"Current version: {localVersion}\n" +
+                          $"New version: {serverVersion}\n\n" +
                           $"Would you like to update now?";
 
-                    StatusMessage = versionCheck.Message;
+                    StatusMessage = $"Update available: v{serverVersion}";
 
-                    // If force update, disable skip option
-                    if (versionCheck.ForceUpdate)
+                    if (forceUpdate)
                     {
-                        CanCancel = false; // Can't cancel if force update
+                        CanCancel = false;
                     }
 
                     return; // Wait for user action
                 }
 
-                // No update needed, continue to launch
+                // ✅ No update needed, launch directly
+                _logger.Info("Application is up to date, launching...");
                 ProgressValue = 60;
                 await LaunchApplicationSequenceAsync();
             }
             catch (Exception ex)
             {
+                _logger.Error(ex, "Launch sequence failed");
                 StatusEmoji = "❌";
                 StatusMessage = $"Error: {ex.Message}";
                 IsProcessing = false;
@@ -181,24 +254,32 @@ namespace ClientLauncher.ViewModels
                 StatusMessage = "Downloading update...";
                 ProgressValue = 50;
 
-                // Call update API
-                var userName = Environment.UserName;
-                var result = await _apiService.InstallApplicationAsync(_appCode, userName);
+                // ✅ Get server manifest
+                var serverManifest = await _manifestService.DownloadManifestFromServerAsync(_appCode);
 
-                if (!result.Success)
+                if (serverManifest == null)
                 {
-                    throw new Exception($"Update failed: {result.Message}");
+                    throw new Exception("Failed to get manifest from server");
                 }
+
+                _logger.Info($"Starting update: {_appCode} to v{serverManifest.Binary?.Version}");
+
+                // ✅ Download and install package
+                await DownloadAndInstallPackageAsync(serverManifest);
+
+                // ✅ Save updated manifest
+                await _manifestService.SaveManifestAsync(_appCode, serverManifest);
 
                 ProgressValue = 80;
                 StatusMessage = "Update completed successfully";
-                await Task.Delay(3000);
+                await Task.Delay(500);
 
-                // Continue to launch
                 await LaunchApplicationSequenceAsync();
             }
             catch (Exception ex)
             {
+                _logger.Error(ex, "Update failed");
+
                 StatusEmoji = "❌";
                 StatusMessage = $"Update failed: {ex.Message}";
                 IsProcessing = false;
@@ -235,7 +316,7 @@ namespace ClientLauncher.ViewModels
             StatusMessage = "Launching application...";
             ProgressValue = 90;
 
-            await Task.Delay(2000);
+            await Task.Delay(500);
 
             LaunchApplication();
 
@@ -244,6 +325,40 @@ namespace ClientLauncher.ViewModels
 
             await Task.Delay(100);
             _window.Close();
+        }
+
+        /// <summary>
+        /// ✅ Download and install package using manifest info
+        /// </summary>
+        private async Task DownloadAndInstallPackageAsync(ManifestDto manifest)
+        {
+            try
+            {
+                var packageName = _manifestService.GetPackageName(manifest);
+                
+                if (string.IsNullOrEmpty(packageName))
+                {
+                    throw new Exception("Package name not found in manifest");
+                }
+
+                _logger.Info($"Installing package: {packageName}");
+
+                StatusMessage = $"Downloading {packageName}...";
+                
+                var result = await _installationService.InstallApplicationAsync(_appCode, packageName);
+
+                if (!result.Success)
+                {
+                    throw new Exception($"Installation failed: {result.Message}");
+                }
+
+                _logger.Info($"Package installed successfully: {packageName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Package installation failed");
+                throw;
+            }
         }
 
         private async Task GetAppInfoAsync()
@@ -273,7 +388,6 @@ namespace ClientLauncher.ViewModels
             try
             {
                 var appPath = Path.Combine(_appsBasePath, _appCode, "App");
-
                 var exeFiles = Directory.GetFiles(appPath, "*.exe", SearchOption.TopDirectoryOnly);
 
                 if (exeFiles.Length > 0)
@@ -288,6 +402,7 @@ namespace ClientLauncher.ViewModels
                     };
 
                     Process.Start(processInfo);
+                    _logger.Info($"Application launched: {exePath}");
                 }
                 else
                 {
@@ -296,7 +411,22 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
+                _logger.Error(ex, "Failed to launch application");
                 throw new Exception($"Failed to launch application: {ex.Message}", ex);
+            }
+        }
+
+        private bool IsNewerVersion(string serverVersion, string localVersion)
+        {
+            try
+            {
+                var server = new Version(serverVersion);
+                var local = new Version(localVersion);
+                return server > local;
+            }
+            catch
+            {
+                return serverVersion != localVersion;
             }
         }
 
