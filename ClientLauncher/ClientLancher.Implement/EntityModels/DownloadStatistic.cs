@@ -1,9 +1,8 @@
-﻿namespace ClientLancher.Implement.EntityModels
+﻿using ClientLancher.Common.BaseEntity;
+
+namespace ClientLancher.Implement.EntityModels
 {
-    /// <summary>
-    /// Thống kê download cho analytics
-    /// </summary>
-    public class DownloadStatistic
+    public class DownloadStatistic : BaseEntity
     {
         public int Id { get; set; }
         public int PackageVersionId { get; set; }

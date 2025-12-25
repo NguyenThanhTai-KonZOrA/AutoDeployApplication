@@ -1,9 +1,8 @@
-﻿namespace ClientLancher.Implement.EntityModels
+﻿using ClientLancher.Common.BaseEntity;
+
+namespace ClientLancher.Implement.EntityModels
 {
-    /// <summary>
-    /// Lịch sử triển khai từng version
-    /// </summary>
-    public class DeploymentHistory
+    public class DeploymentHistory : BaseEntity
     {
         public int Id { get; set; }
         public int PackageVersionId { get; set; }

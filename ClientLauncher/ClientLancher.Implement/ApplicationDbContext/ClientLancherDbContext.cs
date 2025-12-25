@@ -11,12 +11,11 @@ namespace ClientLancher.Implement.ApplicationDbContext
 
         public DbSet<Application> Applications { get; set; }
         public DbSet<InstallationLog> InstallationLogs { get; set; }
-
-        // ✅ NEW DbSets
         public DbSet<PackageVersion> PackageVersions { get; set; }
         public DbSet<DeploymentHistory> DeploymentHistories { get; set; }
         public DbSet<ApplicationCategory> ApplicationCategories { get; set; }
         public DbSet<DownloadStatistic> DownloadStatistics { get; set; }
+        public DbSet<ApplicationManifest> ApplicationManifests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -30,7 +29,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.AppCode).IsRequired().HasMaxLength(50);
 
-                // ✅ Category relationship
+                // Category relationship
                 entity.HasOne(e => e.Category)
                     .WithMany(c => c.Applications)
                     .HasForeignKey(e => e.CategoryId)
@@ -51,7 +50,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ✅ ApplicationCategory Configuration
+            // ApplicationCategory Configuration
             modelBuilder.Entity<ApplicationCategory>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -60,7 +59,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(200);
             });
 
-            // ✅ PackageVersion Configuration
+            // PackageVersion Configuration
             modelBuilder.Entity<PackageVersion>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -88,7 +87,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ✅ DeploymentHistory Configuration
+            // DeploymentHistory Configuration
             modelBuilder.Entity<DeploymentHistory>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -107,7 +106,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ✅ DownloadStatistic Configuration
+            // DownloadStatistic Configuration
             modelBuilder.Entity<DownloadStatistic>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -123,6 +122,33 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 entity.HasOne(e => e.PackageVersion)
                     .WithMany(p => p.DownloadStatistics)
                     .HasForeignKey(e => e.PackageVersionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ApplicationManifest Configuration
+            modelBuilder.Entity<ApplicationManifest>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Indexes
+                entity.HasIndex(e => new { e.ApplicationId, e.Version }).IsUnique();
+                entity.HasIndex(e => new { e.ApplicationId, e.IsActive, e.PublishedAt });
+
+                // Properties
+                entity.Property(e => e.Version).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BinaryVersion).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.BinaryPackage).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.ConfigVersion).HasMaxLength(50);
+                entity.Property(e => e.ConfigPackage).HasMaxLength(255);
+                entity.Property(e => e.ConfigMergeStrategy).HasMaxLength(50).HasDefaultValue("preserveLocal");
+                entity.Property(e => e.UpdateType).IsRequired().HasMaxLength(50).HasDefaultValue("both");
+                entity.Property(e => e.CreatedBy).HasMaxLength(100);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(100);
+
+                // Relationships
+                entity.HasOne(e => e.Application)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApplicationId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

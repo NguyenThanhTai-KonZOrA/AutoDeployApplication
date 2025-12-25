@@ -7,7 +7,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
     {
         public static async Task SeedAsync(ClientLancherDbContext context)
         {
-            // ✅ Seed Categories
+            // Seed Categories
             if (!await context.ApplicationCategories.AnyAsync())
             {
                 var categories = new List<ApplicationCategory>
@@ -61,9 +61,6 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         Description = "Application for monitoring levy tickets",
                         IconUrl = "/icons/levy.png",
                         CategoryId = cageCategory?.Id,
-                        Developer = "Development Team",
-                        SupportEmail = "support@yourcompany.com",
-                        RequiresAdminRights = false,
                         IsActive = true
                     },
                     new Application
@@ -73,9 +70,6 @@ namespace ClientLancher.Implement.ApplicationDbContext
                          Description = "Application for checking Patron In/Out",
                         IconUrl = "/icons/csentry.png",
                         CategoryId = htrCategory?.Id,
-                        Developer = "Development Team",
-                        SupportEmail = "support@yourcompany.com",
-                        RequiresAdminRights = false,
                         IsActive = true
                     },
                     new Application
@@ -85,8 +79,6 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         Description = "Application for display queue ticket",
                         IconUrl = "/icons/levy.png",
                         CategoryId = htrCategory?.Id,
-                        Developer = "Development Team",
-                        SupportEmail = "support@yourcompany.com",
                         IsActive = true
                     }
                 };

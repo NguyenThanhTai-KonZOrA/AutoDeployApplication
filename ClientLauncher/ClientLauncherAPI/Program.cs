@@ -31,7 +31,7 @@ else
 try
 {
 
-    logger.Info("🟢 ClientLauncher API initializing...");
+    logger.Info("🟢 Deployment Manager API initializing...");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -49,7 +49,7 @@ try
     builder.Services.Configure<DeploymentSettings>(builder.Configuration.GetSection("DeploymentSettings"));
     builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<DeploymentSettings>>().Value);
 
-    // ✅ REPOSITORIES
+    // REPOSITORIES
     builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
     builder.Services.AddScoped<IInstallationLogRepository, InstallationLogRepository>();
     builder.Services.AddScoped<IPackageVersionRepository, PackageVersionRepository>();
@@ -57,10 +57,10 @@ try
     builder.Services.AddScoped<IApplicationCategoryRepository, ApplicationCategoryRepository>();
     builder.Services.AddScoped<IDownloadStatisticRepository, DownloadStatisticRepository>();
 
-    // ✅ UNIT OF WORK
+    // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-    // ✅ SERVICES
+    // SERVICES
     builder.Services.AddScoped<IAppCatalogService, AppCatalogService>();
     builder.Services.AddScoped<IManifestService, ManifestService>();
     builder.Services.AddScoped<IServerManifestService, ServerManifestService>();
@@ -72,6 +72,8 @@ try
     builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
     builder.Services.AddScoped<IDeploymentService, DeploymentService>();
     builder.Services.AddHttpClient();
+    builder.Services.AddScoped<IApplicationManifestRepository, ApplicationManifestRepository>();
+    builder.Services.AddScoped<IManifestManagementService, ManifestManagementService>();
 
     // Add CORS if needed
     builder.Services.AddCors(options =>
@@ -88,7 +90,7 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
-        c.SwaggerDoc("v1", new() { Title = "Client Launcher API", Version = "v1" });
+        c.SwaggerDoc("v1", new() { Title = "Deployment Manager API", Version = "v1" });
     });
 
     var app = builder.Build();

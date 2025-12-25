@@ -1,6 +1,8 @@
-﻿namespace ClientLancher.Implement.EntityModels
+﻿using ClientLancher.Common.BaseEntity;
+
+namespace ClientLancher.Implement.EntityModels
 {
-    public class InstallationLog
+    public class InstallationLog : BaseEntity
     {
         public int Id { get; set; }
         public int ApplicationId { get; set; }

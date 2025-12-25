@@ -1,122 +1,76 @@
-﻿using ClientLauncher.Models;
-using ClientLauncher.Models.Response;
-using ClientLauncher.Services.Interface;
-using System.Configuration;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
+﻿using ClientLauncher.Services.Interface;
+using NLog;
 
 namespace ClientLauncher.Services
 {
     public class VersionCheckService : IVersionCheckService
     {
-        private readonly HttpClient _httpClient;
-        private readonly string _serverUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "https://localhost:7172/api";
-        private readonly string _appsBasePath = @"C:\CompanyApps";
+        private readonly IManifestService _manifestService;
+        private readonly IInstallationChecker _installationChecker;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public VersionCheckService()
         {
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            _manifestService = new ManifestService();
+            _installationChecker = new InstallationChecker();
         }
 
-        public async Task<VersionComparisonResult> CheckForUpdatesAsync(string appCode)
+        public async Task<bool> IsUpdateAvailableAsync(string appCode)
         {
             try
             {
+                Logger.Info("Checking for updates: {AppCode}", appCode);
+
                 // 1. Get local version
-                var localVersion = GetLocalVersion(appCode);
-
-                // 2. Get server version
-                var serverVersion = await GetServerVersionAsync(appCode);
-
-                if (serverVersion == null)
+                var localVersion = _installationChecker.GetInstalledVersion(appCode);
+                if (string.IsNullOrEmpty(localVersion))
                 {
-                    return new VersionComparisonResult
-                    {
-                        UpdateAvailable = false,
-                        Message = "Unable to check for updates (server unreachable)"
-                    };
+                    Logger.Debug("No local version found for {AppCode}", appCode);
+                    return false;
                 }
 
-                // 3. Compare versions
-                var updateAvailable = IsNewerVersion(serverVersion.BinaryVersion, localVersion);
+                // 2. Check against server manifest (generated from database)
+                var isUpdateAvailable = await _manifestService.IsUpdateAvailableAsync(appCode, localVersion);
 
-                return new VersionComparisonResult
-                {
-                    UpdateAvailable = updateAvailable,
-                    ForceUpdate = serverVersion.ForceUpdate,
-                    LocalVersion = localVersion,
-                    ServerVersion = serverVersion.BinaryVersion,
-                    UpdateType = serverVersion.UpdateType,
-                    Message = updateAvailable
-                        ? $"New version available: {serverVersion.BinaryVersion} (Current: {localVersion})"
-                        : "You are running the latest version"
-                };
+                Logger.Info("Update check result for {AppCode}: {Result}", appCode, isUpdateAvailable);
+                return isUpdateAvailable;
             }
             catch (Exception ex)
             {
-                return new VersionComparisonResult
-                {
-                    UpdateAvailable = false,
-                    Message = $"Error checking updates: {ex.Message}"
-                };
+                Logger.Error(ex, "Error checking for updates: {AppCode}", appCode);
+                return false;
             }
         }
 
-        private string GetLocalVersion(string appCode)
+        public async Task<string?> GetLatestVersionAsync(string appCode)
         {
             try
             {
-                var versionFile = Path.Combine(_appsBasePath, appCode, "App", "version.txt");
+                var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
+                var version = manifest?.Binary?.Version;
 
-                if (File.Exists(versionFile))
-                {
-                    return File.ReadAllText(versionFile).Trim();
-                }
-
-                return "0.0.0";
+                Logger.Debug("Latest version for {AppCode}: {Version}", appCode, version ?? "N/A");
+                return version;
             }
-            catch
+            catch (Exception ex)
             {
-                return "0.0.0";
-            }
-        }
-
-        private async Task<VersionCheckDto?> GetServerVersionAsync(string appCode)
-        {
-            try
-            {
-                var url = $"{_serverUrl}/apps/{appCode}/version";
-                var response = await _httpClient.GetAsync(url);
-
-                if (!response.IsSuccessStatusCode)
-                    return null;
-
-                var json = await response.Content.ReadAsStringAsync();
-                var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<VersionCheckDto>>(
-                    json,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-
-                return apiResponse?.Success == true ? apiResponse.Data : null;
-            }
-            catch
-            {
+                Logger.Error(ex, "Error getting latest version for {AppCode}", appCode);
                 return null;
             }
         }
 
-        private bool IsNewerVersion(string serverVersion, string localVersion)
+        public async Task<bool> IsForceUpdateRequiredAsync(string appCode)
         {
             try
             {
-                var server = new Version(serverVersion);
-                var local = new Version(localVersion);
-                return server > local;
+                var isForced = await _manifestService.IsUpdateForcedAsync(appCode);
+                Logger.Debug("Force update check for {AppCode}: {IsForced}", appCode, isForced);
+                return isForced;
             }
-            catch
+            catch (Exception ex)
             {
-                return serverVersion != localVersion;
+                Logger.Error(ex, "Error checking force update for {AppCode}", appCode);
+                return false;
             }
         }
     }

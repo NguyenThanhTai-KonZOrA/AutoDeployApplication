@@ -1,105 +1,79 @@
 ﻿using ClientLauncher.Services.Interface;
 using NLog;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ClientLauncher.Services
 {
     public class InstallationChecker : IInstallationChecker
     {
-        private readonly string _appsBasePath;
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        private readonly string _appBasePath;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public InstallationChecker()
         {
-            _appsBasePath = System.Configuration.ConfigurationManager.AppSettings["AppsBasePath"]
-                ?? @"C:\CompanyApps";
+            _appBasePath = @"C:\CompanyApps";
+            Logger.Debug("InstallationChecker initialized with base path: {Path}", _appBasePath);
         }
 
-        /// <summary>
-        /// Check if application is installed on LOCAL machine
-        /// </summary>
         public bool IsApplicationInstalled(string appCode)
         {
             try
             {
-                // Check 1: Manifest exists
-                var manifestPath = Path.Combine(_appsBasePath, appCode, "manifest.json");
-                if (!File.Exists(manifestPath))
+                var versionFilePath = Path.Combine(_appBasePath, appCode, "version.txt");
+                var appFolderPath = Path.Combine(_appBasePath, appCode, "App");
+
+                bool versionFileExists = File.Exists(versionFilePath);
+                bool appFolderExists = Directory.Exists(appFolderPath);
+                bool hasExecutable = false;
+
+                if (appFolderExists)
                 {
-                    _logger.Debug("Manifest not found for {AppCode} at {Path}", appCode, manifestPath);
-                    return false;
+                    hasExecutable = Directory.GetFiles(appFolderPath, "*.exe", SearchOption.TopDirectoryOnly).Any();
                 }
 
-                // Check 2: App folder exists
-                var appPath = Path.Combine(_appsBasePath, appCode, "App");
-                if (!Directory.Exists(appPath))
+                bool isInstalled = versionFileExists && appFolderExists && hasExecutable;
+
+                Logger.Info("Installation check for {AppCode}: " +
+                    "VersionFile={VersionFile}, AppFolder={AppFolder}, HasExe={HasExe}, IsInstalled={IsInstalled}",
+                    appCode, versionFileExists, appFolderExists, hasExecutable, isInstalled);
+
+                if (!isInstalled)
                 {
-                    _logger.Debug("App folder not found for {AppCode} at {Path}", appCode, appPath);
-                    return false;
+                    Logger.Debug("Installation paths checked:\n" +
+                        "  Version file: {VersionFile}\n" +
+                        "  App folder: {AppFolder}",
+                        versionFilePath, appFolderPath);
                 }
 
-                // Check 3: At least one .exe file exists
-                var exeFiles = Directory.GetFiles(appPath, "*.exe", SearchOption.TopDirectoryOnly);
-                if (exeFiles.Length == 0)
-                {
-                    _logger.Debug("No executable found for {AppCode} in {Path}", appCode, appPath);
-                    return false;
-                }
-
-                _logger.Info("Application {AppCode} is installed at {Path}", appCode, appPath);
-                return true;
+                return isInstalled;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error checking installation status for {AppCode}", appCode);
+                Logger.Error(ex, "Error checking installation for {AppCode}", appCode);
                 return false;
             }
         }
 
-        /// <summary>
-        /// Get installed version from LOCAL version.txt file
-        /// </summary>
         public string? GetInstalledVersion(string appCode)
         {
             try
             {
-                var versionFile = Path.Combine(_appsBasePath, appCode, "App", "version.txt");
+                var versionFilePath = Path.Combine(_appBasePath, appCode, "version.txt");
 
-                if (!File.Exists(versionFile))
+                if (!File.Exists(versionFilePath))
                 {
-                    _logger.Debug("Version file not found for {AppCode}", appCode);
+                    Logger.Debug("Version file not found for {AppCode} at {Path}", appCode, versionFilePath);
                     return null;
                 }
 
-                var version = File.ReadAllText(versionFile).Trim();
-                _logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                var version = File.ReadAllText(versionFilePath).Trim();
+                Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
                 return version;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error reading version for {AppCode}", appCode);
+                Logger.Error(ex, "Error reading version for {AppCode}", appCode);
                 return null;
-            }
-        }
-
-        /// <summary>
-        /// Check if manifest exists (shortcut created but app not downloaded yet)
-        /// </summary>
-        public bool HasManifest(string appCode)
-        {
-            try
-            {
-                var manifestPath = Path.Combine(_appsBasePath, appCode, "manifest.json");
-                return File.Exists(manifestPath);
-            }
-            catch
-            {
-                return false;
             }
         }
     }

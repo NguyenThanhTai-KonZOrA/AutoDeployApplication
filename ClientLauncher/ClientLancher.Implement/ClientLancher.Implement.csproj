@@ -21,4 +21,7 @@
     <PackageReference Include="NLog" Version="6.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ClientLancher.Common\ClientLancher.Common.csproj" />
+  </ItemGroup>
 </Project>

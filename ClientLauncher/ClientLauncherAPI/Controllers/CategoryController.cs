@@ -22,7 +22,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Create a new category
         /// </summary>
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<IActionResult> CreateCategory([FromBody] CategoryCreateRequest request)
         {
             try
@@ -41,7 +41,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Update an existing category
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPost("update/{id}")]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] CategoryCreateRequest request)
         {
             try
@@ -59,7 +59,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Delete a category
         /// </summary>
-        [HttpDelete("{id}")]
+        [HttpPost("delete/{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             try
@@ -125,7 +125,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Get all categories
         /// </summary>
-        [HttpGet]
+        [HttpGet("all")]
         public async Task<IActionResult> GetAllCategories()
         {
             try

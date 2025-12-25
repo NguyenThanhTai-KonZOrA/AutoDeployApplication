@@ -50,11 +50,6 @@ namespace ClientLancher.Implement.Services
                     Description = request.Description,
                     IconUrl = request.IconUrl ?? string.Empty,
                     CategoryId = request.CategoryId,
-                    Developer = request.Developer,
-                    SupportEmail = request.SupportEmail,
-                    DocumentationUrl = request.DocumentationUrl,
-                    RequiresAdminRights = request.RequiresAdminRights,
-                    MinimumOsVersion = request.MinimumOsVersion,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -107,21 +102,6 @@ namespace ClientLancher.Implement.Services
 
                 if (request.IsActive.HasValue)
                     application.IsActive = request.IsActive.Value;
-
-                if (request.Developer != null)
-                    application.Developer = request.Developer;
-
-                if (request.SupportEmail != null)
-                    application.SupportEmail = request.SupportEmail;
-
-                if (request.DocumentationUrl != null)
-                    application.DocumentationUrl = request.DocumentationUrl;
-
-                if (request.RequiresAdminRights.HasValue)
-                    application.RequiresAdminRights = request.RequiresAdminRights.Value;
-
-                if (request.MinimumOsVersion != null)
-                    application.MinimumOsVersion = request.MinimumOsVersion;
 
                 application.UpdatedAt = DateTime.UtcNow;
 
@@ -246,11 +226,6 @@ namespace ClientLancher.Implement.Services
                 CategoryId = app.CategoryId,
                 CategoryName = app.Category?.DisplayName,
                 IsActive = app.IsActive,
-                Developer = app.Developer,
-                SupportEmail = app.SupportEmail,
-                DocumentationUrl = app.DocumentationUrl,
-                RequiresAdminRights = app.RequiresAdminRights,
-                MinimumOsVersion = app.MinimumOsVersion,
                 CreatedAt = app.CreatedAt,
                 UpdatedAt = app.UpdatedAt,
                 LatestVersion = latestVersion?.Version,

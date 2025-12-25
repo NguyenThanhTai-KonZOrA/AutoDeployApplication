@@ -140,6 +140,10 @@ namespace ClientLauncher.ViewModels
                 async _ => await InstallApplicationAsync(),
                 _ => SelectedApplication != null && !IsProcessing
             );
+
+            UninstallCommand = new AsyncRelayCommand(
+            async _ => await UninstallApplicationAsync(),
+            _ => SelectedApplication != null && !IsProcessing && SelectedApplication.IsInstalled);
             BackToListCommand = new RelayCommand(_ => BackToList());
 
             _ = LoadApplicationsAsync();
@@ -192,8 +196,8 @@ namespace ClientLauncher.ViewModels
                         }
 
                         app.StatusText = app.HasUpdate
-                            ? $"Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available"
-                            : $"Installed v{app.InstalledVersion}";
+                            ? $"Installed {app.InstalledVersion} → 🆕 {app.ServerVersion} available"
+                            : $"Installed {app.InstalledVersion}";
                     }
                     else
                     {
@@ -391,7 +395,8 @@ namespace ClientLauncher.ViewModels
             if (SelectedApplication == null || !SelectedApplication.IsInstalled) return;
 
             var result = MessageBox.Show(
-                $"Are you sure you want to uninstall '{SelectedApplication.Name}'?",
+                $"Are you sure you want to uninstall '{SelectedApplication.Name}'?\n\n" +
+                $"This will remove all application files from C:\\CompanyApps\\{SelectedApplication.AppCode}",
                 "Confirm Uninstall",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning
@@ -402,6 +407,8 @@ namespace ClientLauncher.ViewModels
 
             try
             {
+                _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
+
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -410,29 +417,33 @@ namespace ClientLauncher.ViewModels
                 IsProcessing = true;
                 ProgressValue = 0;
                 StatusMessage = "Preparing uninstallation...";
-
                 await Task.Delay(500);
-                ProgressValue = 30;
 
-                StatusMessage = "Removing application files...";
-                var userName = Environment.UserName;
-                var uninstallResult = await _apiService.UninstallApplicationAsync(
+                ProgressValue = 20;
+                StatusMessage = "Removing application files from C:\\CompanyApps...";
+                await Task.Delay(300);
+
+                // FIX: Use InstallationService to uninstall
+                var installationService = new InstallationService();
+                var uninstallResult = await installationService.UninstallApplicationAsync(
                     SelectedApplication.AppCode,
-                    userName
-                );
+                    Environment.UserName);
 
-                ProgressValue = 80;
+                ProgressValue = 70;
 
-                // Remove desktop shortcut
                 if (uninstallResult.Success)
                 {
                     StatusMessage = "Removing desktop shortcut...";
                     _shortcutService.RemoveDesktopShortcut(SelectedApplication.Name);
                     ProgressValue = 90;
+                    await Task.Delay(300);
+
+                    _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
                 }
 
                 StatusMessage = "Finalizing...";
                 ProgressValue = 100;
+                await Task.Delay(300);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -442,11 +453,15 @@ namespace ClientLauncher.ViewModels
                 InstallationSuccess = uninstallResult.Success;
                 InstallationResult = uninstallResult.Success
                     ? $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
-                      $"Uninstalled by: {userName}"
+                      $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +
+                      $"Desktop shortcut removed\n\n" +
+                      $"Uninstalled by: {Environment.UserName}"
                     : $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
             }
             catch (Exception ex)
             {
+                _logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication.AppCode);
+
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));

@@ -6,18 +6,29 @@ using NLog;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace ClientLauncher.ViewModels
 {
     public class LaunchViewModel : ViewModelBase
     {
-        private readonly string _appCode;
-        private readonly Window _window;
         private readonly IManifestService _manifestService;
+        private readonly IVersionCheckService _versionCheckService;
         private readonly IInstallationService _installationService;
-        private readonly IApiService _apiService;
-        private readonly string _appsBasePath = @"C:\CompanyApps";
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        private readonly IInstallationChecker _installationChecker;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+        private string _appCode = string.Empty;
+        private string _statusMessage = "Initializing...";
+        private double _progressValue;
+        private bool _isProcessing = true;
+        private readonly Window _window;
+
+        public string AppCode
+        {
+            get => _appCode;
+            set => SetProperty(ref _appCode, value);
+        }
 
         private string _appName = "Loading...";
         public string AppName
@@ -33,26 +44,6 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _statusEmoji, value);
         }
 
-        private string _statusMessage = "Initializing...";
-        public string StatusMessage
-        {
-            get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
-        }
-
-        private double _progressValue;
-        public double ProgressValue
-        {
-            get => _progressValue;
-            set => SetProperty(ref _progressValue, value);
-        }
-
-        private bool _isProcessing = true;
-        public bool IsProcessing
-        {
-            get => _isProcessing;
-            set => SetProperty(ref _isProcessing, value);
-        }
 
         private bool _isIndeterminate = true;
         public bool IsIndeterminate
@@ -94,230 +85,282 @@ namespace ClientLauncher.ViewModels
         public AsyncRelayCommand UpdateAndLaunchCommand { get; }
         public RelayCommand LaunchWithoutUpdateCommand { get; }
 
+
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                // ✅ FIX: Update on UI thread
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    SetProperty(ref _statusMessage, value);
+                }, DispatcherPriority.Normal);
+            }
+        }
+
+        public double ProgressValue
+        {
+            get => _progressValue;
+            set
+            {
+                // ✅ FIX: Update on UI thread
+                Application.Current?.Dispatcher.Invoke(() =>
+                {
+                    SetProperty(ref _progressValue, value);
+                }, DispatcherPriority.Normal);
+            }
+        }
+
+        public bool IsProcessing
+        {
+            get => _isProcessing;
+            set => SetProperty(ref _isProcessing, value);
+        }
+
         public LaunchViewModel(string appCode, Window window)
         {
             _appCode = appCode;
             _window = window;
             _manifestService = new ManifestService();
+            _versionCheckService = new VersionCheckService();
             _installationService = new InstallationService();
-            _apiService = new ApiService();
+            _installationChecker = new InstallationChecker();
 
-            CancelCommand = new RelayCommand(_ => Cancel());
-            UpdateAndLaunchCommand = new AsyncRelayCommand(async _ => await UpdateAndLaunchAsync());
-            LaunchWithoutUpdateCommand = new RelayCommand(_ => LaunchWithoutUpdate());
-
-            _logger.Info($"LaunchViewModel initialized for {appCode}");
-
-            // Start the launch sequence
-            _ = LaunchSequenceAsync();
+            _ = InitializeAndLaunchAsync();
         }
 
-        private async Task LaunchSequenceAsync()
+        private async Task InitializeAndLaunchAsync()
         {
             try
             {
-                // Step 1: Get app info
-                StatusMessage = "Loading application information...";
-                await GetAppInfoAsync();
+                Logger.Info("=== Starting launch process for {AppCode} ===", AppCode);
+
+                // Step 1: Connecting to server
+                UpdateStatus("🔌 Connecting to server...", 5);
+                await Task.Delay(500); // ✅ Increased delay for UI update
+
+                var manifest = await _manifestService.GetManifestFromServerAsync(AppCode);
+                if (manifest == null)
+                {
+                    Logger.Error("Failed to get manifest from server for {AppCode}", AppCode);
+                    UpdateStatus("❌ Failed to connect to server", 0);
+                    await Task.Delay(2000);
+                    Application.Current.Shutdown();
+                    return;
+                }
+
+                Logger.Info("Manifest retrieved: Binary v{BinaryVersion}, Config v{ConfigVersion}",
+                    manifest.Binary?.Version, manifest.Config?.Version);
+
+                // Step 2: Checking installation status
+                UpdateStatus("🔍 Checking installation status...", 15);
                 await Task.Delay(500);
 
-                // Step 2: Load local manifest
-                StatusEmoji = "📄";
-                StatusMessage = "Loading manifest...";
-                ProgressValue = 10;
+                var isInstalled = _installationChecker.IsApplicationInstalled(AppCode);
+                var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
 
-                var localManifest = await _manifestService.GetLocalManifestAsync(_appCode);
+                Logger.Info("Installation check: IsInstalled={IsInstalled}, Version={Version}",
+                    isInstalled, currentVersion);
 
-                if (localManifest == null)
+                if (isInstalled && !string.IsNullOrEmpty(currentVersion))
                 {
-                    throw new Exception("Manifest not found. Please reinstall the application.");
-                }
+                    // ✅ FIX: App is installed, check for updates
+                    UpdateStatus("✓ Application is installed", 25);
+                    await Task.Delay(500);
 
-                var localVersion = localManifest.Binary?.Version ?? "0.0.0";
-                _logger.Info($"Local manifest loaded: {_appCode} v{localVersion}");
+                    UpdateStatus("🔍 Checking for updates...", 35);
+                    await Task.Delay(500);
 
-                ProgressValue = 20;
+                    var isUpdateAvailable = await _versionCheckService.IsUpdateAvailableAsync(AppCode);
+                    var isForceUpdate = await _versionCheckService.IsForceUpdateRequiredAsync(AppCode);
 
-                // Step 3: Download server manifest to check version
-                StatusEmoji = "🔍";
-                StatusMessage = "Checking for updates...";
-
-                var serverManifest = await _manifestService.DownloadManifestFromServerAsync(_appCode);
-
-                if (serverManifest == null)
-                {
-                    _logger.Warn("Could not fetch server manifest, proceeding with local version");
-
-                    // Check if app binary exists
-                    var appPath = Path.Combine(_appsBasePath, _appCode, "App");
-                    if (!Directory.Exists(appPath) || Directory.GetFiles(appPath, "*.exe").Length == 0)
+                    if (isUpdateAvailable)
                     {
-                        // No binary installed, must download
-                        _logger.Info("No binary found, downloading initial package...");
-                        await DownloadAndInstallPackageAsync(localManifest);
+                        Logger.Info("Update available for {AppCode}. Force={IsForce}", AppCode, isForceUpdate);
+
+                        if (isForceUpdate)
+                        {
+                            UpdateStatus("⚠️ Mandatory update required...", 40);
+                            await Task.Delay(500);
+                            await PerformUpdateAsync(manifest);
+                        }
+                        else
+                        {
+                            var result = MessageBox.Show(
+                                $"A new version ({manifest.Binary?.Version}) is available.\n\n" +
+                                $"Current version: {currentVersion}\n" +
+                                $"Do you want to update now?",
+                                "Update Available",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information);
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                await PerformUpdateAsync(manifest);
+                            }
+                            else
+                            {
+                                UpdateStatus("⏭️ Update skipped", 45);
+                                await Task.Delay(500);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // ✅ No update needed - LAUNCH DIRECTLY
+                        UpdateStatus("✓ Application is up to date", 45);
+                        await Task.Delay(500);
+
+                        Logger.Info("No update needed, launching application directly");
                     }
 
-                    await LaunchApplicationSequenceAsync();
-                    return;
+                    // ✅ FIX: Launch application directly without reinstalling
+                    await LaunchApplicationAsync();
                 }
-
-                var serverVersion = serverManifest.Binary?.Version ?? "0.0.0";
-                _logger.Info($"Server manifest loaded: {_appCode} v{serverVersion}");
-
-                ProgressValue = 40;
-
-                // Step 4: Compare versions
-                var hasUpdate = IsNewerVersion(serverVersion, localVersion);
-
-                // Check if binary exists
-                var binaryPath = Path.Combine(_appsBasePath, _appCode, "App");
-                var binaryExists = Directory.Exists(binaryPath) && Directory.GetFiles(binaryPath, "*.exe").Length > 0;
-
-                if (!binaryExists)
+                else
                 {
-                    // First run - download package
-                    _logger.Info("First run detected, downloading package...");
+                    // Not installed - perform installation
+                    Logger.Info("Application not installed. Starting installation...");
+                    UpdateStatus("📦 Application not installed. Installing...", 30);
+                    await Task.Delay(500);
 
-                    StatusEmoji = "⬇️";
-                    StatusMessage = "Downloading application (first run)...";
-                    ProgressValue = 50;
+                    await PerformInstallationAsync(manifest);
 
-                    await DownloadAndInstallPackageAsync(serverManifest);
-
-                    // Save updated manifest
-                    await _manifestService.SaveManifestAsync(_appCode, serverManifest);
-
-                    await LaunchApplicationSequenceAsync();
-                    return;
+                    // Launch after installation
+                    await LaunchApplicationAsync();
                 }
-
-                if (hasUpdate)
-                {
-                    // Show update prompt
-                    var forceUpdate = serverManifest.UpdatePolicy?.Force ?? false;
-
-                    StatusEmoji = "⚠️";
-                    IsProcessing = false;
-                    IsIndeterminate = false;
-                    ShowUpdatePrompt = true;
-                    ForceUpdate = forceUpdate;
-
-                    UpdateMessage = forceUpdate
-                        ? $"🔴 CRITICAL UPDATE REQUIRED\n\n" +
-                          $"Current version: {localVersion}\n" +
-                          $"New version: {serverVersion}\n\n" +
-                          $"This update is mandatory and must be installed before launching."
-                        : $"📦 New version available!\n\n" +
-                          $"Current version: {localVersion}\n" +
-                          $"New version: {serverVersion}\n\n" +
-                          $"Would you like to update now?";
-
-                    StatusMessage = $"Update available: v{serverVersion}";
-
-                    if (forceUpdate)
-                    {
-                        CanCancel = false;
-                    }
-
-                    return; // Wait for user action
-                }
-
-                // No update needed, launch directly
-                _logger.Info("Application is up to date, launching...");
-                ProgressValue = 60;
-                await LaunchApplicationSequenceAsync();
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Launch sequence failed");
-                StatusEmoji = "❌";
-                StatusMessage = $"Error: {ex.Message}";
+                Logger.Error(ex, "Launch process failed for {AppCode}", AppCode);
+                UpdateStatus($"❌ Error: {ex.Message}", 0);
+                await Task.Delay(3000);
+                Application.Current.Shutdown();
+            }
+            finally
+            {
                 IsProcessing = false;
-                CanCancel = true;
-
-                _window.WindowState = WindowState.Normal;
-                _window.Show();
             }
         }
 
-        private async Task UpdateAndLaunchAsync()
+        private async Task PerformUpdateAsync(ManifestDto manifest)
         {
             try
             {
-                ShowUpdatePrompt = false;
-                IsProcessing = true;
-                IsIndeterminate = true;
+                Logger.Info("Starting update process for {AppCode}", AppCode);
 
-                StatusEmoji = "⬇️";
-                StatusMessage = "Downloading update...";
-                ProgressValue = 50;
+                UpdateStatus("📥 Downloading update package...", 50);
+                await Task.Delay(800);
 
-                // Get server manifest
-                var serverManifest = await _manifestService.DownloadManifestFromServerAsync(_appCode);
+                var updateType = manifest.UpdatePolicy?.Type ?? "both";
+                Logger.Info("Update type: {UpdateType}", updateType);
 
-                if (serverManifest == null)
+                var result = await _installationService.UpdateApplicationAsync(
+                    AppCode,
+                    Environment.UserName);
+
+                if (result.Success)
                 {
-                    throw new Exception("Failed to get manifest from server");
+                    Logger.Info("Update completed successfully");
+
+                    UpdateStatus("📦 Extracting files...", 65);
+                    await Task.Delay(500);
+
+                    UpdateStatus("✓ Update completed successfully", 75);
+                    await Task.Delay(500);
+
+                    // Save updated manifest to C:\CompanyApps\{appCode}\manifest.json
+                    await _manifestService.SaveManifestAsync(AppCode, manifest);
                 }
-
-                _logger.Info($"Starting update: {_appCode} to v{serverManifest.Binary?.Version}");
-
-                // Download and install package
-                await DownloadAndInstallPackageAsync(serverManifest);
-
-                // Save updated manifest
-                await _manifestService.SaveManifestAsync(_appCode, serverManifest);
-
-                ProgressValue = 80;
-                StatusMessage = "Update completed successfully";
-                await Task.Delay(500);
-
-                await LaunchApplicationSequenceAsync();
+                else
+                {
+                    Logger.Error("Update failed: {Message}", result.Message);
+                    throw new Exception(result.Message ?? "Update failed");
+                }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Update failed");
-
-                StatusEmoji = "❌";
-                StatusMessage = $"Update failed: {ex.Message}";
-                IsProcessing = false;
-                CanCancel = true;
-
-                _window.WindowState = WindowState.Normal;
-                _window.Show();
+                Logger.Error(ex, "Update failed for {AppCode}", AppCode);
+                throw;
             }
         }
 
-        private void LaunchWithoutUpdate()
+        private async Task PerformInstallationAsync(ManifestDto manifest)
         {
-            if (ForceUpdate)
+            try
             {
-                MessageBox.Show(
-                    "This update is mandatory. You cannot launch the application without updating.",
-                    "Update Required",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
+                Logger.Info("Starting installation for {AppCode}", AppCode);
+
+                UpdateStatus("📥 Downloading installation package...", 40);
+                await Task.Delay(800);
+
+                UpdateStatus("📦 Extracting application files...", 55);
+                await Task.Delay(500);
+
+                var result = await _installationService.InstallApplicationAsync(
+                    AppCode,
+                    Environment.UserName);
+
+                if (result.Success)
+                {
+                    Logger.Info("Installation completed successfully");
+
+                    UpdateStatus("⚙️ Configuring application...", 70);
+                    await Task.Delay(500);
+
+                    UpdateStatus("✓ Installation completed successfully", 80);
+                    await Task.Delay(500);
+
+                    // Save manifest to C:\CompanyApps\{appCode}\manifest.json
+                    await _manifestService.SaveManifestAsync(AppCode, manifest);
+                }
+                else
+                {
+                    Logger.Error("Installation failed: {Message}", result.Message);
+                    throw new Exception(result.Message ?? "Installation failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Installation failed for {AppCode}", AppCode);
+                throw;
+            }
+        }
+
+        private async Task LaunchApplicationAsync()
+        {
+            // Verifying installation
+            UpdateStatus("🔍 Verifying installation...", 85);
+            await Task.Delay(500);
+
+            // Launching application
+            UpdateStatus("🚀 Launching application...", 92);
+            await Task.Delay(500);
+
+            var appPath = GetApplicationPath();
+            if (string.IsNullOrEmpty(appPath) || !File.Exists(appPath))
+            {
+                Logger.Error("Application executable not found at: {Path}", appPath);
+                UpdateStatus("❌ Application executable not found", 0);
+                await Task.Delay(2000);
+                Application.Current.Shutdown();
                 return;
             }
 
-            ShowUpdatePrompt = false;
-            IsProcessing = true;
-            IsIndeterminate = true;
+            Logger.Info("Launching: {AppPath}", appPath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = appPath,
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(appPath)
+            });
 
-            _ = LaunchApplicationSequenceAsync();
-        }
+            UpdateStatus("✓ Application launched successfully!", 100);
+            await Task.Delay(1000);
 
-        private async Task LaunchApplicationSequenceAsync()
-        {
-            StatusEmoji = "🚀";
-            StatusMessage = "Launching application...";
-            ProgressValue = 90;
-
-            await Task.Delay(500);
-
-            LaunchApplication();
-
+            Logger.Info("=== Launch process completed for {AppCode} ===", AppCode);
+            Application.Current.Shutdown();
             _window.WindowState = WindowState.Minimized;
             _window.Hide();
 
@@ -325,112 +368,41 @@ namespace ClientLauncher.ViewModels
             _window.Close();
         }
 
-        /// <summary>
-        /// Download and install package using manifest info
-        /// </summary>
-        private async Task DownloadAndInstallPackageAsync(ManifestDto manifest)
-        {
-            try
-            {
-                var packageName = _manifestService.GetPackageName(manifest);
-
-                if (string.IsNullOrEmpty(packageName))
-                {
-                    throw new Exception("Package name not found in manifest");
-                }
-
-                _logger.Info($"Installing package: {packageName}");
-
-                StatusMessage = $"Downloading {packageName}...";
-
-                var result = await _installationService.InstallApplicationAsync(_appCode, packageName);
-
-                if (!result.Success)
-                {
-                    throw new Exception($"Installation failed: {result.Message}");
-                }
-
-                _logger.Info($"Package installed successfully: {packageName}");
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Package installation failed");
-                throw;
-            }
-        }
-
-        private async Task GetAppInfoAsync()
-        {
-            try
-            {
-                var apps = await _apiService.GetAllApplicationsAsync();
-                var app = apps.FirstOrDefault(a => a.AppCode == _appCode);
-
-                if (app != null)
-                {
-                    AppName = app.Name;
-                }
-                else
-                {
-                    AppName = _appCode;
-                }
-            }
-            catch
-            {
-                AppName = _appCode;
-            }
-        }
-
-        private void LaunchApplication()
-        {
-            try
-            {
-                var appPath = Path.Combine(_appsBasePath, _appCode, "App");
-                var exeFiles = Directory.GetFiles(appPath, "*.exe", SearchOption.TopDirectoryOnly);
-
-                if (exeFiles.Length > 0)
-                {
-                    var exePath = exeFiles[0];
-
-                    var processInfo = new ProcessStartInfo
-                    {
-                        FileName = exePath,
-                        WorkingDirectory = appPath,
-                        UseShellExecute = true
-                    };
-
-                    Process.Start(processInfo);
-                    _logger.Info($"Application launched: {exePath}");
-                }
-                else
-                {
-                    throw new Exception($"No executable found in {appPath}");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to launch application");
-                throw new Exception($"Failed to launch application: {ex.Message}", ex);
-            }
-        }
-
-        private bool IsNewerVersion(string serverVersion, string localVersion)
-        {
-            try
-            {
-                var server = new Version(serverVersion);
-                var local = new Version(localVersion);
-                return server > local;
-            }
-            catch
-            {
-                return serverVersion != localVersion;
-            }
-        }
-
         private void Cancel()
         {
             _window.Close();
+        }
+
+        private string GetApplicationPath()
+        {
+            var appBasePath = Path.Combine(@"C:\CompanyApps", AppCode, "App");
+
+            // Common executable patterns
+            var possibleExes = new[]
+            {
+                Path.Combine(appBasePath, $"{AppCode}.exe"),
+                Path.Combine(appBasePath, $"{AppCode}.Application.exe")
+            };
+
+            // Try exact matches first
+            var exePath = possibleExes.FirstOrDefault(File.Exists);
+
+            // If not found, search for any .exe
+            if (string.IsNullOrEmpty(exePath) && Directory.Exists(appBasePath))
+            {
+                exePath = Directory.GetFiles(appBasePath, "*.exe", SearchOption.TopDirectoryOnly).FirstOrDefault();
+            }
+
+            Logger.Debug("Application path for {AppCode}: {Path}", AppCode, exePath ?? "NOT FOUND");
+            return exePath ?? string.Empty;
+        }
+
+        // ✅ Helper method to update status on UI thread
+        private void UpdateStatus(string message, double progress)
+        {
+            StatusMessage = message;
+            ProgressValue = progress;
+            Logger.Debug("Status: {Message} ({Progress}%)", message, progress);
         }
     }
 }

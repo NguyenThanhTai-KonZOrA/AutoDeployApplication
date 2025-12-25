@@ -8,21 +8,13 @@
 
   <ItemGroup>
     <Compile Remove="api\**" />
+    <Compile Remove="Manifests\**" />
     <Content Remove="api\**" />
+    <Content Remove="Manifests\**" />
     <EmbeddedResource Remove="api\**" />
+    <EmbeddedResource Remove="Manifests\**" />
     <None Remove="api\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Page Include="Manifests\HTCasinoEntry\manifest.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
-    <Page Include="Manifests\LevyTicketMonitor\manifest.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
-    <Page Include="Manifests\QueueTicketDisplay\manifest.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Page>
+    <None Remove="Manifests\**" />
   </ItemGroup>
 
   <ItemGroup>

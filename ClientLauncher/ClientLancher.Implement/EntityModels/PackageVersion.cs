@@ -1,9 +1,8 @@
-﻿namespace ClientLancher.Implement.EntityModels
+﻿using ClientLancher.Common.BaseEntity;
+
+namespace ClientLancher.Implement.EntityModels
 {
-    /// <summary>
-    /// Lưu trữ lịch sử các phiên bản package
-    /// </summary>
-    public class PackageVersion
+    public class PackageVersion : BaseEntity
     {
         public int Id { get; set; }
         public int ApplicationId { get; set; }
@@ -20,7 +19,6 @@
 
         // Metadata
         public string ReleaseNotes { get; set; } = string.Empty;
-        public bool IsActive { get; set; } = true; // Có thể download không
         public bool IsStable { get; set; } = true; // Stable/Beta/Alpha
         public string? MinimumClientVersion { get; set; } // Yêu cầu version ClientLauncher tối thiểu
 

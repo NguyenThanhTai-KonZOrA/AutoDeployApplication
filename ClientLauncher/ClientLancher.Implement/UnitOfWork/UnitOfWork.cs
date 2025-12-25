@@ -13,11 +13,12 @@ namespace ClientLancher.Implement.UnitOfWork
         public IApplicationRepository Applications { get; }
         public IInstallationLogRepository InstallationLogs { get; }
 
-        // ✅ NEW
+        // NEW
         public IPackageVersionRepository PackageVersions { get; }
         public IDeploymentHistoryRepository DeploymentHistories { get; }
         public IApplicationCategoryRepository ApplicationCategories { get; }
         public IDownloadStatisticRepository DownloadStatistics { get; }
+        public IApplicationManifestRepository ApplicationManifests { get; }
 
         public UnitOfWork(
             ClientLancherDbContext context,
@@ -26,7 +27,8 @@ namespace ClientLancher.Implement.UnitOfWork
             IPackageVersionRepository packageVersions,
             IDeploymentHistoryRepository deploymentHistories,
             IApplicationCategoryRepository applicationCategories,
-            IDownloadStatisticRepository downloadStatistics)
+            IDownloadStatisticRepository downloadStatistics,
+            IApplicationManifestRepository applicationManifests)
         {
             _context = context;
             Applications = applications;
@@ -35,6 +37,7 @@ namespace ClientLancher.Implement.UnitOfWork
             DeploymentHistories = deploymentHistories;
             ApplicationCategories = applicationCategories;
             DownloadStatistics = downloadStatistics;
+            ApplicationManifests = applicationManifests;
         }
 
         public async Task<int> SaveChangesAsync()

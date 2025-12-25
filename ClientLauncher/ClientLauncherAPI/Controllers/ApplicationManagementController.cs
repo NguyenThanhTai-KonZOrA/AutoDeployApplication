@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.Services.Interface;
+﻿using ClientLancher.Common.Constants;
+using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,19 +11,22 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IApplicationManagementService _appService;
         private readonly ILogger<ApplicationManagementController> _logger;
+        private readonly IManifestManagementService _manifestService;
 
         public ApplicationManagementController(
             IApplicationManagementService appService,
+            IManifestManagementService manifestService,
             ILogger<ApplicationManagementController> logger)
         {
             _appService = appService;
+            _manifestService = manifestService;
             _logger = logger;
         }
 
         /// <summary>
         /// Create a new application
         /// </summary>
-        [HttpPost]
+        [HttpPost("create")]
         public async Task<IActionResult> CreateApplication([FromBody] ApplicationCreateRequest request)
         {
             try
@@ -41,7 +45,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Update an existing application
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPost("update/{id}")]
         public async Task<IActionResult> UpdateApplication(int id, [FromBody] ApplicationUpdateRequest request)
         {
             try
@@ -59,7 +63,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Delete an application
         /// </summary>
-        [HttpDelete("{id}")]
+        [HttpPost("delete/{id}")]
         public async Task<IActionResult> DeleteApplication(int id)
         {
             try
@@ -125,7 +129,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Get all applications
         /// </summary>
-        [HttpGet]
+        [HttpGet("all")]
         public async Task<IActionResult> GetAllApplications()
         {
             try
@@ -175,5 +179,174 @@ namespace ClientLauncherAPI.Controllers
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
+
+        #region Manifest Management
+
+        /// <summary>
+        /// Create new manifest version for application
+        /// </summary>
+        [HttpPost("{id}/manifest")]
+        public async Task<IActionResult> CreateManifest(int id, [FromBody] ManifestCreateRequest request)
+        {
+            try
+            {
+                var result = await _manifestService.CreateManifestAsync(id, request, User.Identity?.Name ?? CommonConstants.SystemUser);
+                return CreatedAtAction(nameof(GetManifest), new { id, manifestId = result.Id },
+                    new { success = true, data = result, message = "Manifest created successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating manifest for application ID: {Id}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Update manifest
+        /// </summary>
+        [HttpPut("{id}/manifest/{manifestId}")]
+        public async Task<IActionResult> UpdateManifest(int id, int manifestId, [FromBody] ManifestUpdateRequest request)
+        {
+            try
+            {
+                var result = await _manifestService.UpdateManifestAsync(manifestId, request, User.Identity?.Name ?? CommonConstants.SystemUser);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating manifest ID: {ManifestId}", manifestId);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get specific manifest by ID
+        /// </summary>
+        [HttpGet("{id}/manifest/{manifestId}")]
+        public async Task<IActionResult> GetManifest(int id, int manifestId)
+        {
+            try
+            {
+                var result = await _manifestService.GetManifestByIdAsync(manifestId);
+                if (result == null)
+                {
+                    return NotFound(new { success = false, message = "Manifest not found" });
+                }
+                return Ok(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting manifest ID: {ManifestId}", manifestId);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Get latest active manifest for application
+        /// </summary>
+        [HttpGet("{id}/manifest/latest")]
+        public async Task<IActionResult> GetLatestManifest(int id)
+        {
+            try
+            {
+                var result = await _manifestService.GetLatestManifestAsync(id);
+                if (result == null)
+                {
+                    return NotFound(new { success = false, message = "No active manifest found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting latest manifest for application ID: {Id}", id);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Get manifest history for application
+        /// </summary>
+        [HttpGet("{id}/manifest/history")]
+        public async Task<IActionResult> GetManifestHistory(int id, [FromQuery] int take = 10)
+        {
+            try
+            {
+                var result = await _manifestService.GetManifestHistoryAsync(id, take);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting manifest history for application ID: {Id}", id);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Activate specific manifest version
+        /// </summary>
+        [HttpPost("{id}/manifest/{manifestId}/activate")]
+        public async Task<IActionResult> ActivateManifest(int id, int manifestId)
+        {
+            try
+            {
+                var result = await _manifestService.ActivateManifestAsync(manifestId);
+                if (!result)
+                {
+                    return NotFound(new { success = false, message = "Manifest not found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error activating manifest ID: {ManifestId}", manifestId);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Deactivate specific manifest version
+        /// </summary>
+        [HttpPost("{id}/manifest/{manifestId}/deactivate")]
+        public async Task<IActionResult> DeactivateManifest(int id, int manifestId)
+        {
+            try
+            {
+                var result = await _manifestService.DeactivateManifestAsync(manifestId);
+                if (!result)
+                {
+                    return NotFound(new { success = false, message = "Manifest not found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deactivating manifest ID: {ManifestId}", manifestId);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Delete manifest
+        /// </summary>
+        [HttpDelete("{id}/manifest/{manifestId}")]
+        public async Task<IActionResult> DeleteManifest(int id, int manifestId)
+        {
+            try
+            {
+                var result = await _manifestService.DeleteManifestAsync(manifestId);
+                if (!result)
+                {
+                    return NotFound(new { success = false, message = "Manifest not found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting manifest ID: {ManifestId}", manifestId);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        #endregion
     }
 }

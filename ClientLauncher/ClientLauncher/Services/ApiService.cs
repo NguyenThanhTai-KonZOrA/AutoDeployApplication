@@ -14,14 +14,16 @@ namespace ClientLauncher.Services
     {
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
-        private readonly IInstallationChecker _installationChecker; // Add
+        private readonly IInstallationChecker _installationChecker;
+        private readonly IManifestService _manifestService;
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public ApiService()
         {
             _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102/api";
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
-            _installationChecker = new InstallationChecker(); // Initialize
+            _installationChecker = new InstallationChecker();
+            _manifestService = new ManifestService();
 
             Logger.Debug("ApiService initialized with base URL: {BaseUrl}", _baseUrl);
         }
@@ -143,18 +145,12 @@ namespace ClientLauncher.Services
             }
         }
 
-        /// <summary>
-        /// Check installation on LOCAL machine
-        /// </summary>
         public async Task<bool> IsApplicationInstalledAsync(string appCode)
         {
             try
             {
                 Logger.Debug("Checking if application {AppCode} is installed locally", appCode);
-
-                // Check local installation instead of calling API
                 var isInstalled = _installationChecker.IsApplicationInstalled(appCode);
-
                 Logger.Info("Application {AppCode} installation status: {IsInstalled}", appCode, isInstalled);
                 return isInstalled;
             }
@@ -165,16 +161,11 @@ namespace ClientLauncher.Services
             }
         }
 
-        /// <summary>
-        /// Get installed version from LOCAL file
-        /// </summary>
         public async Task<string?> GetInstalledVersionAsync(string appCode)
         {
             try
             {
                 Logger.Debug("Getting installed version for application {AppCode}", appCode);
-
-                // Get version from local file instead of calling API
                 var version = _installationChecker.GetInstalledVersion(appCode);
 
                 if (version != null)
@@ -200,49 +191,28 @@ namespace ClientLauncher.Services
             try
             {
                 Logger.Debug("Getting server version for application {AppCode}", appCode);
-                var response = await _httpClient.GetAsync($"/api/apps/{appCode}/version");
 
-                if (!response.IsSuccessStatusCode)
+                // Use manifest service to get version from database-generated manifest
+                var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
+
+                if (manifest == null)
                 {
-                    Logger.Warn("Failed to get server version for {AppCode}: {StatusCode}",
-                        appCode, response.StatusCode);
+                    Logger.Warn("No manifest found for {AppCode}", appCode);
                     return null;
                 }
 
-                var jsonResponse = await response.Content.ReadAsStringAsync();
-
-                // Try with ApiBaseResponse wrapper
-                try
+                var versionInfo = new VersionInfoDto
                 {
-                    var apiResponse = JsonSerializer.Deserialize<ApiBaseResponse<VersionInfoDto>>(
-                        jsonResponse,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
+                    BinaryVersion = manifest.Binary?.Version ?? "0.0.0",
+                    ConfigVersion = manifest.Config?.Version ?? manifest.Binary?.Version ?? "0.0.0",
+                    UpdateType = manifest.UpdatePolicy?.Type ?? "none",
+                    ForceUpdate = manifest.UpdatePolicy?.Force ?? false
+                };
 
-                    if (apiResponse?.Success == true && apiResponse.Data != null)
-                    {
-                        Logger.Debug("Server version for {AppCode}: {Version}",
-                            appCode, apiResponse.Data.BinaryVersion);
-                        return apiResponse.Data;
-                    }
-                }
-                catch
-                {
-                    // Try direct deserialization
-                    var versionInfo = JsonSerializer.Deserialize<VersionInfoDto>(
-                        jsonResponse,
-                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                    );
+                Logger.Debug("Server version for {AppCode}: Binary={BinaryVersion}, Config={ConfigVersion}",
+                    appCode, versionInfo.BinaryVersion, versionInfo.ConfigVersion);
 
-                    if (versionInfo != null)
-                    {
-                        Logger.Debug("Server version for {AppCode}: {Version}",
-                            appCode, versionInfo.BinaryVersion);
-                        return versionInfo;
-                    }
-                }
-
-                return null;
+                return versionInfo;
             }
             catch (Exception ex)
             {

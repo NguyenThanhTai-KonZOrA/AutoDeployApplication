@@ -1,6 +1,7 @@
 ﻿using ClientLauncher.Models.Response;
 using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -13,311 +14,291 @@ namespace ClientLauncher.Services
     public class InstallationService : IInstallationService
     {
         private readonly HttpClient _httpClient;
-        private readonly string _serverUrl;
-        private readonly string _appsBasePath;
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        private readonly string _baseUrl;
+        private readonly string _appBasePath;
+        private readonly IManifestService _manifestService;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public InstallationService()
         {
-            _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
+            _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
 
-            // Load from config
-            _serverUrl = System.Configuration.ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
-            _appsBasePath = System.Configuration.ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
+            // Base path at C:\CompanyApps
+            _appBasePath = @"C:\CompanyApps";
+            _manifestService = new ManifestService();
 
-            _logger.Info($"InstallationService initialized. Server: {_serverUrl}, AppsPath: {_appsBasePath}");
+            if (!Directory.Exists(_appBasePath))
+            {
+                Directory.CreateDirectory(_appBasePath);
+            }
+
+            Logger.Debug("InstallationService initialized with base path: {Path}", _appBasePath);
         }
 
-        public async Task<InstallationResult> InstallApplicationAsync(string appCode, string packageName)
+        public async Task<InstallationResult> InstallApplicationAsync(string appCode, string userName)
         {
             var stopwatch = Stopwatch.StartNew();
-            var result = new InstallationResult { AppCode = appCode };
-
             try
             {
-                _logger.Info($"Starting installation for {appCode}, package: {packageName}");
-
-                // 1. Download package
-                _logger.Info($"Downloading package {packageName} from server...");
-                var packageBytes = await DownloadPackageAsync(appCode, packageName);
-
-                if (packageBytes == null || packageBytes.Length == 0)
+                Logger.Info("Starting installation for {AppCode}", appCode);
+                // 1. Get manifest from server (database-generated)
+                var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
+                if (manifest == null)
                 {
-                    throw new Exception("Failed to download package or package is empty");
+                    throw new Exception("Failed to retrieve manifest from server");
                 }
 
-                _logger.Info($"Downloaded {packageBytes.Length} bytes");
+                // C:\CompanyApps\{appCode}\App
+                var appPath = Path.Combine(_appBasePath, appCode, "App");
+                var binaryPackage = manifest.Binary?.Package;
 
-                // 2. Save to temp
-                var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_install_{Guid.NewGuid()}.zip");
-                await File.WriteAllBytesAsync(tempZip, packageBytes);
+                if (string.IsNullOrEmpty(binaryPackage))
+                {
+                    throw new Exception("Invalid manifest: binary package not specified");
+                }
 
-                // 3. Extract to app folder
-                var appPath = Path.Combine(_appsBasePath, appCode, "App");
+                // 2. Download and extract binary package
+                Logger.Info("Downloading binary package: {Package}", binaryPackage);
+                await DownloadAndExtractAsync(appCode, binaryPackage, appPath);
 
-                // If exists, this is an UPDATE - backup first
-                string? backupPath = null;
+                // 3. Download config if specified
+                if (!string.IsNullOrEmpty(manifest.Config?.Package) &&
+                    manifest.UpdatePolicy?.Type != "binary")
+                {
+                    var configPath = Path.Combine(_appBasePath, appCode, "Config");
+                    Logger.Info("Downloading config package: {Package}", manifest.Config.Package);
+                    await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
+                }
+
+                // 4. Save version info to C:\CompanyApps\{appCode}\version.txt
+                SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
+
+                // Save manifest to C:\CompanyApps\{appCode}\manifest.json
+                await _manifestService.SaveManifestAsync(appCode, manifest);
+
+                Logger.Info("Installation completed for {AppCode}", appCode);
+                stopwatch.Stop();
+
+                var result = new InstallationResult();
+                result.Success = true;
+                result.InstalledVersion = manifest.Binary?.Version;
+                result.Message = $"Installation completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s";
+                result.InstallationPath = appPath;
+
+                await NotifyInstallationAsync(appCode, result?.InstalledVersion ?? string.Empty, true, stopwatch.Elapsed);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                stopwatch.Stop();
+                await NotifyInstallationAsync(appCode, "0.0.0", true, stopwatch.Elapsed, ex.Message);
+                Logger.Error(ex, "Installation failed for {AppCode}", appCode);
+                return new InstallationResult
+                {
+                    Success = false,
+                    Message = "Installation failed",
+                    ErrorDetails = ex.Message
+                };
+            }
+        }
+
+        public async Task<InstallationResult> UpdateApplicationAsync(string appCode, string userName)
+        {
+            try
+            {
+                Logger.Info("Starting update for {AppCode}", appCode);
+
+                // 1. Get latest manifest from server
+                var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
+                if (manifest == null)
+                {
+                    throw new Exception("Failed to retrieve manifest from server");
+                }
+
+                var updateType = manifest.UpdatePolicy?.Type ?? "both";
+                Logger.Info("Update type: {UpdateType}", updateType);
+
+                var appPath = Path.Combine(_appBasePath, appCode, "App");
+                var backupPath = Path.Combine(_appBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
+
+                // 2. Backup current installation
                 if (Directory.Exists(appPath))
                 {
-                    backupPath = Path.Combine(_appsBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
-                    _logger.Info($"Existing installation found, creating backup at {backupPath}");
-
-                    Directory.CreateDirectory(backupPath);
-                    CopyDirectory(appPath, backupPath);
-
-                    // Delete old files
-                    Directory.Delete(appPath, true);
+                    Directory.Move(appPath, backupPath);
+                    Logger.Info("Created backup at {BackupPath}", backupPath);
                 }
 
                 try
                 {
-                    Directory.CreateDirectory(appPath);
-                    _logger.Info($"Extracting to {appPath}...");
-                    ZipFile.ExtractToDirectory(tempZip, appPath, overwriteFiles: true);
-
-                    // Get version
-                    var versionMatch = System.Text.RegularExpressions.Regex.Match(packageName, @"_v?(\d+\.\d+\.\d+)");
-                    var installedVersion = versionMatch.Success ? versionMatch.Groups[1].Value : "1.0.0";
-
-                    // Save version.txt
-                    var versionFile = Path.Combine(appPath, "version.txt");
-                    await File.WriteAllTextAsync(versionFile, installedVersion);
-
-                    // Delete backup on success
-                    if (backupPath != null && Directory.Exists(backupPath))
+                    // Update binary if needed
+                    if (updateType == "binary" || updateType == "both")
                     {
-                        Directory.Delete(backupPath, true);
-                        _logger.Info("Backup deleted after successful installation");
+                        Logger.Info("Updating binary package");
+                        await DownloadAndExtractAsync(appCode, manifest.Binary?.Package!, appPath);
                     }
 
-                    // Cleanup temp
-                    if (File.Exists(tempZip))
-                        File.Delete(tempZip);
+                    // Update config if needed
+                    if ((updateType == "config" || updateType == "both") &&
+                        !string.IsNullOrEmpty(manifest.Config?.Package))
+                    {
+                        var configPath = Path.Combine(_appBasePath, appCode, "Config");
+                        var mergeStrategy = manifest.Config?.MergeStrategy ?? "preserveLocal";
 
-                    stopwatch.Stop();
+                        Logger.Info("Updating config with merge strategy: {Strategy}", mergeStrategy);
 
-                    result.Success = true;
-                    result.InstalledVersion = installedVersion;
-                    result.Message = $"Installation completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s";
-                    result.InstallationPath = appPath;
+                        if (mergeStrategy == "preserveLocal")
+                        {
+                            // Only update if no local config exists
+                            if (!Directory.Exists(configPath))
+                            {
+                                await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
+                            }
+                        }
+                        else
+                        {
+                            await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
+                        }
+                    }
 
-                    await NotifyInstallationAsync(appCode, installedVersion, true, stopwatch.Elapsed);
+                    // 3. Update version info
+                    SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
 
-                    return result;
+                    // 4. Update local manifest
+                    await _manifestService.SaveManifestAsync(appCode, manifest);
+
+                    // 5. Delete backup on success
+                    if (Directory.Exists(backupPath))
+                    {
+                        Directory.Delete(backupPath, true);
+                        Logger.Info("Deleted backup");
+                    }
+
+                    Logger.Info("Update completed for {AppCode}", appCode);
+                    return new InstallationResult
+                    {
+                        Success = true,
+                        Message = "Update completed successfully",
+                        InstalledVersion = manifest.Binary?.Version
+                    };
                 }
                 catch
                 {
                     // Rollback on error
-                    if (backupPath != null && Directory.Exists(backupPath))
-                    {
-                        if (Directory.Exists(appPath))
-                            Directory.Delete(appPath, true);
-
-                        Directory.Move(backupPath, appPath);
-                        _logger.Info("Rollback completed");
-                    }
-                    throw;
-                }
-            }
-            catch (Exception ex)
-            {
-                stopwatch.Stop();
-                _logger.Error(ex, $"Installation failed for {appCode}");
-
-                result.Success = false;
-                result.Message = "Installation failed";
-                result.ErrorDetails = ex.Message;
-
-                await NotifyInstallationAsync(appCode, "0.0.0", false, stopwatch.Elapsed, ex.Message);
-
-                return result;
-            }
-        }
-
-        public async Task<InstallationResult> UpdateApplicationAsync(string appCode, string packageName)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var result = new InstallationResult { AppCode = appCode };
-
-            try
-            {
-                _logger.Info($"Starting update for {appCode}, package: {packageName}");
-
-                var appPath = Path.Combine(_appsBasePath, appCode, "App");
-
-                // 1. Check if installed
-                if (!Directory.Exists(appPath))
-                {
-                    _logger.Warn($"{appCode} is not installed. Redirecting to install...");
-                    return await InstallApplicationAsync(appCode, packageName);
-                }
-
-                // 2. Get current version
-                var versionFile = Path.Combine(appPath, "version.txt");
-                var oldVersion = File.Exists(versionFile) ? (await File.ReadAllTextAsync(versionFile)).Trim() : "0.0.0";
-                _logger.Info($"Current version: {oldVersion}");
-
-                // 3. Backup current version
-                var backupPath = Path.Combine(_appsBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
-                _logger.Info($"Creating backup at {backupPath}...");
-
-                Directory.CreateDirectory(backupPath);
-                CopyDirectory(appPath, backupPath);
-
-                try
-                {
-                    // 4. Download new package
-                    _logger.Info($"Downloading update package {packageName}...");
-                    var packageBytes = await DownloadPackageAsync(appCode, packageName);
-
-                    if (packageBytes == null || packageBytes.Length == 0)
-                    {
-                        throw new Exception("Failed to download update package");
-                    }
-
-                    // 5. Save to temp
-                    var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_update_{Guid.NewGuid()}.zip");
-                    await File.WriteAllBytesAsync(tempZip, packageBytes);
-
-                    // 6. Delete old files (keep backup)
-                    Directory.Delete(appPath, true);
-                    Directory.CreateDirectory(appPath);
-
-                    // 7. Extract new version
-                    _logger.Info($"Extracting update to {appPath}...");
-                    ZipFile.ExtractToDirectory(tempZip, appPath, overwriteFiles: true);
-
-                    // 8. Get new version
-                    var newVersionFile = Path.Combine(appPath, "version.txt");
-                    var newVersion = "1.0.0";
-
-                    if (File.Exists(newVersionFile))
-                    {
-                        newVersion = (await File.ReadAllTextAsync(newVersionFile)).Trim();
-                    }
-                    else
-                    {
-                        var versionMatch = System.Text.RegularExpressions.Regex.Match(packageName, @"_v?(\d+\.\d+\.\d+)");
-                        if (versionMatch.Success)
-                        {
-                            newVersion = versionMatch.Groups[1].Value;
-                            await File.WriteAllTextAsync(newVersionFile, newVersion);
-                        }
-                    }
-
-                    // 9. Cleanup
-                    if (File.Exists(tempZip))
-                        File.Delete(tempZip);
-
-                    // 10. Delete backup on success
-                    if (Directory.Exists(backupPath))
-                    {
-                        Directory.Delete(backupPath, true);
-                        _logger.Info("Backup deleted after successful update");
-                    }
-
-                    stopwatch.Stop();
-
-                    result.Success = true;
-                    result.InstalledVersion = newVersion;
-                    result.Message = $"Update completed successfully from {oldVersion} to {newVersion} in {stopwatch.Elapsed.TotalSeconds:F2}s";
-                    result.InstallationPath = appPath;
-
-                    _logger.Info($"Update completed: {appCode} {oldVersion} → {newVersion}");
-
-                    await NotifyInstallationAsync(appCode, newVersion, true, stopwatch.Elapsed, oldVersion: oldVersion);
-
-                    return result;
-                }
-                catch (Exception)
-                {
-                    // Rollback on error
-                    _logger.Error("Update failed, rolling back...");
-
                     if (Directory.Exists(appPath))
+                    {
                         Directory.Delete(appPath, true);
-
+                    }
                     if (Directory.Exists(backupPath))
                     {
                         Directory.Move(backupPath, appPath);
-                        _logger.Info("Rollback completed, restored from backup");
+                        Logger.Info("Rolled back to backup");
                     }
-
                     throw;
                 }
             }
             catch (Exception ex)
             {
-                stopwatch.Stop();
-                _logger.Error(ex, $"Update failed for {appCode}");
-
-                result.Success = false;
-                result.Message = "Update failed";
-                result.ErrorDetails = ex.Message;
-
-                await NotifyInstallationAsync(appCode, "0.0.0", false, stopwatch.Elapsed, ex.Message);
-
-                return result;
+                Logger.Error(ex, "Update failed for {AppCode}", appCode);
+                return new InstallationResult
+                {
+                    Success = false,
+                    Message = "Update failed",
+                    ErrorDetails = ex.Message
+                };
             }
         }
 
-        public async Task<bool> UninstallApplicationAsync(string appCode)
+        public async Task<InstallationResult> UninstallApplicationAsync(string appCode, string userName)
         {
             try
             {
-                _logger.Info($"Uninstalling {appCode}...");
+                Logger.Info("Starting uninstall for {AppCode}", appCode);
 
-                var appFolder = Path.Combine(_appsBasePath, appCode);
-
-                if (!Directory.Exists(appFolder))
+                var appFolder = Path.Combine(_appBasePath, appCode);
+                if (Directory.Exists(appFolder))
                 {
-                    _logger.Warn($"{appCode} is not installed");
-                    return false;
+                    Directory.Delete(appFolder, true);
+                    Logger.Info("Deleted application folder at {Path}", appFolder);
                 }
 
-                Directory.Delete(appFolder, true);
-                _logger.Info($"Uninstalled {appCode} successfully");
-
-                await NotifyInstallationAsync(appCode, "0.0.0", true, TimeSpan.Zero, action: "Uninstall");
-
-                return true;
+                Logger.Info("Uninstall completed for {AppCode}", appCode);
+                return new InstallationResult
+                {
+                    Success = true,
+                    Message = "Uninstall completed successfully"
+                };
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, $"Uninstall failed for {appCode}");
-                return false;
+                Logger.Error(ex, "Uninstall failed for {AppCode}", appCode);
+                return new InstallationResult
+                {
+                    Success = false,
+                    Message = "Uninstall failed",
+                    ErrorDetails = ex.Message
+                };
             }
         }
 
-        private async Task<byte[]?> DownloadPackageAsync(string appCode, string packageName)
+        private async Task DownloadAndExtractAsync(string appCode, string packageName, string targetPath)
         {
+            var packageUrl = $"/api/apps/{appCode}/download/{packageName}";
+            var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_{Guid.NewGuid()}.zip");
+
             try
             {
-                var downloadUrl = $"{_serverUrl}/api/apps/{appCode}/download/{packageName}";
-                _logger.Info($"Downloading from: {downloadUrl}");
+                Logger.Info("Downloading package from {Url} to {Path}", packageUrl, targetPath);
 
-                var response = await _httpClient.GetAsync(downloadUrl);
-
+                var response = await _httpClient.GetAsync(packageUrl);
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.Error($"Download failed: {response.StatusCode}");
-                    return null;
+                    throw new HttpRequestException($"Failed to download package: {response.StatusCode}");
                 }
 
-                return await response.Content.ReadAsByteArrayAsync();
+                var packageData = await response.Content.ReadAsByteArrayAsync();
+                await File.WriteAllBytesAsync(tempZip, packageData);
+
+                Logger.Info("Downloaded {Size} bytes, extracting...", packageData.Length);
+
+                if (Directory.Exists(targetPath))
+                {
+                    Directory.Delete(targetPath, true);
+                }
+                Directory.CreateDirectory(targetPath);
+
+                ZipFile.ExtractToDirectory(tempZip, targetPath, overwriteFiles: true);
+
+                Logger.Info("Successfully extracted to {Path}", targetPath);
             }
-            catch (Exception ex)
+            finally
             {
-                _logger.Error(ex, $"Error downloading package {packageName}");
-                return null;
+                if (File.Exists(tempZip))
+                {
+                    File.Delete(tempZip);
+                }
             }
+        }
+
+        private void SaveVersionInfo(string appCode, string version)
+        {
+            var versionFile = Path.Combine(_appBasePath, appCode, "version.txt");
+            var versionDir = Path.GetDirectoryName(versionFile);
+
+            if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
+            {
+                Directory.CreateDirectory(versionDir);
+            }
+
+            File.WriteAllText(versionFile, version);
+            Logger.Info("Saved version {Version} to {Path}", version, versionFile);
         }
 
         private async Task NotifyInstallationAsync(string appCode, string version, bool success, TimeSpan duration, string? error = null, string? oldVersion = null, string action = "Install")
         {
             try
             {
-                var logUrl = $"{_serverUrl}/api/Installation/log";
+                var logUrl = $"{_baseUrl}/api/Installation/log";
                 var logData = new
                 {
                     appCode,
@@ -342,34 +323,16 @@ namespace ClientLauncher.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.Info("Installation logged to server successfully");
+                    Logger.Info("Installation logged to server successfully");
                 }
                 else
                 {
-                    _logger.Warn($"Failed to log installation: {response.StatusCode}");
+                    Logger.Warn($"Failed to log installation: {response.StatusCode}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.Warn(ex, "Failed to notify server about installation (non-critical)");
-            }
-        }
-
-        // Helper method
-        private void CopyDirectory(string sourceDir, string destDir)
-        {
-            Directory.CreateDirectory(destDir);
-
-            foreach (var file in Directory.GetFiles(sourceDir))
-            {
-                var destFile = Path.Combine(destDir, Path.GetFileName(file));
-                File.Copy(file, destFile, overwrite: true);
-            }
-
-            foreach (var dir in Directory.GetDirectories(sourceDir))
-            {
-                var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
-                CopyDirectory(dir, destSubDir);
+                Logger.Warn(ex, "Failed to notify server about installation (non-critical)");
             }
         }
     }

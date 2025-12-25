@@ -1,5 +1,4 @@
 ﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers
@@ -8,65 +7,61 @@ namespace ClientLauncherAPI.Controllers
     [Route("api/apps")]
     public class ManifestController : ControllerBase
     {
-        private readonly IServerManifestService _manifestService;
+        private readonly IManifestManagementService _manifestService;
         private readonly ILogger<ManifestController> _logger;
-        private readonly string _manifestsBasePath;
-        private readonly IWebHostEnvironment _environment;
 
         public ManifestController(
-            IServerManifestService manifestService,
-            ILogger<ManifestController> logger,
-            IWebHostEnvironment environment)
+            IManifestManagementService manifestService,
+            ILogger<ManifestController> logger)
         {
             _manifestService = manifestService;
             _logger = logger;
-            _environment = environment;
-            _manifestsBasePath = Path.Combine(_environment.ContentRootPath, "Manifests");
         }
 
         /// <summary>
-        /// Get manifest as JSON object
+        /// Get manifest as JSON object (Generated from database)
         /// </summary>
         [HttpGet("{appCode}/manifest")]
-        public async Task<ActionResult<AppManifest>> GetManifest(string appCode)
+        public async Task<IActionResult> GetManifest(string appCode)
         {
             try
             {
-                var manifest = await _manifestService.GetManifestAsync(appCode);
+                var manifest = await _manifestService.GenerateManifestJsonAsync(appCode);
                 if (manifest == null)
                 {
-                    return NotFound($"Manifest not found for app: {appCode}");
+                    return NotFound(new { success = false, message = $"No active manifest found for app: {appCode}" });
                 }
+
                 return Ok(manifest);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving manifest for {AppCode}", appCode);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
         /// <summary>
-        /// Get only version info from server manifest
+        /// Get only version info from manifest
         /// </summary>
         [HttpGet("{appCode}/version")]
         public async Task<IActionResult> GetManifestVersion(string appCode)
         {
             try
             {
-                var manifest = await _manifestService.GetManifestAsync(appCode);
+                var manifest = await _manifestService.GetLatestManifestByAppCodeAsync(appCode);
                 if (manifest == null)
                 {
-                    return NotFound($"Manifest not found for app: {appCode}");
+                    return NotFound(new { success = false, message = $"Manifest not found for app: {appCode}" });
                 }
 
                 var versionInfo = new
                 {
-                    manifest.appCode,
-                    binaryVersion = manifest.binary?.version ?? "0.0.0",
-                    configVersion = manifest.config?.version ?? "0.0.0",
-                    updateType = manifest.updatePolicy?.type ?? "none",
-                    forceUpdate = manifest.updatePolicy?.force ?? false
+                    appCode = manifest.AppCode,
+                    binaryVersion = manifest.BinaryVersion,
+                    configVersion = manifest.ConfigVersion ?? manifest.BinaryVersion,
+                    updateType = manifest.UpdateType,
+                    forceUpdate = manifest.ForceUpdate
                 };
 
                 return Ok(versionInfo);
@@ -74,12 +69,12 @@ namespace ClientLauncherAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving manifest version for {AppCode}", appCode);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
         /// <summary>
-        /// Download manifest.json file
+        /// Download manifest.json file (Generated dynamically from database)
         /// </summary>
         [HttpGet("{appCode}/manifest/download")]
         public async Task<IActionResult> DownloadManifest(string appCode)
@@ -92,21 +87,25 @@ namespace ClientLauncherAPI.Controllers
                     appCode.Contains("/") || appCode.Contains("\\"))
                 {
                     _logger.LogWarning("Invalid appCode detected: {AppCode}", appCode);
-                    return BadRequest("Invalid application code");
+                    return BadRequest(new { success = false, message = "Invalid application code" });
                 }
 
-                var manifestPath = Path.Combine(_manifestsBasePath, appCode, "manifest.json");
-
-                _logger.LogInformation("Looking for manifest at: {Path}", manifestPath);
-
-                if (!System.IO.File.Exists(manifestPath))
+                var manifest = await _manifestService.GenerateManifestJsonAsync(appCode);
+                if (manifest == null)
                 {
-                    _logger.LogWarning("Manifest file not found: {Path}", manifestPath);
-                    return NotFound($"Manifest file not found for app: {appCode}");
+                    _logger.LogWarning("No active manifest found for {AppCode}", appCode);
+                    return NotFound(new { success = false, message = $"Manifest not found for app: {appCode}" });
                 }
 
-                var fileBytes = await System.IO.File.ReadAllBytesAsync(manifestPath);
-                _logger.LogInformation("Successfully read {Size} bytes from manifest.json for {AppCode}",
+                // Convert to JSON
+                var json = System.Text.Json.JsonSerializer.Serialize(manifest, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                });
+
+                var fileBytes = System.Text.Encoding.UTF8.GetBytes(json);
+                _logger.LogInformation("Generated {Size} bytes manifest.json for {AppCode}",
                     fileBytes.Length, appCode);
 
                 return File(fileBytes, "application/json", "manifest.json");
@@ -114,22 +113,7 @@ namespace ClientLauncherAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error downloading manifest for {AppCode}", appCode);
-                return StatusCode(500, "Error downloading manifest");
-            }
-        }
-
-        [HttpPost("{appCode}/manifest")]
-        public async Task<IActionResult> UpdateManifest(string appCode, [FromBody] AppManifest manifest)
-        {
-            try
-            {
-                await _manifestService.UpdateManifestAsync(appCode, manifest);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating manifest for {AppCode}", appCode);
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { success = false, message = "Error downloading manifest" });
             }
         }
     }

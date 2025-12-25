@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace ClientLancher.Implement.Migrations
 {
     /// <inheritdoc />
-    public partial class InitDb : Migration
+    public partial class InitDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -23,7 +23,11 @@ namespace ClientLancher.Implement.Migrations
                     IconUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DisplayOrder = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -42,12 +46,10 @@ namespace ClientLancher.Implement.Migrations
                     IconUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CategoryId = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
-                    Developer = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SupportEmail = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DocumentationUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RequiresAdminRights = table.Column<bool>(type: "bit", nullable: false),
-                    MinimumOsVersion = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -59,6 +61,42 @@ namespace ClientLancher.Implement.Migrations
                         principalTable: "ApplicationCategories",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ApplicationManifests",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ApplicationId = table.Column<int>(type: "int", nullable: false),
+                    Version = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    BinaryVersion = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    BinaryPackage = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    ConfigVersion = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ConfigPackage = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ConfigMergeStrategy = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "preserveLocal"),
+                    UpdateType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "both"),
+                    ForceUpdate = table.Column<bool>(type: "bit", nullable: false),
+                    ReleaseNotes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsStable = table.Column<bool>(type: "bit", nullable: false),
+                    PublishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ApplicationManifests", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ApplicationManifests_Applications_ApplicationId",
+                        column: x => x.ApplicationId,
+                        principalTable: "Applications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -80,7 +118,13 @@ namespace ClientLancher.Implement.Migrations
                     InstallationPath = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    DurationInSeconds = table.Column<int>(type: "int", nullable: false)
+                    DurationInSeconds = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -107,7 +151,6 @@ namespace ClientLancher.Implement.Migrations
                     FileHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     StoragePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     ReleaseNotes = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsStable = table.Column<bool>(type: "bit", nullable: false),
                     MinimumClientVersion = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UploadedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -115,7 +158,13 @@ namespace ClientLancher.Implement.Migrations
                     PublishedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DownloadCount = table.Column<int>(type: "int", nullable: false),
                     LastDownloadedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ReplacesVersionId = table.Column<int>(type: "int", nullable: true)
+                    ReplacesVersionId = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -157,7 +206,13 @@ namespace ClientLancher.Implement.Migrations
                     ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RequiresApproval = table.Column<bool>(type: "bit", nullable: false),
                     ApprovedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    ApprovedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -187,7 +242,13 @@ namespace ClientLancher.Implement.Migrations
                     Success = table.Column<bool>(type: "bit", nullable: false),
                     ErrorMessage = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ClientLauncherVersion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    OsVersion = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    OsVersion = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -204,6 +265,17 @@ namespace ClientLancher.Implement.Migrations
                 name: "IX_ApplicationCategories_Name",
                 table: "ApplicationCategories",
                 column: "Name",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationManifests_ApplicationId_IsActive_PublishedAt",
+                table: "ApplicationManifests",
+                columns: new[] { "ApplicationId", "IsActive", "PublishedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ApplicationManifests_ApplicationId_Version",
+                table: "ApplicationManifests",
+                columns: new[] { "ApplicationId", "Version" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -287,6 +359,9 @@ namespace ClientLancher.Implement.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ApplicationManifests");
+
             migrationBuilder.DropTable(
                 name: "DeploymentHistories");
 
