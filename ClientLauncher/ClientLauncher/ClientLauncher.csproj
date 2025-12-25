@@ -30,7 +30,9 @@
 	<ItemGroup>
 		<Resource Include="Assets\Images\app.png" />
 		<Resource Include="Assets\Images\NewLogo-01.png" />
-		<Resource Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
+		<Resource Include="Assets\Icons\app_default.ico">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Resource> <!-- Default app icon re-added -->
     
 	</ItemGroup>
 
@@ -47,10 +49,15 @@
 		</COMReference>
 	</ItemGroup>
 	<ItemGroup>
-	  <Content Include="Assets\Icons\app_cage.ico" /> <!-- Added cage icon -->
-	  <Content Include="Assets\Icons\app_htr.ico" /> <!-- Added HTR icon -->
-	  <Content Include="Assets\Icons\app_finance.ico" /> <!-- Added finance icon -->
-	  <Content Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
+	  <Resource Include="Assets\Icons\app_cage.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource> <!-- Added cage icon -->
+	  <Resource Include="Assets\Icons\app_htr.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource> <!-- Added HTR icon -->
+	  <Resource Include="Assets\Icons\app_finance.ico">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Resource> <!-- Added finance icon --> <!-- Default app icon re-added -->
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Models\Request\" />

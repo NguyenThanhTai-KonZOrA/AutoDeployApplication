@@ -1,6 +1,7 @@
 ﻿using ClientLancher.Implement.EntityModels;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
+using ClientLancher.Implement.ViewModels;
 using ClientLancher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -16,16 +17,15 @@ namespace ClientLancher.Implement.Services
         private readonly IAppCatalogService _appCatalogService;
         private readonly HttpClient _httpClient;
         private readonly ILogger<InstallationService> _logger;
-        private readonly string _serverUrl;
-        private readonly string _appsBasePath;
-
+        private readonly DeploymentSettings _deploymentSettings;
         public InstallationService(
             IUnitOfWork unitOfWork,
             IManifestService manifestService,
             IVersionService versionService,
             IAppCatalogService appCatalogService,
             HttpClient httpClient,
-            ILogger<InstallationService> logger)
+            ILogger<InstallationService> logger,
+            DeploymentSettings deploymentSettings)
         {
             _unitOfWork = unitOfWork;
             _manifestService = manifestService;
@@ -33,8 +33,7 @@ namespace ClientLancher.Implement.Services
             _appCatalogService = appCatalogService;
             _httpClient = httpClient;
             _logger = logger;
-            _serverUrl = "http://10.21.10.1:8102"; // Load from config
-            _appsBasePath = "C:\\CompanyApps";
+            _deploymentSettings = deploymentSettings;
         }
 
         public async Task<InstallationResult> InstallApplicationAsync(string appCode, string userName)
@@ -63,7 +62,7 @@ namespace ClientLancher.Implement.Services
                 }
 
                 // 3. Download and extract
-                var appPath = Path.Combine(_appsBasePath, appCode, "App");
+                var appPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "App");
                 await DownloadAndExtractAsync(appCode, manifest.binary.package, appPath);
 
                 // 4. Save version
@@ -72,7 +71,7 @@ namespace ClientLancher.Implement.Services
                 // 5. Download config if exists
                 if (!string.IsNullOrEmpty(manifest.config.package))
                 {
-                    var configPath = Path.Combine(_appsBasePath, appCode, "Config");
+                    var configPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "Config");
                     await DownloadAndExtractAsync(appCode, manifest.config.package, configPath);
                     _versionService.SaveConfigVersion(appCode, manifest.config.version);
                 }
@@ -141,8 +140,8 @@ namespace ClientLancher.Implement.Services
                 }
 
                 // Backup current version
-                var appPath = Path.Combine(_appsBasePath, appCode, "App");
-                var backupPath = Path.Combine(_appsBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
+                var appPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "App");
+                var backupPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
 
                 if (Directory.Exists(appPath))
                 {
@@ -209,7 +208,7 @@ namespace ClientLancher.Implement.Services
 
             try
             {
-                var appFolder = Path.Combine(_appsBasePath, appCode);
+                var appFolder = Path.Combine(_deploymentSettings.ServerAppPath, appCode);
                 if (Directory.Exists(appFolder))
                 {
                     Directory.Delete(appFolder, true);
@@ -247,7 +246,7 @@ namespace ClientLancher.Implement.Services
         {
             try
             {
-                var manifestPath = Path.Combine(_appsBasePath, appCode, "manifest.json");
+                var manifestPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "manifest.json");
                 var manifestDir = Path.GetDirectoryName(manifestPath);
 
                 if (!string.IsNullOrEmpty(manifestDir) && !Directory.Exists(manifestDir))
@@ -272,7 +271,7 @@ namespace ClientLancher.Implement.Services
 
         private async Task DownloadAndExtractAsync(string appCode, string packageName, string targetPath)
         {
-            var packageUrl = $"{_serverUrl}/api/apps/{appCode}/download/{packageName}";
+            var packageUrl = $"{_deploymentSettings.ServerBaseUrl}/api/apps/{appCode}/download/{packageName}";
             var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_{Guid.NewGuid()}.zip");
 
             try
@@ -357,7 +356,7 @@ namespace ClientLancher.Implement.Services
                 MachineId = GetMachineId(),
                 Action = action,
                 Status = "InProgress",
-                InstallationPath = Path.Combine(_appsBasePath, appCode),
+                InstallationPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode),
                 StartedAt = DateTime.UtcNow
             };
 
@@ -388,7 +387,7 @@ namespace ClientLancher.Implement.Services
 
         private string GetMachineId()
         {
-            // Generate unique machine ID (có thể dùng CPU ID, MAC address, etc.)
+            // Generate unique machine ID (CPU ID, MAC address, etc.)
             return Environment.MachineName + "_" + Environment.UserName;
         }
     }

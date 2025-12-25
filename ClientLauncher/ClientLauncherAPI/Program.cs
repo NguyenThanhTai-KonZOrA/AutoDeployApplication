@@ -4,8 +4,10 @@ using ClientLancher.Implement.Repositories.Interface;
 using ClientLancher.Implement.Services;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
+using ClientLancher.Implement.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using NLog;
 using NLog.Web;
 
@@ -43,6 +45,9 @@ try
     // Database
     builder.Services.AddDbContext<ClientLancherDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+    builder.Services.Configure<DeploymentSettings>(builder.Configuration.GetSection("DeploymentSettings"));
+    builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<DeploymentSettings>>().Value);
 
     // ✅ REPOSITORIES
     builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();

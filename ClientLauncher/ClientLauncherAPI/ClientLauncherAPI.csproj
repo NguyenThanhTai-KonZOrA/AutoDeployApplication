@@ -7,15 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Remove="Manifests\HTCasinoEntry\manifest.json" />
-    <Content Remove="Manifests\LevyTicketMonitor\manifest.json" />
-    <Content Remove="Manifests\QueueTicketDisplay\manifest.json" />
+    <Compile Remove="api\**" />
+    <Content Remove="api\**" />
+    <EmbeddedResource Remove="api\**" />
+    <None Remove="api\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Page Include="api\apps\HTCasinoEntry\manifest.json" />
-    <Page Include="api\apps\LevyTicketMonitor\manifest.json" />
-    <Page Include="api\apps\QueueTicketDisplay\manifest.json" />
     <Page Include="Manifests\HTCasinoEntry\manifest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Page>

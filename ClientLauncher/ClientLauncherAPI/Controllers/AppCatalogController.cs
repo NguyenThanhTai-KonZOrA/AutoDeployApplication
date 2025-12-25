@@ -1,4 +1,5 @@
 ﻿using ClientLancher.Implement.Services.Interface;
+using ClientLancher.Implement.ViewModels.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers
@@ -24,7 +25,25 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var apps = await _appCatalogService.GetAllApplicationsAsync();
-                return Ok(apps);
+                if (apps == null || !apps.Any())
+                {
+                    return NotFound("No applications found");
+                }
+
+                var mappings = apps.Select(app => new ApplicationResponse
+                {
+                    AppCode = app.AppCode,
+                    Name = app.Name,
+                    Description = app.Description,
+                    Category = app.Category?.Name ?? string.Empty,
+                    IsActive = app.IsActive,
+                    CreatedAt = app.CreatedAt,
+                    UpdatedAt = app.UpdatedAt,
+                    IconUrl = app.IconUrl,
+                    Id = app.Id,
+                });
+
+                return Ok(mappings);
             }
             catch (Exception ex)
             {

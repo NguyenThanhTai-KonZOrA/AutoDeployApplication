@@ -204,7 +204,7 @@ namespace ClientLauncher.ViewModels
                         if (serverVersionInfo != null)
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
-                            app.StatusText = $"❌ Not Installed (Latest: v{app.ServerVersion})";
+                            app.StatusText = $"❌ Not Installed (Latest: {app.ServerVersion})";
                         }
                     }
 

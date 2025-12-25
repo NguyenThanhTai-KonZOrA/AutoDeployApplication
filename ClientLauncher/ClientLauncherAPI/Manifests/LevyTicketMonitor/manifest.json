@@ -1,7 +1,7 @@
 {
   "appCode": "LevyTicketMonitor",
   "binary": {
-    "version": "v1.2.0",
+    "version": "v1.2.1",
     "package": "LevyTicketMonitor_v1.2.0.zip"
   },
   "config": {

@@ -2,7 +2,7 @@
 using ClientLancher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AppServer.API.Controllers
+namespace ClientLauncherAPI.Controllers
 {
     [ApiController]
     [Route("api/apps")]
@@ -62,7 +62,7 @@ namespace AppServer.API.Controllers
 
                 var versionInfo = new
                 {
-                    appCode = manifest.appCode,
+                    manifest.appCode,
                     binaryVersion = manifest.binary?.version ?? "0.0.0",
                     configVersion = manifest.config?.version ?? "0.0.0",
                     updateType = manifest.updatePolicy?.type ?? "none",
