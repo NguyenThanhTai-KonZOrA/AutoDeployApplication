@@ -1,0 +1,20 @@
+export const PAGE_TITLES = {
+    DASHBOARD: "Dashboard",
+    ADMIN_CALL: "Counter Terminal",
+    QUEUE_MANAGEMENT: "Queue Management",
+    REPORTS: "Reports",
+    SETTINGS: "Settings",
+    ARCHIVE: "Ticket Archive",
+    COUNTERS: "Counter Management",
+    ISSUED_PROCESSED_BY_HOUR: "Hourly Report",
+    SERVICE_PERFORMANCE: "Service Report",
+    EMPLOYEE_PERFORMANCE: "Employee Report",
+    SYSTEM_SETTINGS: "System Settings",
+    SERVICE_TYPES: "Service Type Management",
+    ROLES: "Role Management",
+    PERMISSIONS: "Permission Management",
+    EMPLOYEES: "Employee Management",
+    AUDIT_LOGS: "Audit Logs",
+    TICKET_ARCHIVED: "Ticket Archived",
+    DEFAULT: "Deployment Manager"
+} as const;
