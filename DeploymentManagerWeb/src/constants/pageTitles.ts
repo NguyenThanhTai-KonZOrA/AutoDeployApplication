@@ -16,5 +16,8 @@ export const PAGE_TITLES = {
     EMPLOYEES: "Employee Management",
     AUDIT_LOGS: "Audit Logs",
     TICKET_ARCHIVED: "Ticket Archived",
+    APPLICATIONS: "Application Management",
+    CATEGORIES: "Category Management",
+    INSTALLATION_LOGS: "Installation Logs",
     DEFAULT: "Deployment Manager"
 } as const;

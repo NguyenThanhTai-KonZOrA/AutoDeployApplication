@@ -3,9 +3,9 @@ import type {
     LoginResponse,
     LoginRequest,
     RefreshTokenRequest
-} from "../type";
+} from "../type/type";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
-import type { ApiEnvelope } from "../commonType";
+import type { ApiEnvelope } from "../type/commonType";
 
 
 const API_AUTH_BASE = (window as any)._env_?.API_AUTH_BASE;

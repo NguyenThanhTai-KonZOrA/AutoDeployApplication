@@ -31,7 +31,7 @@ import { useState, useEffect } from "react";
 
 import AdminLayout from '../components/layout/AdminLayout';
 import { adminReportService } from "../services/queueService";
-import type { IssuedProcessedByHourResponse, IssuedProcessedByHourRowResponse } from "../type";
+import type { IssuedProcessedByHourResponse, IssuedProcessedByHourRowResponse } from "../type/type";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 

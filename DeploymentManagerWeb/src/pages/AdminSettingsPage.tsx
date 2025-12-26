@@ -48,7 +48,7 @@ import type {
     UpdateSettingsRequest,
     SettingsInfoResponse,
     CategoriesofSettingsResponse
-} from "../type";
+} from "../type/type";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { FormatUtcTime } from "../utils/formatUtcTime";

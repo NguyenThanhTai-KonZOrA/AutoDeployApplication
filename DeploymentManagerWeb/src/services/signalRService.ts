@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import type { ChangeQueueStatusResponse, TicketResponse } from '../type';
+import type { ChangeQueueStatusResponse, TicketResponse } from '../type/type';
 
 class SignalRService {
     private connection: signalR.HubConnection | null = null;

@@ -29,101 +29,32 @@ import {
 import { useSidebar } from '../../contexts/SidebarContext';
 import { usePermission } from '../../hooks/usePermission';
 import { Permission } from '../../constants/roles';
-import type { NavItem } from '../../commonType';
+import type { NavItem } from '../../type/commonType';
 
 const navItems: NavItem[] = [
     {
-        key: 'dashboard',
-        title: 'Dashboard',
-        href: '/admin-dashboard',
+        key: 'application',
+        title: 'Application',
+        href: '/admin-application',
         icon: DashboardIcon,
-        requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
     {
-        key: 'admin-call',
-        title: 'Counter Terminal',
-        href: '/admin-call',
-        icon: FormatListNumberedRtlIcon,
-        requiredPermission: Permission.VIEW_ADMIN_CALL
+        key: 'category',
+        title: 'Category',
+        href: '/admin-category',
+        icon: DashboardIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    }, {
+        key: 'installation',
+        title: 'Installation',
+        href: '/admin-installation',
+        icon: DashboardIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
-    {
-        key: 'admin-issued-processed-by-hour',
-        title: 'Hourly Report',
-        href: '/admin-issued-processed-by-hour',
-        icon: AssessmentIcon,
-        requiredPermission: Permission.VIEW_REPORTS
-    },
-    {
-        key: 'admin-service-report',
-        title: 'Service Report',
-        href: '/admin-service-report',
-        icon: BarChartIcon,
-        requiredPermission: Permission.VIEW_REPORTS
-    },
-    {
-        key: 'employee-report',
-        title: 'Employee Report',
-        href: '/employee-report',
-        icon: GroupsIcon,
-        requiredPermission: Permission.VIEW_REPORTS
-    },
-    {
-        key: 'admin-counter',
-        title: 'Counter Management',
-        href: '/admin-counter',
-        icon: AddBusinessIcon,
-        requiredPermission: Permission.VIEW_SYSTEM_SETTINGS
-    },
-    {
-        key: 'admin-service-type',
-        title: 'Service Type Management',
-        href: '/service-type-report',
-        icon: DesignServicesIcon,
-        requiredPermission: Permission.VIEW_SYSTEM_SETTINGS
-    },
-    {
-        key: 'admin-roles',
-        title: 'Role Management',
-        href: '/admin-roles',
-        icon: RoleManagementIcon,
-        requiredPermission: Permission.VIEW_ROLE_MANAGEMENT
-    },
-    {
-        key: 'admin-permissions',
-        title: 'Permission Management',
-        href: '/admin-permissions',
-        icon: PermissionManagementIcon,
-        requiredPermission: Permission.VIEW_ROLE_MANAGEMENT
-    },
-    {
-        key: 'admin-employees',
-        title: 'Employee Management',
-        href: '/admin-employees',
-        icon: PeopleIcon,
-        requiredPermission: Permission.VIEW_EMPLOYEE_MANAGEMENT
-    },
-    {
-        key: 'admin-settings',
-        title: 'System Settings',
-        href: '/admin-settings',
-        icon: SettingsIcon,
-        requiredPermission: Permission.VIEW_SYSTEM_SETTINGS
-    },
-    {
-        key: 'admin-audit-logs',
-        title: 'Audit Logs',
-        href: '/admin-audit-logs',
-        icon: ManageHistoryIcon,
-        requiredPermission: Permission.VIEW_AUDIT_LOGS,
-    },
-    {
-        key: 'admin-ticket-archived',
-        title: 'Ticket Archived',
-        href: '/admin-ticket-archived',
-        icon: ArchiveIcon,
-        requiredPermission: Permission.VIEW_TICKET_ARCHIVE
-    },
+
 ];
+
 
 export function SideNav(): React.JSX.Element {
     const location = useLocation();

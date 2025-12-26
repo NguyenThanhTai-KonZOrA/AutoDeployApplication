@@ -30,24 +30,3 @@ export interface ApplicationResponse {
     totalInstalls: number;
     totalStorageSize: number;
 }
-
-export interface CategoryCreateOrUpdateRequest {
-    name: string;
-    displayName: string;
-    description?: string;
-    icon: string;
-    displayOrder: number;
-}
-
-export interface CategoryResponse {
-    id: number;
-    name: string;
-    displayName: string;
-    description?: string;
-    icon: string;
-    displayOrder: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-    applicationCount: number;
-}

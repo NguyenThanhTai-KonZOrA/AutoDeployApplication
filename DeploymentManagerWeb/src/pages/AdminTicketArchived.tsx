@@ -35,7 +35,7 @@ import {
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { ticketArchivedService } from "../services/queueService";
-import type { QueueTicketCanBeArchivedResponse, ArchiveTicketRequest } from "../type";
+import type { QueueTicketCanBeArchivedResponse, ArchiveTicketRequest } from "../type/type";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 

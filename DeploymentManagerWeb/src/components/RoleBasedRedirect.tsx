@@ -15,9 +15,9 @@ const RoleBasedRedirect: React.FC = () => {
 
     // Redirect based on highest priority role
     if (roles.includes(UserRole.ADMIN)) {
-        return <Navigate to="/admin-dashboard" replace />;
+        return <Navigate to="/admin-application" replace />;
     } else if (roles.includes(UserRole.MANAGER)) {
-        return <Navigate to="/admin-dashboard" replace />;
+        return <Navigate to="/admin-application" replace />;
     } else if (roles.includes(UserRole.COUNTERSTAFF)) {
         return <Navigate to="/admin-call" replace />;
     } else if (roles.includes(UserRole.USER)) {

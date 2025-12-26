@@ -24,6 +24,9 @@ import AdminAuditLogsPage from './pages/AdminAuditLogsPage'
 import AdminRolePage from './pages/AdminRolePage'
 import AdminPermissionPage from './pages/AdminPermissionPage'
 import AdminEmployeePage from './pages/AdminEmployeePage'
+import AdminApplicationPage from './pages/AdminApplicationPage'
+import AdminCategoryPage from './pages/AdminCategoryPage'
+import AdminInstallationLogPage from './pages/AdminInstallationLogPage'
 
 function AppContent() {
   const networkStatus = useNetworkStatus();
@@ -47,123 +50,24 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
-        <Route path="/admin-call" element={
+        <Route path="/admin-application" element={
           <ProtectedRoute>
-            <AdminCallPage />
+            <AdminApplicationPage />
           </ProtectedRoute>
         } />
 
-        <Route path="/admin-dashboard" element={
+        <Route path="/admin-category" element={
           <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_ADMIN_DASHBOARD}>
-              <AdminDashboard />
-            </RoleBasedRoute>
+            <AdminCategoryPage />
           </ProtectedRoute>
         } />
 
-        <Route path="/admin-counter" element={
+        <Route path="/admin-installation" element={
           <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_SYSTEM_SETTINGS}>
-              <AdminCounterPage />
-            </RoleBasedRoute>
+            <AdminInstallationLogPage />
           </ProtectedRoute>
         } />
 
-        <Route path="/admin-ticket-archived" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_SYSTEM_SETTINGS}>
-              <AdminTicketArchivedPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-issued-processed-by-hour" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_REPORTS}>
-              <AdminIssuedProcessedByHourPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-service-report" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_REPORTS}>
-              <AdminServiceReport />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/employee-report" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_REPORTS}>
-              <EmployeeReportPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/service-type-report" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_SYSTEM_SETTINGS}>
-              <AdminServiceTypePage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-settings" element={
-          <ProtectedRoute>
-            <RoleBasedRoute requiredPermission={Permission.VIEW_SYSTEM_SETTINGS}>
-              <AdminSettingsPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-audit-logs" element={
-          <ProtectedRoute>
-            <RoleBasedRoute
-              requiredPermission={Permission.VIEW_AUDIT_LOGS}
-              fallbackPath="/admin-audit-logs"
-              showAccessDenied={true}
-            >
-              <AdminAuditLogsPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-roles" element={
-          <ProtectedRoute>
-            <RoleBasedRoute
-              requiredPermission={Permission.VIEW_ROLE_MANAGEMENT}
-              fallbackPath="/admin-roles"
-              showAccessDenied={true}
-            >
-              <AdminRolePage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-permissions" element={
-          <ProtectedRoute>
-            <RoleBasedRoute
-              requiredPermission={Permission.VIEW_ROLE_MANAGEMENT}
-              fallbackPath="/admin-permissions"
-              showAccessDenied={true}
-            >
-              <AdminPermissionPage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin-employees" element={
-          <ProtectedRoute>
-            <RoleBasedRoute
-              requiredPermission={Permission.VIEW_EMPLOYEE_MANAGEMENT}
-              fallbackPath="/admin-employees"
-              showAccessDenied={true}
-            >
-              <AdminEmployeePage />
-            </RoleBasedRoute>
-          </ProtectedRoute>
-        } />
 
       </Routes>
     </>

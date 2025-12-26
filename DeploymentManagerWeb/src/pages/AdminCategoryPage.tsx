@@ -38,22 +38,20 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     Save as SaveIcon,
-    Close as CloseIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
-import { serviceTypeService } from "../services/queueService";
-import type { ServiceTypeResponse, CreateServiceTypeRequest, UpdateServiceTypeRequest, SummaryWorkFlowServiceResponse } from "../type/type";
+import { categoryService } from "../services/deploymentManagerService";
+import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
 
-export default function AdminServiceTypePage() {
-    useSetPageTitle(PAGE_TITLES.SERVICE_TYPES);
-    const [serviceTypes, setServiceTypes] = useState<ServiceTypeResponse[]>([]);
+export default function AdminCategoryPage() {
+    useSetPageTitle(PAGE_TITLES.CATEGORIES);
+    const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [toggleLoading, setToggleLoading] = useState<number | null>(null);
 
     // Search and pagination states
     const [searchTerm, setSearchTerm] = useState("");
@@ -65,23 +63,21 @@ export default function AdminServiceTypePage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
     const [dialogLoading, setDialogLoading] = useState(false);
-    const [editingServiceType, setEditingServiceType] = useState<ServiceTypeResponse | null>(null);
+    const [editingCategory, setEditingCategory] = useState<CategoryResponse | null>(null);
 
     // Form states
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<CategoryCreateOrUpdateRequest>({
         name: "",
+        displayName: "",
         description: "",
-        workFlowServiceId: 0,
+        icon: "",
+        displayOrder: 0,
     });
 
     // Delete confirmation dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [deletingServiceType, setDeletingServiceType] = useState<ServiceTypeResponse | null>(null);
+    const [deletingCategory, setDeletingCategory] = useState<CategoryResponse | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
-
-    // Workflow services states
-    const [workflowServices, setWorkflowServices] = useState<SummaryWorkFlowServiceResponse[]>([]);
-    const [workflowLoading, setWorkflowLoading] = useState(false);
 
     const showSnackbar = (message: string, severity: "success" | "error") => {
         setSnackbar({ open: true, message, severity });
@@ -91,15 +87,15 @@ export default function AdminServiceTypePage() {
         setSnackbar({ ...snackbar, open: false });
     };
 
-    const loadServiceTypes = async () => {
+    const loadCategories = async () => {
         try {
             setLoading(true);
             setError(null);
-            const data = await serviceTypeService.getAllServiceTypes();
-            setServiceTypes(data);
+            const data = await categoryService.getAllCategories();
+            setCategories(data);
         } catch (error: any) {
-            console.error("Error loading service types:", error);
-            let errorMessage = "Failed to load service types data";
+            console.error("Error loading categories:", error);
+            let errorMessage = "Failed to load categories data";
             if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error?.message) {
@@ -111,97 +107,38 @@ export default function AdminServiceTypePage() {
         }
     };
 
-    const loadWorkflowServices = async () => {
-        try {
-            setWorkflowLoading(true);
-            const data = await serviceTypeService.getWorkFlowServices();
-            setWorkflowServices(data);
-        } catch (error: any) {
-            console.error("Error loading workflow services:", error);
-            let errorMessage = "Failed to load workflow services";
-            if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
-            showSnackbar(errorMessage, "error");
-        } finally {
-            setWorkflowLoading(false);
-        }
-    };
-
-    const handleToggleStatus = async (serviceType: ServiceTypeResponse) => {
-        try {
-            setToggleLoading(serviceType.id);
-
-            if (serviceType.countersCount > 0 && serviceType.isActive) {
-                showSnackbar(`Cannot deactivate "${serviceType.name}" because it is assigned to ${serviceType.countersCount} counter(s). Please reassign or remove those counters first.`, "error");
-                return;
-            }
-
-            const result = await serviceTypeService.changeStatusServiceType(serviceType.id);
-
-            if (result) {
-                showSnackbar(`Changed status for "${serviceType.name}" successfully!`, "success");
-                setServiceTypes(prevServiceTypes =>
-                    prevServiceTypes.map(st =>
-                        st.id === serviceType.id
-                            ? { ...st, isActive: !st.isActive }
-                            : st
-                    )
-                );
-            } else {
-                setError("Failed to change service type status");
-            }
-        } catch (error: any) {
-            console.error("Error updating service type status:", error);
-            let errorMessage = "Error updating service type status";
-            if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
-            showSnackbar(errorMessage, "error");
-        } finally {
-            setToggleLoading(null);
-        }
-    };
-
     const handleOpenCreateDialog = () => {
         setDialogMode("create");
-        setEditingServiceType(null);
+        setEditingCategory(null);
         setFormData({
             name: "",
+            displayName: "",
             description: "",
-            workFlowServiceId: 0,
+            icon: "",
+            displayOrder: categories.length + 1,
         });
         setDialogOpen(true);
-        loadWorkflowServices(); // Load workflow services when opening dialog
     };
 
-    const handleOpenEditDialog = (serviceType: ServiceTypeResponse) => {
+    const handleOpenEditDialog = (category: CategoryResponse) => {
         setDialogMode("edit");
-        setEditingServiceType(serviceType);
+        setEditingCategory(category);
         setFormData({
-            name: serviceType.name,
-            description: serviceType.description,
-            workFlowServiceId: serviceType.workFlowServiceId || 0,
+            name: category.name,
+            displayName: category.displayName,
+            description: category.description || "",
+            icon: category.icon,
+            displayOrder: category.displayOrder,
         });
         setDialogOpen(true);
-        loadWorkflowServices(); // Load workflow services when opening dialog
     };
 
     const handleCloseDialog = () => {
         setDialogOpen(false);
-        setEditingServiceType(null);
-        setFormData({
-            name: "",
-            description: "",
-            workFlowServiceId: 0,
-        });
+        setEditingCategory(null);
     };
 
-    const handleFormChange = (field: string, value: string | number) => {
+    const handleFormChange = (field: keyof CategoryCreateOrUpdateRequest, value: string | number) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -211,55 +148,56 @@ export default function AdminServiceTypePage() {
     const handleSubmit = async () => {
         // Validation
         if (!formData.name.trim()) {
-            showSnackbar("Service type name is required", "error");
+            showSnackbar("Category name is required", "error");
             return;
         }
 
-        if (!formData.description.trim()) {
-            showSnackbar("Service type description is required", "error");
+        if (!formData.displayName.trim()) {
+            showSnackbar("Display name is required", "error");
             return;
         }
 
-        if (!formData.workFlowServiceId || formData.workFlowServiceId === 0) {
-            showSnackbar("Workflow service is required", "error");
+        if (!formData.icon.trim()) {
+            showSnackbar("Icon is required", "error");
+            return;
+        }
+
+        if (formData.displayOrder <= 0) {
+            showSnackbar("Display order must be greater than 0", "error");
             return;
         }
 
         try {
             setDialogLoading(true);
 
-            if (dialogMode === "create") {
-                const request: CreateServiceTypeRequest = {
-                    name: formData.name.trim(),
-                    description: formData.description.trim(),
-                    workFlowServiceId: formData.workFlowServiceId,
-                };
-                const result = await serviceTypeService.createServiceType(request);
-                setServiceTypes(prev => [...prev, result]);
-                showSnackbar(`Service type "${result.name}" created successfully!`, "success");
-            } else {
-                if (!editingServiceType) return;
+            const request: CategoryCreateOrUpdateRequest = {
+                name: formData.name.trim(),
+                displayName: formData.displayName.trim(),
+                description: formData.description?.trim(),
+                icon: formData.icon.trim(),
+                displayOrder: formData.displayOrder,
+            };
 
-                const request: UpdateServiceTypeRequest = {
-                    id: editingServiceType.id,
-                    name: formData.name.trim(),
-                    description: formData.description.trim(),
-                    isActive: editingServiceType.isActive,
-                    workFlowServiceId: formData.workFlowServiceId,
-                };
-                const result = await serviceTypeService.updateServiceType(request);
-                setServiceTypes(prev =>
-                    prev.map(st => st.id === result.id ? result : st)
+            if (dialogMode === "create") {
+                const result = await categoryService.createCategory(request);
+                setCategories(prev => [...prev, result]);
+                showSnackbar(`Category "${result.displayName}" created successfully!`, "success");
+            } else {
+                if (!editingCategory) return;
+
+                const result = await categoryService.updateCategory(editingCategory.id, request);
+                setCategories(prev =>
+                    prev.map(cat => cat.id === result.id ? result : cat)
                 );
-                showSnackbar(`Service type "${result.name}" updated successfully!`, "success");
+                showSnackbar(`Category "${result.displayName}" updated successfully!`, "success");
             }
 
             handleCloseDialog();
         } catch (error: any) {
-            console.error("Error submitting service type:", error);
+            console.error("Error submitting category:", error);
             let errorMessage = dialogMode === "create"
-                ? "Error creating service type"
-                : "Error updating service type";
+                ? "Error creating category"
+                : "Error updating category";
 
             if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
@@ -272,31 +210,28 @@ export default function AdminServiceTypePage() {
         }
     };
 
-    const handleOpenDeleteDialog = (serviceType: ServiceTypeResponse) => {
-        setDeletingServiceType(serviceType);
+    const handleOpenDeleteDialog = (category: CategoryResponse) => {
+        setDeletingCategory(category);
         setDeleteDialogOpen(true);
     };
 
     const handleCloseDeleteDialog = () => {
         setDeleteDialogOpen(false);
-        setDeletingServiceType(null);
+        setDeletingCategory(null);
     };
 
     const handleDelete = async () => {
-        if (!deletingServiceType) return;
+        if (!deletingCategory) return;
 
         try {
             setDeleteLoading(true);
-            const result = await serviceTypeService.deleteServiceType(deletingServiceType.id);
-
-            if (result) {
-                setServiceTypes(prev => prev.filter(st => st.id !== deletingServiceType.id));
-                showSnackbar(`Service type "${deletingServiceType.name}" deleted successfully!`, "success");
-                handleCloseDeleteDialog();
-            }
+            await categoryService.deleteCategory(deletingCategory.id);
+            setCategories(prev => prev.filter(cat => cat.id !== deletingCategory.id));
+            showSnackbar(`Category "${deletingCategory.displayName}" deleted successfully!`, "success");
+            handleCloseDeleteDialog();
         } catch (error: any) {
-            console.error("Error deleting service type:", error);
-            let errorMessage = "Error deleting service type";
+            console.error("Error deleting category:", error);
+            let errorMessage = "Error deleting category";
 
             if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
@@ -311,24 +246,25 @@ export default function AdminServiceTypePage() {
 
     // Auto load data on component mount
     useEffect(() => {
-        loadServiceTypes();
+        loadCategories();
     }, []);
 
     // Search and pagination logic
-    const filteredServiceTypes = useMemo(() => {
-        if (!searchTerm) return serviceTypes;
+    const filteredCategories = useMemo(() => {
+        if (!searchTerm) return categories;
 
-        return serviceTypes.filter(st =>
-            st.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            st.description.toLowerCase().includes(searchTerm.toLowerCase())
+        return categories.filter(cat =>
+            cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            cat.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (cat.description && cat.description.toLowerCase().includes(searchTerm.toLowerCase()))
         );
-    }, [serviceTypes, searchTerm]);
+    }, [categories, searchTerm]);
 
     // Pagination calculations
-    const totalPages = Math.ceil(filteredServiceTypes.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentPageData = filteredServiceTypes.slice(startIndex, endIndex);
+    const currentPageData = filteredCategories.slice(startIndex, endIndex);
 
     // Reset to first page when search term or items per page changes
     useEffect(() => {
@@ -353,11 +289,8 @@ export default function AdminServiceTypePage() {
             <Box>
                 {/* Header */}
                 <Box sx={{ mb: 3 }}>
-                    {/* <Typography variant="h4" fontWeight={600} sx={{ mb: 1 }}>
-                        Service Type Management
-                    </Typography> */}
                     <Typography variant="body1" color="text.secondary">
-                        Manage service types, create new types, update information, and control status
+                        Manage application categories, create new categories, and organize applications
                     </Typography>
                 </Box>
 
@@ -369,7 +302,7 @@ export default function AdminServiceTypePage() {
                                 <TextField
                                     fullWidth
                                     size="small"
-                                    label="Search service types..."
+                                    label="Search categories..."
                                     value={searchTerm}
                                     onChange={handleSearchChange}
                                     InputProps={{
@@ -399,7 +332,7 @@ export default function AdminServiceTypePage() {
                                     variant="contained"
                                     fullWidth
                                     startIcon={<RefreshIcon />}
-                                    onClick={loadServiceTypes}
+                                    onClick={loadCategories}
                                     disabled={loading}
                                 >
                                     Refresh
@@ -420,18 +353,18 @@ export default function AdminServiceTypePage() {
 
                             <Grid size={{ xs: 12, md: 3 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                                    Total: {filteredServiceTypes.length} service types
-                                    {searchTerm && ` (filtered from ${serviceTypes.length})`}
+                                    Total: {filteredCategories.length} categories
+                                    {searchTerm && ` (filtered from ${categories.length})`}
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
                                     <Chip
-                                        label={`Active: ${serviceTypes.filter(st => st.isActive).length}`}
+                                        label={`Active: ${categories.filter(cat => cat.isActive).length}`}
                                         color="success"
                                         size="small"
                                         variant="outlined"
                                     />
                                     <Chip
-                                        label={`Inactive: ${serviceTypes.filter(st => !st.isActive).length}`}
+                                        label={`Inactive: ${categories.filter(cat => !cat.isActive).length}`}
                                         color="error"
                                         size="small"
                                         variant="outlined"
@@ -446,7 +379,7 @@ export default function AdminServiceTypePage() {
 
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }} action={
-                        <IconButton size="small" onClick={loadServiceTypes}>
+                        <IconButton size="small" onClick={loadCategories}>
                             <RefreshIcon />
                         </IconButton>
                     }>
@@ -454,7 +387,7 @@ export default function AdminServiceTypePage() {
                     </Alert>
                 )}
 
-                {/* Service Types Table */}
+                {/* Categories Table */}
                 <Card>
                     <CardContent sx={{ p: 0 }}>
                         <TableContainer component={Paper} variant="outlined">
@@ -476,24 +409,27 @@ export default function AdminServiceTypePage() {
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                            Icon
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 150 }}>
                                             Name
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
+                                            Display Name
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 250 }}>
                                             Description
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
-                                            Counters
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                            Display Order
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
-                                            Workflow Service
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                            Applications
                                         </TableCell>
                                         <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
                                             Status
                                         </TableCell>
-                                        {/* <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
-                                            Created At
-                                        </TableCell> */}
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
                                             Updated At
                                         </TableCell>
@@ -501,23 +437,24 @@ export default function AdminServiceTypePage() {
                                 </TableHead>
                                 <TableBody>
                                     {loading ? (
-                                        // Loading skeleton rows
                                         Array.from({ length: itemsPerPage }).map((_, index) => (
                                             <TableRow key={index}>
                                                 <TableCell align="center"><Skeleton width="120px" /></TableCell>
                                                 <TableCell><Skeleton width="40px" /></TableCell>
+                                                <TableCell><Skeleton width="60px" /></TableCell>
+                                                <TableCell><Skeleton width="120px" /></TableCell>
                                                 <TableCell><Skeleton width="150px" /></TableCell>
                                                 <TableCell><Skeleton width="200px" /></TableCell>
                                                 <TableCell align="center"><Skeleton width="60px" /></TableCell>
-                                                <TableCell><Skeleton width="150px" /></TableCell>
+                                                <TableCell align="center"><Skeleton width="60px" /></TableCell>
                                                 <TableCell align="center"><Skeleton width="80px" /></TableCell>
                                                 <TableCell><Skeleton width="150px" /></TableCell>
                                             </TableRow>
                                         ))
                                     ) : currentPageData.length > 0 ? (
-                                        currentPageData.map((serviceType) => (
+                                        currentPageData.map((category) => (
                                             <TableRow
-                                                key={serviceType.id}
+                                                key={category.id}
                                                 sx={{
                                                     '&:nth-of-type(even)': { bgcolor: '#f8f9fa' },
                                                     '&:hover': { bgcolor: '#e3f2fd' }
@@ -534,20 +471,20 @@ export default function AdminServiceTypePage() {
                                                     borderRight: '1px solid #e0e0e0'
                                                 }}>
                                                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                                                        <Tooltip title="Edit service type">
+                                                        <Tooltip title="Edit category">
                                                             <IconButton
                                                                 size="small"
                                                                 color="primary"
-                                                                onClick={() => handleOpenEditDialog(serviceType)}
+                                                                onClick={() => handleOpenEditDialog(category)}
                                                             >
                                                                 <EditIcon />
                                                             </IconButton>
                                                         </Tooltip>
-                                                        <Tooltip title="Delete service type">
+                                                        <Tooltip title="Delete category">
                                                             <IconButton
                                                                 size="small"
                                                                 color="error"
-                                                                onClick={() => handleOpenDeleteDialog(serviceType)}
+                                                                onClick={() => handleOpenDeleteDialog(category)}
                                                             >
                                                                 <DeleteIcon />
                                                             </IconButton>
@@ -555,54 +492,53 @@ export default function AdminServiceTypePage() {
                                                     </Box>
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
-                                                    {serviceType.id}
-                                                </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
-                                                    {serviceType.name}
+                                                    {category.id}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {serviceType.description}
+                                                    <Typography variant="h5">{category.icon}</Typography>
+                                                </TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                    {category.name}
+                                                </TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                    {category.displayName}
+                                                </TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                    {category.description || 'N/A'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip
-                                                        label={serviceType.countersCount}
+                                                        label={category.displayOrder}
+                                                        color="info"
+                                                        size="small"
+                                                        variant="outlined"
+                                                    />
+                                                </TableCell>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                    <Chip
+                                                        label={category.applicationCount}
                                                         color="primary"
                                                         size="small"
                                                         variant="outlined"
                                                     />
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {serviceType.workFlowServiceName || 'N/A'}
-                                                </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    <Tooltip title={`${serviceType.isActive ? 'Deactivate' : 'Activate'} service type`}>
-                                                        <span>
-                                                            <Switch
-                                                                checked={serviceType.isActive}
-                                                                onChange={() => handleToggleStatus(serviceType)}
-                                                                disabled={toggleLoading === serviceType.id}
-                                                                color="success"
-                                                                size="small"
-                                                            />
-                                                        </span>
-                                                    </Tooltip>
+                                                    <Chip
+                                                        label={category.isActive ? "Active" : "Inactive"}
+                                                        color={category.isActive ? "success" : "error"}
+                                                        size="small"
+                                                    />
                                                 </TableCell>
-                                                {/* <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {FormatUtcTime.formatDateTime(serviceType.createdAt)}
-                                                </TableCell> */}
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {FormatUtcTime.formatDateTime(serviceType.updatedAt)} <br />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        by {serviceType.updatedBy}
-                                                    </Typography>
+                                                    {FormatUtcTime.formatDateTime(category.updatedAt)}
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
+                                            <TableCell colSpan={10} sx={{ textAlign: 'center', py: 4 }}>
                                                 <Typography color="text.secondary">
-                                                    {searchTerm ? `No service types found matching "${searchTerm}"` : "No service types available"}
+                                                    {searchTerm ? `No categories found matching "${searchTerm}"` : "No categories available"}
                                                 </Typography>
                                             </TableCell>
                                         </TableRow>
@@ -612,12 +548,12 @@ export default function AdminServiceTypePage() {
                         </TableContainer>
 
                         {/* Pagination */}
-                        {filteredServiceTypes.length > 0 && (
+                        {filteredCategories.length > 0 && (
                             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, mb: 2, gap: 2 }}>
                                 <Typography variant="body2" color="text.secondary">
-                                    Showing {filteredServiceTypes.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredServiceTypes.length)} of {filteredServiceTypes.length} items
+                                    Showing {filteredCategories.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredCategories.length)} of {filteredCategories.length} items
                                 </Typography>
-                                {filteredServiceTypes.length > itemsPerPage && (
+                                {filteredCategories.length > itemsPerPage && (
                                     <Pagination
                                         count={totalPages}
                                         page={currentPage}
@@ -640,22 +576,31 @@ export default function AdminServiceTypePage() {
                 fullWidth
             >
                 <DialogTitle>
-                    {dialogMode === "create" ? "Create New Service Type" : "Edit Service Type"}
+                    {dialogMode === "create" ? "Create New Category" : "Edit Category"}
                 </DialogTitle>
                 <DialogContent>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
                         <TextField
-                            label="Service Type Name"
+                            label="Category Name"
                             fullWidth
                             required
                             value={formData.name}
                             onChange={(e) => handleFormChange("name", e.target.value)}
                             disabled={dialogLoading}
                             autoFocus
+                            helperText="Internal name (lowercase, no spaces)"
+                        />
+                        <TextField
+                            label="Display Name"
+                            fullWidth
+                            required
+                            value={formData.displayName}
+                            onChange={(e) => handleFormChange("displayName", e.target.value)}
+                            disabled={dialogLoading}
+                            helperText="User-friendly name shown in UI"
                         />
                         <TextField
                             label="Description"
-                            required
                             fullWidth
                             multiline
                             rows={3}
@@ -663,35 +608,25 @@ export default function AdminServiceTypePage() {
                             onChange={(e) => handleFormChange("description", e.target.value)}
                             disabled={dialogLoading}
                         />
-                        <FormControl fullWidth required disabled={dialogLoading || workflowLoading}>
-                            <InputLabel id="workflow-service-label">Workflow Service</InputLabel>
-                            <Select
-                                labelId="workflow-service-label"
-                                label="Workflow Service"
-                                value={formData.workFlowServiceId}
-                                onChange={(e) => handleFormChange("workFlowServiceId", e.target.value)}
-                            >
-                                <MenuItem value={0} disabled>
-                                    <em>Select a workflow service</em>
-                                </MenuItem>
-                                {workflowLoading ? (
-                                    <MenuItem disabled>Loading workflow services...</MenuItem>
-                                ) : workflowServices.length > 0 ? (
-                                    workflowServices.map((workflow) => (
-                                        <MenuItem key={workflow.id} value={workflow.id}>
-                                            {workflow.name}
-                                            {workflow.description && (
-                                                <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                    - {workflow.description}
-                                                </Typography>
-                                            )}
-                                        </MenuItem>
-                                    ))
-                                ) : (
-                                    <MenuItem disabled>No workflow services available</MenuItem>
-                                )}
-                            </Select>
-                        </FormControl>
+                        <TextField
+                            label="Icon"
+                            fullWidth
+                            required
+                            value={formData.icon}
+                            onChange={(e) => handleFormChange("icon", e.target.value)}
+                            disabled={dialogLoading}
+                            helperText="Emoji or icon character"
+                        />
+                        <TextField
+                            label="Display Order"
+                            fullWidth
+                            required
+                            type="number"
+                            value={formData.displayOrder}
+                            onChange={(e) => handleFormChange("displayOrder", parseInt(e.target.value) || 0)}
+                            disabled={dialogLoading}
+                            helperText="Lower numbers appear first"
+                        />
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -723,12 +658,12 @@ export default function AdminServiceTypePage() {
                 <DialogTitle>Confirm Delete</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete the service type <strong>"{deletingServiceType?.name}"</strong>?
+                        Are you sure you want to delete the category <strong>"{deletingCategory?.displayName}"</strong>?
                     </Typography>
-                    {deletingServiceType && deletingServiceType.countersCount > 0 && (
+                    {deletingCategory && deletingCategory.applicationCount > 0 && (
                         <Alert severity="warning" sx={{ mt: 2 }}>
-                            This service type is currently assigned to {deletingServiceType.countersCount} counter(s). <br />
-                            Please reassign or remove those counters before deleting this service type.
+                            This category has {deletingCategory.applicationCount} application(s) assigned. 
+                            Please reassign those applications before deleting this category.
                         </Alert>
                     )}
                 </DialogContent>
@@ -744,7 +679,7 @@ export default function AdminServiceTypePage() {
                         onClick={handleDelete}
                         variant="contained"
                         color="error"
-                        disabled={deleteLoading || (deletingServiceType?.countersCount ?? 0) > 0}
+                        disabled={deleteLoading || (deletingCategory?.applicationCount ?? 0) > 0}
                         startIcon={<DeleteIcon />}
                     >
                         {deleteLoading ? "Deleting..." : "Delete"}

@@ -3,7 +3,7 @@ import React, { useCallback } from 'react';
 import { Snackbar, Alert, AlertTitle } from '@mui/material';
 import { useState } from 'react';
 import { useSignalR } from '../hooks/useSignalR';
-import type { ChangeQueueStatusResponse, TicketResponse } from '../type';
+import type { ChangeQueueStatusResponse, TicketResponse } from '../type/type';
 
 interface NotificationState {
     open: boolean;

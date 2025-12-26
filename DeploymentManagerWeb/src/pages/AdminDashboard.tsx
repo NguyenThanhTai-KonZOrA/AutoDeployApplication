@@ -34,7 +34,7 @@ import {
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { queueAdminService } from "../services/queueService";
-import type { DashboardResponse, CounterDashboardResponse } from "../type";
+import type { DashboardResponse, CounterDashboardResponse } from "../type/type";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 

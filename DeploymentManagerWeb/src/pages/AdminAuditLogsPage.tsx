@@ -43,7 +43,7 @@ import AdminLayout from '../components/layout/AdminLayout';
 import { useSetPageTitle } from '../hooks/useSetPageTitle';
 import { PAGE_TITLES } from '../constants/pageTitles';
 import { auditLogService } from '../services/queueService';
-import type { AuditLogResponse, AuditLogPaginationRequest } from '../type';
+import type { AuditLogResponse, AuditLogPaginationRequest } from '../type/type';
 import { FormatUtcTime } from '../utils/formatUtcTime';
 
 // Entity Types

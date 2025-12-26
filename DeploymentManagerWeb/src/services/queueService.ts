@@ -22,9 +22,9 @@ import type {
   AuditLogPaginationRequest,
   AuditLogPaginationResponse,
   AuditLogResponse
-} from "../type";
+} from "../type/type";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
-import type { ApiEnvelope } from "../commonType";
+import type { ApiEnvelope } from "../type/commonType";
 
 // Action constants for updateTicketStatus
 export const QUEUE_ACTIONS = {

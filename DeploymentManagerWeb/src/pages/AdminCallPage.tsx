@@ -32,10 +32,10 @@ import { useState, useEffect } from "react";
 import AdminLayout from '../components/layout/AdminLayout';
 import { queueAdminService, membershipService, queueService, QUEUE_ACTIONS, counterService, serviceTypeService } from '../services/queueService';
 import { signalRService } from '../services/signalRService';
-import type { ChangeQueueStatusResponse, GetQueueStatusData, RegisterNewUserRequest, TicketsInProcessResponse, TicketResponse, CurrentCounterResponse, SummaryServiceTypeResponse } from '../type';
+import type { ChangeQueueStatusResponse, GetQueueStatusData, RegisterNewUserRequest, TicketsInProcessResponse, TicketResponse, CurrentCounterResponse, SummaryServiceTypeResponse } from '../type/type';
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
-import { WorkFlowService } from "../commonType";
+import { WorkFlowService } from "../type/commonType";
 
 export default function AdminCallPage() {
     const [waitingList, setWaitingList] = useState<GetQueueStatusData[]>([]);

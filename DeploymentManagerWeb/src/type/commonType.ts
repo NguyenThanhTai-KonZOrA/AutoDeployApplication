@@ -1,4 +1,4 @@
-import type { Permission } from "./constants/roles";
+import type { Permission } from "../constants/roles";
 
 export const WorkFlowService = {
     NewMembership: 1,

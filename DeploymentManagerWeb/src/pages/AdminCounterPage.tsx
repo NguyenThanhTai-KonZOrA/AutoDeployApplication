@@ -57,7 +57,7 @@ import type {
     CounterWithServiceTypesResponse,
     UpdateCounterServiceTypesRequest,
     CounterServiceTypeItem
-} from "../type";
+} from "../type/type";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";

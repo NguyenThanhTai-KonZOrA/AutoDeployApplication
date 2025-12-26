@@ -1,6 +1,6 @@
 import axios from "axios";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
-import type { ApiEnvelope } from "../commonType";
+import type { ApiEnvelope } from "../type/commonType";
 import type { AssignRoleRequest, CreatePermissionRequest, CreateRoleRequest, EmployeeResponse, EmployeeWithRoles, PermissionResponse, RoleResponse, UpdatePermissionRequest, UpdateRoleRequest } from "../rolePermissionType";
 
 const API_BASE = (window as any)._env_?.API_BASE;

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { signalRService } from '../services/signalRService';
-import type { ChangeQueueStatusResponse, TicketResponse } from '../type';
+import type { ChangeQueueStatusResponse, TicketResponse } from '../type/type';
 
 export const useSignalR = () => {
     // Initialize SignalR connection
