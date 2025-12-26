@@ -110,7 +110,7 @@ namespace ClientLancher.Implement.Repositories
             }
 
             // Filter by ApplicationId
-            if (request.ApplicationId.HasValue)
+            if (request.ApplicationId.HasValue && request.ApplicationId != 0)
             {
                 query = query.Where(a => a.ApplicationId == request.ApplicationId.Value);
             }
@@ -136,8 +136,7 @@ namespace ClientLancher.Implement.Repositories
             if (request.ToDate.HasValue)
             {
                 // Include the entire end date (23:59:59)
-                var endDate = request.ToDate.Value.Date.AddDays(1).AddTicks(-1);
-                query = query.Where(a => a.CreatedAt <= endDate);
+                query = query.Where(a => a.CreatedAt <= request.ToDate.Value);
             }
 
             return query;

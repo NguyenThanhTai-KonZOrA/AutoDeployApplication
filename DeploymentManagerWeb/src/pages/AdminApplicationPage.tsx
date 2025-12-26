@@ -233,7 +233,7 @@ export default function AdminApplicationPage() {
             PublishImmediately: true,
         });
         setSelectedFile(null);
-        
+
         // Load manifest if exists
         try {
             const manifest = await applicationService.getApplicationManifest(application.id);
@@ -268,7 +268,7 @@ export default function AdminApplicationPage() {
                 PublishedAt: new Date().toISOString().slice(0, 16),
             });
         }
-        
+
         setDialogOpen(true);
         loadCategories();
     };
@@ -394,7 +394,7 @@ export default function AdminApplicationPage() {
                         formData.append('IsStable', packageFormData.IsStable.toString());
                         formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
                         formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
-                        
+
                         // Get current user from localStorage
                         const user = JSON.parse(localStorage.getItem('user') || '{}');
                         formData.append('UploadedBy', user.username || 'Unknown');
@@ -455,7 +455,7 @@ export default function AdminApplicationPage() {
                     }
 
                     try {
-                        await applicationService.updateApplicationManifest(editingApplication.id, manifestFormData);
+                        await applicationService.updateApplicationManifest(editingApplication.id, editingApplication.manifestId, manifestFormData);
                         showSnackbar(`Manifest updated successfully!`, "success");
                     } catch (error: any) {
                         console.error("Error updating manifest:", error);
@@ -472,6 +472,7 @@ export default function AdminApplicationPage() {
                 // Step 3: Upload package if file is selected
                 if (selectedFile) {
                     try {
+                        debugger;
                         const formData = new FormData();
                         formData.append('ApplicationId', editingApplication.id.toString());
                         formData.append('Version', packageFormData.Version);
@@ -481,9 +482,8 @@ export default function AdminApplicationPage() {
                         formData.append('IsStable', packageFormData.IsStable.toString());
                         formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
                         formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
-                        
-                        const user = JSON.parse(localStorage.getItem('user') || '{}');
-                        formData.append('UploadedBy', user.username || 'Unknown');
+
+                        formData.append('UploadedBy', 'admin'); // Replace with actual user
 
                         await packageManagementService.uploadPackage(formData);
                         showSnackbar(`Package uploaded successfully!`, "success");
@@ -579,6 +579,7 @@ export default function AdminApplicationPage() {
             setManifestLoading(true);
             const updatedManifest = await applicationService.updateApplicationManifest(
                 viewingManifest.applicationId,
+                viewingManifest.id,
                 {
                     Version: viewingManifest.version,
                     BinaryVersion: viewingManifest.binaryVersion,

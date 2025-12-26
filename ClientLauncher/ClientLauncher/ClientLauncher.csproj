@@ -1,69 +1,60 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<UseWPF>true</UseWPF>
-		<ApplicationIcon>Assets\Icons\app_default.ico</ApplicationIcon>
-		<!--<ApplicationIcon>Assets\Images\app.png</ApplicationIcon>-->
-    <!-- ClickOnce Settings -->
-    <PublishUrl>publish\</PublishUrl>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <UpdateEnabled>true</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MinimumRequiredVersion>1.0.0.0</MinimumRequiredVersion>
-    <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
-    <WebPage>publish.htm</WebPage>
-    <ApplicationRevision>1</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <PublishWizardCompleted>true</PublishWizardCompleted>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\Icons\app_default.ico</ApplicationIcon>
   </PropertyGroup>
 
-	<ItemGroup>
-		<Resource Include="Assets\Images\app.png" />
-		<Resource Include="Assets\Images\NewLogo-01.png" />
-		<Resource Include="Assets\Icons\app_default.ico">
-		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Resource> <!-- Default app icon re-added -->
-    
-	</ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Images\app.png" />
+    <Resource Include="Assets\Images\NewLogo-01.png" />
+    <Resource Include="Assets\Icons\app_default.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
 
-	<!-- Add COM Reference for Shortcut Creation -->
-	<ItemGroup>
-		<COMReference Include="IWshRuntimeLibrary">
-			<WrapperTool>tlbimp</WrapperTool>
-			<VersionMinor>0</VersionMinor>
-			<VersionMajor>1</VersionMajor>
-			<Guid>f935dc20-1cf0-11d0-adb9-00c04fd58a0b</Guid>
-			<Lcid>0</Lcid>
-			<Isolated>false</Isolated>
-			<EmbedInteropTypes>true</EmbedInteropTypes>
-		</COMReference>
-	</ItemGroup>
-	<ItemGroup>
-	  <Resource Include="Assets\Icons\app_cage.ico">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Resource> <!-- Added cage icon -->
-	  <Resource Include="Assets\Icons\app_htr.ico">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Resource> <!-- Added HTR icon -->
-	  <Resource Include="Assets\Icons\app_finance.ico">
-	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	  </Resource> <!-- Added finance icon --> <!-- Default app icon re-added -->
-	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Models\Request\" />
-	</ItemGroup>
-	<ItemGroup>
-	  <PackageReference Include="NLog" Version="6.0.5" />
-	</ItemGroup>
+  <ItemGroup>
+    <COMReference Include="IWshRuntimeLibrary">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>0</VersionMinor>
+      <VersionMajor>1</VersionMajor>
+      <Guid>f935dc20-1cf0-11d0-adb9-00c04fd58a0b</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Icons\app_cage.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\Icons\app_htr.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Assets\Icons\app_finance.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\Request\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ✅ FIX: Add missing NLog packages -->
+    <PackageReference Include="NLog" Version="5.3.4" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
+  </ItemGroup>
+
+  <!-- ✅ FIX: Copy NLog.config to output -->
+  <ItemGroup>
+    <None Update="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

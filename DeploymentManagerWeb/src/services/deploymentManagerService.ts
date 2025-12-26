@@ -2,7 +2,7 @@ import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotif
 import type { ApiEnvelope } from "../type/commonType";
 import axios from "axios";
 import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRequest } from "../type/applicationType";
-import type { ManifestCreateRequest, ManifestResponse } from "../type/manifestType";
+import type { ManifestCreateRequest, ManifestResponse, ManifestUpdateRequest } from "../type/manifestType";
 import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
 import type { InstallationLogRequest, InstallationLogPaginationResponse } from "../type/installationLogType";
 import type { PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
@@ -113,8 +113,8 @@ export const applicationService = {
         return unwrapApiEnvelope(response);
     },
 
-    updateApplicationManifest: async (id: number, manifest: ManifestCreateRequest): Promise<ManifestResponse> => {
-        const response = await api.post(`/api/ApplicationManagement/${id}/manifest`, manifest);
+    updateApplicationManifest: async (id: number, manifestId: number, manifest: ManifestUpdateRequest): Promise<ManifestResponse> => {
+        const response = await api.post(`/api/ApplicationManagement/update/${id}/manifest/${manifestId}`, manifest);
         return unwrapApiEnvelope(response);
     },
 

@@ -24,7 +24,10 @@ import {
     ManageHistory as ManageHistoryIcon,
     AssignmentInd as RoleManagementIcon,
     VerifiedUser as PermissionManagementIcon,
-    Archive as ArchiveIcon
+    Archive as ArchiveIcon,
+    Apps as AppIcon,
+    Category as CategoryIcon,
+    FileDownloadDone as FileDownloadDoneIcon
 } from '@mui/icons-material';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -34,25 +37,32 @@ import type { NavItem } from '../../type/commonType';
 const navItems: NavItem[] = [
     {
         key: 'application',
-        title: 'Application',
+        title: 'Application Management',
         href: '/admin-application',
-        icon: DashboardIcon,
+        icon: AppIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
     {
         key: 'category',
-        title: 'Category',
+        title: 'Category Management',
         href: '/admin-category',
-        icon: DashboardIcon,
-        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
-    }, {
-        key: 'installation',
-        title: 'Installation',
-        href: '/admin-installation',
-        icon: DashboardIcon,
+        icon: CategoryIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
-
+    {
+        key: 'package',
+        title: 'Packages Management',
+        href: '/admin-package',
+        icon: FileDownloadDoneIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
+    {
+        key: 'installation',
+        title: 'Installation Logs',
+        href: '/admin-installation',
+        icon: ManageHistoryIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
 ];
 
 

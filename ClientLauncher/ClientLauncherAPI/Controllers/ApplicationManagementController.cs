@@ -202,7 +202,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Update manifest
         /// </summary>
-        [HttpPost("{id}/manifest/{manifestId}")]
+        [HttpPost("update/{id}/manifest/{manifestId}")]
         public async Task<IActionResult> UpdateManifest(int id, int manifestId, [FromBody] ManifestUpdateRequest request)
         {
             try

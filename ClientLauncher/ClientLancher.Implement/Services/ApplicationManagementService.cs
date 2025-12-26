@@ -180,7 +180,6 @@ namespace ClientLancher.Implement.Services
         {
             var applications = await _unitOfWork.Applications.GetApplicationsByCategoryAsync(categoryId.ToString());
             var responses = new List<ApplicationDetailResponse>();
-
             foreach (var app in applications)
             {
                 responses.Add(await MapToDetailResponseAsync(app));
@@ -205,6 +204,8 @@ namespace ClientLancher.Implement.Services
             // Get latest version
             var latestVersion = await _unitOfWork.PackageVersions.GetLatestVersionAsync(app.Id);
 
+            var lastestManifest = await _unitOfWork.ApplicationManifests.GetLatestActiveManifestAsync(app.Id);
+
             // Get total versions count
             var versions = await _unitOfWork.PackageVersions.GetByApplicationIdAsync(app.Id);
             var totalVersions = versions.Count();
@@ -219,6 +220,7 @@ namespace ClientLancher.Implement.Services
             return new ApplicationDetailResponse
             {
                 Id = app.Id,
+                ManifestId = lastestManifest?.Id ?? 0,
                 AppCode = app.AppCode,
                 Name = app.Name,
                 Description = app.Description,

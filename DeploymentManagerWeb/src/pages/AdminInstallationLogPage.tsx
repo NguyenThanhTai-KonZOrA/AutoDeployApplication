@@ -64,8 +64,10 @@ export default function AdminInstallationLogPage() {
         MachineName: "",
         Status: "",
         Action: "",
-        FromDate: new Date().toISOString().slice(0, 16),
-        ToDate: new Date().toISOString().slice(0, 16),
+        // from start of today
+        FromDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString().slice(0, 16),
+        // to end of today
+        ToDate: new Date(new Date().setHours(23, 59, 59, 999)).toISOString().slice(0, 16),
         Page: 1,
         PageSize: 10,
         Take: 10,

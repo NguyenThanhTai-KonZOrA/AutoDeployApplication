@@ -3,6 +3,7 @@
     public class ApplicationDetailResponse
     {
         public int Id { get; set; }
+        public int ManifestId { get; set; }
         public string AppCode { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

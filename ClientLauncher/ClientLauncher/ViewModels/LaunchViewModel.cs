@@ -127,7 +127,13 @@ namespace ClientLauncher.ViewModels
             _installationService = new InstallationService();
             _installationChecker = new InstallationChecker();
 
-            _ = InitializeAndLaunchAsync();
+            //_ = InitializeAndLaunchAsync();
+            // Load after UI is ready
+            Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await Task.Delay(100); // Give UI time to render
+                await InitializeAndLaunchAsync();
+            }, DispatcherPriority.Background);
         }
 
         private async Task InitializeAndLaunchAsync()
