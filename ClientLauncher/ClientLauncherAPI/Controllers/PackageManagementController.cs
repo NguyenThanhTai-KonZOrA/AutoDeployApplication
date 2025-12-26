@@ -33,7 +33,7 @@ namespace ClientLauncherAPI.Controllers
                     request.ApplicationId);
 
                 var result = await _packageService.UploadPackageAsync(request);
-                return Ok(new { success = true, data = result, message = "Package uploaded successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -51,7 +51,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _packageService.UpdatePackageAsync(id, request);
-                return Ok(new { success = true, data = result, message = "Package updated successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {

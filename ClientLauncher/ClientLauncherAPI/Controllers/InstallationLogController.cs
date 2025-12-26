@@ -1,4 +1,6 @@
-﻿using ClientLancher.Implement.UnitOfWork;
+﻿using ClientLancher.Implement.Services.Interface;
+using ClientLancher.Implement.UnitOfWork;
+using ClientLancher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers
@@ -9,13 +11,31 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<InstallationLogController> _logger;
+        private readonly IInstallationLogService _installationLogService;
 
         public InstallationLogController(
             IUnitOfWork unitOfWork,
-            ILogger<InstallationLogController> logger)
+            ILogger<InstallationLogController> logger,
+            IInstallationLogService installationLogService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _installationLogService = installationLogService;
+        }
+
+        [HttpPost("logs")]
+        public async Task<IActionResult> GetInstallationLogs([FromBody] InstallationLogFilterRequest request)
+        {
+            try
+            {
+                var logs = await _installationLogService.GetInstallationLogByFilterAsync(request);
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching installation logs");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("application/{applicationId}")]

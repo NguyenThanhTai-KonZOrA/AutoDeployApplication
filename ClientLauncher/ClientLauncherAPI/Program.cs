@@ -74,6 +74,7 @@ try
     builder.Services.AddHttpClient();
     builder.Services.AddScoped<IApplicationManifestRepository, ApplicationManifestRepository>();
     builder.Services.AddScoped<IManifestManagementService, ManifestManagementService>();
+    builder.Services.AddScoped<IInstallationLogService, InstallationLogService>();
 
     // Add CORS if needed
     builder.Services.AddCors(options =>

@@ -32,8 +32,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.CreateApplicationAsync(request);
-                return CreatedAtAction(nameof(GetApplication), new { id = result.Id },
-                    new { success = true, data = result, message = "Application created successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -51,7 +50,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.UpdateApplicationAsync(id, request);
-                return Ok(new { success = true, data = result, message = "Application updated successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -73,7 +72,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Application not found" });
                 }
-                return Ok(new { success = true, message = "Application deleted successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -95,7 +94,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Application not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -135,7 +134,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.GetAllApplicationsAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -153,7 +152,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.GetApplicationsByCategoryAsync(categoryId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -171,7 +170,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.GetApplicationWithStatsAsync(id);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -191,8 +190,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _manifestService.CreateManifestAsync(id, request, User.Identity?.Name ?? CommonConstants.SystemUser);
-                return CreatedAtAction(nameof(GetManifest), new { id, manifestId = result.Id },
-                    new { success = true, data = result, message = "Manifest created successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -232,7 +230,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Manifest not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {

@@ -28,8 +28,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _categoryService.CreateCategoryAsync(request);
-                return CreatedAtAction(nameof(GetCategory), new { id = result.Id },
-                    new { success = true, data = result, message = "Category created successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -47,7 +46,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _categoryService.UpdateCategoryAsync(id, request);
-                return Ok(new { success = true, data = result, message = "Category updated successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -69,7 +68,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Category not found" });
                 }
-                return Ok(new { success = true, message = "Category deleted successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -91,7 +90,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Category not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -113,7 +112,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Category not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -131,7 +130,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _categoryService.GetAllCategoriesAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -149,7 +148,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _categoryService.GetActiveCategoriesAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
