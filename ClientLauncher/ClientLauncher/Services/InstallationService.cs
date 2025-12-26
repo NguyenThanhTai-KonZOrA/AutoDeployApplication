@@ -92,7 +92,7 @@ namespace ClientLauncher.Services
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                await NotifyInstallationAsync(appCode, "0.0.0", true, stopwatch.Elapsed, ex.Message);
+                await NotifyInstallationAsync(appCode, "0.0.0", false, stopwatch.Elapsed, ex.Message);
                 Logger.Error(ex, "Installation failed for {AppCode}", appCode);
                 return new InstallationResult
                 {

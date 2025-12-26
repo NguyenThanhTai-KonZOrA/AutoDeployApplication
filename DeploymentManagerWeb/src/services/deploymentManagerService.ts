@@ -84,12 +84,12 @@ export const applicationService = {
     },
 
     updateApplication: async (id: number, request: UpdateApplicationRequest): Promise<ApplicationResponse> => {
-        const response = await api.put(`/api/ApplicationManagement/update/${id}`, request);
+        const response = await api.post(`/api/ApplicationManagement/update/${id}`, request);
         return unwrapApiEnvelope(response);
     },
 
     deleteApplication: async (id: number): Promise<void> => {
-        const response = await api.delete(`/api/ApplicationManagement/delete/${id}`);
+        const response = await api.post(`/api/ApplicationManagement/delete/${id}`);
         return unwrapApiEnvelope(response);
     },
 
@@ -114,12 +114,12 @@ export const applicationService = {
     },
 
     updateApplicationManifest: async (id: number, manifest: ManifestCreateRequest): Promise<ManifestResponse> => {
-        const response = await api.put(`/api/ApplicationManagement/${id}/manifest`, manifest);
+        const response = await api.post(`/api/ApplicationManagement/${id}/manifest`, manifest);
         return unwrapApiEnvelope(response);
     },
 
     deleteApplicationManifest: async (id: number): Promise<void> => {
-        const response = await api.delete(`/api/ApplicationManagement/${id}/manifest`);
+        const response = await api.post(`/api/ApplicationManagement/${id}/manifest`);
         return unwrapApiEnvelope(response);
     }
 };
@@ -159,8 +159,12 @@ export const installationService = {
 };
 
 export const packageManagementService = {
-    uploadPackage: async (request: PackageUploadRequest): Promise<PackageVersionResponse> => {
-        const response = await api.post(`/api/PackageManagement/upload`, request);
+    uploadPackage: async (formData: FormData): Promise<PackageVersionResponse> => {
+        const response = await api.post(`/api/PackageManagement/upload`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         return unwrapApiEnvelope(response);
     },
 

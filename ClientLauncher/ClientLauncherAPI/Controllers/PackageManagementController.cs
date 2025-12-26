@@ -45,7 +45,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Update package metadata
         /// </summary>
-        [HttpPut("{id}")]
+        [HttpPost("update/{id}")]
         public async Task<IActionResult> UpdatePackage(int id, [FromBody] PackageUpdateRequest request)
         {
             try
@@ -63,7 +63,7 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Delete a package version
         /// </summary>
-        [HttpDelete("{id}")]
+        [HttpPost("delete/{id}")]
         public async Task<IActionResult> DeletePackage(int id)
         {
             try

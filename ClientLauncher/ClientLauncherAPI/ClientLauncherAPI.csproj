@@ -8,13 +8,9 @@
 
   <ItemGroup>
     <Compile Remove="api\**" />
-    <Compile Remove="Manifests\**" />
     <Content Remove="api\**" />
-    <Content Remove="Manifests\**" />
     <EmbeddedResource Remove="api\**" />
-    <EmbeddedResource Remove="Manifests\**" />
     <None Remove="api\**" />
-    <None Remove="Manifests\**" />
   </ItemGroup>
 
   <ItemGroup>

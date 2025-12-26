@@ -69,7 +69,7 @@ namespace ClientLancher.Implement.Repositories
 
         public async Task<List<InstallationLog>> GetPaginatedInstallationLogsAsync(InstallationLogFilterRequest request)
         {
-            var query = _dbSet.AsNoTracking().AsQueryable();
+            var query = _dbSet.Include(x => x.Application).AsNoTracking().AsQueryable();
 
             // Apply filters dynamically
             query = ApplyFilters(query, request);

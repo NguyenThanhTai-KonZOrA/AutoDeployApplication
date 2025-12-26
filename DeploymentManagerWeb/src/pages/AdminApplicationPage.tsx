@@ -43,10 +43,12 @@ import {
     Delete as DeleteIcon,
     Save as SaveIcon,
     Visibility as VisibilityIcon,
+    Upload as UploadIcon,
+    AttachFile as AttachFileIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
-import { applicationService, categoryService } from "../services/deploymentManagerService";
+import { applicationService, categoryService, packageManagementService } from "../services/deploymentManagerService";
 import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRequest } from "../type/applicationType";
 import type { CategoryResponse } from "../type/categoryType";
 import type { ManifestCreateRequest, ManifestResponse } from "../type/manifestType";
@@ -114,6 +116,17 @@ export default function AdminApplicationPage() {
         PublishedAt: new Date().toISOString().slice(0, 16),
     });
 
+    // Form states - Package Upload
+    const [packageFormData, setPackageFormData] = useState({
+        Version: "",
+        PackageType: "Binary",
+        ReleaseNotes: "",
+        IsStable: true,
+        MinimumClientVersion: "",
+        PublishImmediately: true,
+    });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
     // Delete confirmation dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deletingApplication, setDeletingApplication] = useState<ApplicationResponse | null>(null);
@@ -121,8 +134,9 @@ export default function AdminApplicationPage() {
 
     // View manifest dialog
     const [viewManifestDialogOpen, setViewManifestDialogOpen] = useState(false);
-    const [viewingManifest, setViewingManifest] = useState<any>(null);
+    const [viewingManifest, setViewingManifest] = useState<ManifestResponse | null>(null);
     const [manifestLoading, setManifestLoading] = useState(false);
+    const [editingManifest, setEditingManifest] = useState(false);
 
     const showSnackbar = (message: string, severity: "success" | "error") => {
         setSnackbar({ open: true, message, severity });
@@ -186,6 +200,15 @@ export default function AdminApplicationPage() {
             IsStable: true,
             PublishedAt: new Date().toISOString().slice(0, 16),
         });
+        setPackageFormData({
+            Version: "",
+            PackageType: "Binary",
+            ReleaseNotes: "",
+            IsStable: true,
+            MinimumClientVersion: "",
+            PublishImmediately: true,
+        });
+        setSelectedFile(null);
         setDialogOpen(true);
         loadCategories();
     };
@@ -201,6 +224,51 @@ export default function AdminApplicationPage() {
             iconUrl: application.iconUrl,
             categoryId: application.categoryId,
         });
+        setPackageFormData({
+            Version: "",
+            PackageType: "Binary",
+            ReleaseNotes: "",
+            IsStable: true,
+            MinimumClientVersion: "",
+            PublishImmediately: true,
+        });
+        setSelectedFile(null);
+        
+        // Load manifest if exists
+        try {
+            const manifest = await applicationService.getApplicationManifest(application.id);
+            if (manifest) {
+                setManifestFormData({
+                    Version: manifest.version || "",
+                    BinaryVersion: manifest.binaryVersion || "",
+                    BinaryPackage: manifest.binaryPackage || "",
+                    ConfigVersion: manifest.configVersion || "",
+                    ConfigPackage: manifest.configPackage || "",
+                    ConfigMergeStrategy: manifest.configMergeStrategy || "Replace",
+                    UpdateType: manifest.updateType || "Optional",
+                    ForceUpdate: manifest.forceUpdate || false,
+                    ReleaseNotes: manifest.releaseNotes || "",
+                    IsStable: manifest.isStable !== undefined ? manifest.isStable : true,
+                    PublishedAt: manifest.publishedAt ? new Date(manifest.publishedAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+                });
+            }
+        } catch (error) {
+            // No manifest exists, keep default values
+            setManifestFormData({
+                Version: "",
+                BinaryVersion: "",
+                BinaryPackage: "",
+                ConfigVersion: "",
+                ConfigPackage: "",
+                ConfigMergeStrategy: "Replace",
+                UpdateType: "Optional",
+                ForceUpdate: false,
+                ReleaseNotes: "",
+                IsStable: true,
+                PublishedAt: new Date().toISOString().slice(0, 16),
+            });
+        }
+        
         setDialogOpen(true);
         loadCategories();
     };
@@ -223,6 +291,19 @@ export default function AdminApplicationPage() {
             ...prev,
             [field]: value
         }));
+    };
+
+    const handlePackageFormChange = (field: string, value: string | boolean) => {
+        setPackageFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            setSelectedFile(event.target.files[0]);
+        }
     };
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -263,7 +344,7 @@ export default function AdminApplicationPage() {
 
     const handleSubmit = async () => {
         if (dialogMode === "create") {
-            // For create mode, validate both forms
+            // For create mode, validate app form
             if (!validateAppForm()) {
                 setTabValue(0); // Switch to app tab
                 return;
@@ -288,6 +369,7 @@ export default function AdminApplicationPage() {
                     if (!validateManifestForm()) {
                         setTabValue(1); // Switch to manifest tab
                         setApplications(prev => [...prev, createdApp]);
+                        setDialogLoading(false);
                         return;
                     }
 
@@ -297,6 +379,31 @@ export default function AdminApplicationPage() {
                     } catch (error: any) {
                         console.error("Error creating manifest:", error);
                         showSnackbar(`Application created but failed to create manifest: ${error?.response?.data?.message || error?.message}`, "error");
+                    }
+                }
+
+                // Step 3: Upload package if file is selected
+                if (selectedFile) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('ApplicationId', createdApp.id.toString());
+                        formData.append('Version', packageFormData.Version);
+                        formData.append('PackageType', packageFormData.PackageType);
+                        formData.append('PackageFile', selectedFile);
+                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes);
+                        formData.append('IsStable', packageFormData.IsStable.toString());
+                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
+                        formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
+                        
+                        // Get current user from localStorage
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        formData.append('UploadedBy', user.username || 'Unknown');
+
+                        await packageManagementService.uploadPackage(formData);
+                        showSnackbar(`Package uploaded successfully!`, "success");
+                    } catch (error: any) {
+                        console.error("Error uploading package:", error);
+                        showSnackbar(`Application created but failed to upload package: ${error?.response?.data?.message || error?.message}`, "error");
                     }
                 }
 
@@ -316,7 +423,7 @@ export default function AdminApplicationPage() {
                 setDialogLoading(false);
             }
         } else {
-            // Edit mode - only update application
+            // Edit mode - update application, manifest, and optionally upload package
             if (!validateAppForm()) {
                 return;
             }
@@ -326,6 +433,7 @@ export default function AdminApplicationPage() {
             try {
                 setDialogLoading(true);
 
+                // Step 1: Update application
                 const updateRequest: UpdateApplicationRequest = {
                     name: appFormData.name.trim(),
                     description: appFormData.description.trim(),
@@ -333,11 +441,63 @@ export default function AdminApplicationPage() {
                     categoryId: appFormData.categoryId,
                 };
                 const result = await applicationService.updateApplication(editingApplication.id, updateRequest);
+                showSnackbar(`Application "${result.name}" updated successfully!`, "success");
+
+                // Step 2: Update manifest if form is filled
+                if (manifestFormData.Version.trim()) {
+                    if (!validateManifestForm()) {
+                        setTabValue(1); // Switch to manifest tab
+                        setApplications(prev =>
+                            prev.map(app => app.id === result.id ? result : app)
+                        );
+                        setDialogLoading(false);
+                        return;
+                    }
+
+                    try {
+                        await applicationService.updateApplicationManifest(editingApplication.id, manifestFormData);
+                        showSnackbar(`Manifest updated successfully!`, "success");
+                    } catch (error: any) {
+                        console.error("Error updating manifest:", error);
+                        // Try to create if update fails (manifest might not exist)
+                        try {
+                            await applicationService.createApplicationManifest(editingApplication.id, manifestFormData);
+                            showSnackbar(`Manifest created successfully!`, "success");
+                        } catch (createError: any) {
+                            showSnackbar(`Failed to save manifest: ${createError?.response?.data?.message || createError?.message}`, "error");
+                        }
+                    }
+                }
+
+                // Step 3: Upload package if file is selected
+                if (selectedFile) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('ApplicationId', editingApplication.id.toString());
+                        formData.append('Version', packageFormData.Version);
+                        formData.append('PackageType', packageFormData.PackageType);
+                        formData.append('PackageFile', selectedFile);
+                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes);
+                        formData.append('IsStable', packageFormData.IsStable.toString());
+                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
+                        formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
+                        
+                        const user = JSON.parse(localStorage.getItem('user') || '{}');
+                        formData.append('UploadedBy', user.username || 'Unknown');
+
+                        await packageManagementService.uploadPackage(formData);
+                        showSnackbar(`Package uploaded successfully!`, "success");
+                    } catch (error: any) {
+                        console.error("Error uploading package:", error);
+                        showSnackbar(`Application updated but failed to upload package: ${error?.response?.data?.message || error?.message}`, "error");
+                    }
+                }
+
                 setApplications(prev =>
                     prev.map(app => app.id === result.id ? result : app)
                 );
-                showSnackbar(`Application "${result.name}" updated successfully!`, "success");
                 handleCloseDialog();
+                loadApplications(); // Reload to get updated data
             } catch (error: any) {
                 console.error("Error updating application:", error);
                 let errorMessage = "Error updating application";
@@ -389,6 +549,7 @@ export default function AdminApplicationPage() {
     const handleViewManifest = async (application: ApplicationResponse) => {
         try {
             setManifestLoading(true);
+            setEditingManifest(false);
             setViewManifestDialogOpen(true);
             const manifest = await applicationService.getApplicationManifest(application.id);
             setViewingManifest(manifest);
@@ -404,6 +565,52 @@ export default function AdminApplicationPage() {
     const handleCloseViewManifestDialog = () => {
         setViewManifestDialogOpen(false);
         setViewingManifest(null);
+        setEditingManifest(false);
+    };
+
+    const handleEditManifest = () => {
+        setEditingManifest(true);
+    };
+
+    const handleSaveManifest = async () => {
+        if (!viewingManifest) return;
+
+        try {
+            setManifestLoading(true);
+            const updatedManifest = await applicationService.updateApplicationManifest(
+                viewingManifest.applicationId,
+                {
+                    Version: viewingManifest.version,
+                    BinaryVersion: viewingManifest.binaryVersion,
+                    BinaryPackage: viewingManifest.binaryPackage,
+                    ConfigVersion: viewingManifest.configVersion,
+                    ConfigPackage: viewingManifest.configPackage,
+                    ConfigMergeStrategy: viewingManifest.configMergeStrategy,
+                    UpdateType: viewingManifest.updateType,
+                    ForceUpdate: viewingManifest.forceUpdate,
+                    ReleaseNotes: viewingManifest.releaseNotes,
+                    IsStable: viewingManifest.isStable,
+                    PublishedAt: viewingManifest.publishedAt,
+                }
+            );
+            setViewingManifest(updatedManifest);
+            setEditingManifest(false);
+            showSnackbar("Manifest updated successfully!", "success");
+            loadApplications(); // Reload to get updated data
+        } catch (error: any) {
+            console.error("Error updating manifest:", error);
+            showSnackbar(`Failed to update manifest: ${error?.response?.data?.message || error?.message}`, "error");
+        } finally {
+            setManifestLoading(false);
+        }
+    };
+
+    const handleManifestFieldChange = (field: keyof ManifestResponse, value: any) => {
+        if (!viewingManifest) return;
+        setViewingManifest({
+            ...viewingManifest,
+            [field]: value
+        });
     };
 
     // Auto load data on component mount
@@ -765,7 +972,8 @@ export default function AdminApplicationPage() {
                 <DialogContent>
                     <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                         <Tab label="Application Info" />
-                        {dialogMode === "create" && <Tab label="Manifest (Optional)" />}
+                        <Tab label={`Manifest ${dialogMode === "create" ? "(Optional)" : ""}`} />
+                        <Tab label="Upload Package (Optional)" />
                     </Tabs>
 
                     <TabPanel value={tabValue} index={0}>
@@ -825,138 +1033,240 @@ export default function AdminApplicationPage() {
                         </Box>
                     </TabPanel>
 
-                    {dialogMode === "create" && (
-                        <TabPanel value={tabValue} index={1}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TabPanel value={tabValue} index={1}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {dialogMode === "create" && (
                                 <Alert severity="info" sx={{ mb: 1 }}>
                                     Fill out this section to create an initial manifest for the application. This is optional and can be done later.
                                 </Alert>
-                                <Grid container spacing={2}>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <TextField
-                                            label="Version"
-                                            fullWidth
-                                            value={manifestFormData.Version}
-                                            onChange={(e) => handleManifestFormChange("Version", e.target.value)}
-                                            disabled={dialogLoading}
-                                            helperText="e.g., 1.0.0"
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <TextField
-                                            label="Binary Version"
-                                            fullWidth
-                                            value={manifestFormData.BinaryVersion}
-                                            onChange={(e) => handleManifestFormChange("BinaryVersion", e.target.value)}
-                                            disabled={dialogLoading}
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12 }}>
-                                        <TextField
-                                            label="Binary Package"
-                                            fullWidth
-                                            value={manifestFormData.BinaryPackage}
-                                            onChange={(e) => handleManifestFormChange("BinaryPackage", e.target.value)}
-                                            disabled={dialogLoading}
-                                            helperText="Package identifier or URL"
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <TextField
-                                            label="Config Version"
-                                            fullWidth
-                                            value={manifestFormData.ConfigVersion}
-                                            onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
-                                            disabled={dialogLoading}
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <TextField
-                                            label="Config Package"
-                                            fullWidth
-                                            value={manifestFormData.ConfigPackage}
-                                            onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
-                                            disabled={dialogLoading}
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <FormControl fullWidth disabled={dialogLoading}>
-                                            <InputLabel>Config Merge Strategy</InputLabel>
-                                            <Select
-                                                label="Config Merge Strategy"
-                                                value={manifestFormData.ConfigMergeStrategy}
-                                                onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
-                                            >
-                                                <MenuItem value="Replace">Replace</MenuItem>
-                                                <MenuItem value="Merge">Merge</MenuItem>
-                                                <MenuItem value="KeepExisting">Keep Existing</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <FormControl fullWidth disabled={dialogLoading}>
-                                            <InputLabel>Update Type</InputLabel>
-                                            <Select
-                                                label="Update Type"
-                                                value={manifestFormData.UpdateType}
-                                                onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
-                                            >
-                                                <MenuItem value="Optional">Optional</MenuItem>
-                                                <MenuItem value="Recommended">Recommended</MenuItem>
-                                                <MenuItem value="Required">Required</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Grid>
-                                    <Grid size={{ xs: 12 }}>
-                                        <TextField
-                                            label="Release Notes"
-                                            fullWidth
-                                            multiline
-                                            rows={3}
-                                            value={manifestFormData.ReleaseNotes}
-                                            onChange={(e) => handleManifestFormChange("ReleaseNotes", e.target.value)}
-                                            disabled={dialogLoading}
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <TextField
-                                            label="Published At"
-                                            type="datetime-local"
-                                            fullWidth
-                                            value={manifestFormData.PublishedAt}
-                                            onChange={(e) => handleManifestFormChange("PublishedAt", e.target.value)}
-                                            disabled={dialogLoading}
-                                            InputLabelProps={{ shrink: true }}
-                                        />
-                                    </Grid>
-                                    <Grid size={{ xs: 12, sm: 6 }}>
-                                        <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                                            <FormControlLabel
-                                                control={
-                                                    <Checkbox
-                                                        checked={manifestFormData.ForceUpdate}
-                                                        onChange={(e) => handleManifestFormChange("ForceUpdate", e.target.checked)}
-                                                        disabled={dialogLoading}
-                                                    />
-                                                }
-                                                label="Force Update"
-                                            />
-                                            <FormControlLabel
-                                                control={
-                                                    <Checkbox
-                                                        checked={manifestFormData.IsStable}
-                                                        onChange={(e) => handleManifestFormChange("IsStable", e.target.checked)}
-                                                        disabled={dialogLoading}
-                                                    />
-                                                }
-                                                label="Is Stable"
-                                            />
-                                        </Box>
-                                    </Grid>
+                            )}
+                            <Grid container spacing={2}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Version"
+                                        fullWidth
+                                        value={manifestFormData.Version}
+                                        onChange={(e) => handleManifestFormChange("Version", e.target.value)}
+                                        disabled={dialogLoading}
+                                        helperText="e.g., 1.0.0"
+                                    />
                                 </Grid>
-                            </Box>
-                        </TabPanel>
-                    )}
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Binary Version"
+                                        fullWidth
+                                        value={manifestFormData.BinaryVersion}
+                                        onChange={(e) => handleManifestFormChange("BinaryVersion", e.target.value)}
+                                        disabled={dialogLoading}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        label="Binary Package"
+                                        fullWidth
+                                        value={manifestFormData.BinaryPackage}
+                                        onChange={(e) => handleManifestFormChange("BinaryPackage", e.target.value)}
+                                        disabled={dialogLoading}
+                                        helperText="Package identifier or URL"
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Config Version"
+                                        fullWidth
+                                        value={manifestFormData.ConfigVersion}
+                                        onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
+                                        disabled={dialogLoading}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Config Package"
+                                        fullWidth
+                                        value={manifestFormData.ConfigPackage}
+                                        onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
+                                        disabled={dialogLoading}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <FormControl fullWidth disabled={dialogLoading}>
+                                        <InputLabel>Config Merge Strategy</InputLabel>
+                                        <Select
+                                            label="Config Merge Strategy"
+                                            value={manifestFormData.ConfigMergeStrategy}
+                                            onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
+                                        >
+                                            <MenuItem value="Replace">Replace</MenuItem>
+                                            <MenuItem value="Merge">Merge</MenuItem>
+                                            <MenuItem value="KeepExisting">Keep Existing</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <FormControl fullWidth disabled={dialogLoading}>
+                                        <InputLabel>Update Type</InputLabel>
+                                        <Select
+                                            label="Update Type"
+                                            value={manifestFormData.UpdateType}
+                                            onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
+                                        >
+                                            <MenuItem value="Optional">Optional</MenuItem>
+                                            <MenuItem value="Recommended">Recommended</MenuItem>
+                                            <MenuItem value="Required">Required</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        label="Release Notes"
+                                        fullWidth
+                                        multiline
+                                        rows={3}
+                                        value={manifestFormData.ReleaseNotes}
+                                        onChange={(e) => handleManifestFormChange("ReleaseNotes", e.target.value)}
+                                        disabled={dialogLoading}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Published At"
+                                        type="datetime-local"
+                                        fullWidth
+                                        value={manifestFormData.PublishedAt}
+                                        onChange={(e) => handleManifestFormChange("PublishedAt", e.target.value)}
+                                        disabled={dialogLoading}
+                                        InputLabelProps={{ shrink: true }}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={manifestFormData.ForceUpdate}
+                                                    onChange={(e) => handleManifestFormChange("ForceUpdate", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Force Update"
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={manifestFormData.IsStable}
+                                                    onChange={(e) => handleManifestFormChange("IsStable", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Is Stable"
+                                        />
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </TabPanel>
+
+                    <TabPanel value={tabValue} index={2}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Alert severity="info" sx={{ mb: 1 }}>
+                                Upload a package file for this application. This is optional.
+                            </Alert>
+                            <Grid container spacing={2}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Package Version"
+                                        fullWidth
+                                        value={packageFormData.Version}
+                                        onChange={(e) => handlePackageFormChange("Version", e.target.value)}
+                                        disabled={dialogLoading}
+                                        helperText="e.g., 1.0.0"
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <FormControl fullWidth disabled={dialogLoading}>
+                                        <InputLabel>Package Type</InputLabel>
+                                        <Select
+                                            label="Package Type"
+                                            value={packageFormData.PackageType}
+                                            onChange={(e) => handlePackageFormChange("PackageType", e.target.value as string)}
+                                        >
+                                            <MenuItem value="Binary">Binary</MenuItem>
+                                            <MenuItem value="Config">Config</MenuItem>
+                                            <MenuItem value="Full">Full Package</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid size={{ xs: 12 }}>
+                                    <Button
+                                        variant="outlined"
+                                        component="label"
+                                        fullWidth
+                                        startIcon={<AttachFileIcon />}
+                                        disabled={dialogLoading}
+                                        sx={{ py: 2 }}
+                                    >
+                                        {selectedFile ? selectedFile.name : "Choose Package File"}
+                                        <input
+                                            type="file"
+                                            hidden
+                                            onChange={handleFileChange}
+                                            accept=".zip,.rar,.7z,.exe,.msi"
+                                        />
+                                    </Button>
+                                    {selectedFile && (
+                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                            File size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                        </Typography>
+                                    )}
+                                </Grid>
+                                <Grid size={{ xs: 12 }}>
+                                    <TextField
+                                        label="Release Notes"
+                                        fullWidth
+                                        multiline
+                                        rows={3}
+                                        value={packageFormData.ReleaseNotes}
+                                        onChange={(e) => handlePackageFormChange("ReleaseNotes", e.target.value)}
+                                        disabled={dialogLoading}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <TextField
+                                        label="Minimum Client Version"
+                                        fullWidth
+                                        value={packageFormData.MinimumClientVersion}
+                                        onChange={(e) => handlePackageFormChange("MinimumClientVersion", e.target.value)}
+                                        disabled={dialogLoading}
+                                        helperText="Minimum version required to install"
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={packageFormData.IsStable}
+                                                    onChange={(e) => handlePackageFormChange("IsStable", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Is Stable Release"
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={packageFormData.PublishImmediately}
+                                                    onChange={(e) => handlePackageFormChange("PublishImmediately", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Publish Immediately"
+                                        />
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                        </Box>
+                    </TabPanel>
                 </DialogContent>
                 <DialogActions>
                     <Button
@@ -1020,7 +1330,18 @@ export default function AdminApplicationPage() {
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle>Application Manifest</DialogTitle>
+                <DialogTitle>
+                    Application Manifest
+                    {!editingManifest && viewingManifest && (
+                        <IconButton
+                            onClick={handleEditManifest}
+                            sx={{ float: 'right' }}
+                            color="primary"
+                        >
+                            <EditIcon />
+                        </IconButton>
+                    )}
+                </DialogTitle>
                 <DialogContent>
                     {manifestLoading ? (
                         <Box sx={{ py: 4 }}>
@@ -1032,43 +1353,148 @@ export default function AdminApplicationPage() {
                             <Grid container spacing={2}>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Version</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.version}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={viewingManifest.version}
+                                            onChange={(e) => handleManifestFieldChange('version', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.version}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Binary Version</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.binaryVersion}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={viewingManifest.binaryVersion}
+                                            onChange={(e) => handleManifestFieldChange('binaryVersion', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.binaryVersion}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                     <Typography variant="body2" color="text.secondary">Binary Package</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.binaryPackage}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={viewingManifest.binaryPackage}
+                                            onChange={(e) => handleManifestFieldChange('binaryPackage', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.binaryPackage}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Config Version</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.configVersion || 'N/A'}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={viewingManifest.configVersion || ''}
+                                            onChange={(e) => handleManifestFieldChange('configVersion', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configVersion || 'N/A'}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Config Package</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.configPackage || 'N/A'}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            size="small"
+                                            value={viewingManifest.configPackage || ''}
+                                            onChange={(e) => handleManifestFieldChange('configPackage', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configPackage || 'N/A'}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Config Merge Strategy</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.configMergeStrategy}</Typography>
+                                    {editingManifest ? (
+                                        <FormControl fullWidth size="small">
+                                            <Select
+                                                value={viewingManifest.configMergeStrategy}
+                                                onChange={(e) => handleManifestFieldChange('configMergeStrategy', e.target.value)}
+                                            >
+                                                <MenuItem value="Replace">Replace</MenuItem>
+                                                <MenuItem value="Merge">Merge</MenuItem>
+                                                <MenuItem value="KeepExisting">Keep Existing</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configMergeStrategy}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Update Type</Typography>
-                                    <Chip label={viewingManifest.updateType} color="primary" size="small" />
+                                    {editingManifest ? (
+                                        <FormControl fullWidth size="small">
+                                            <Select
+                                                value={viewingManifest.updateType}
+                                                onChange={(e) => handleManifestFieldChange('updateType', e.target.value)}
+                                            >
+                                                <MenuItem value="Optional">Optional</MenuItem>
+                                                <MenuItem value="Recommended">Recommended</MenuItem>
+                                                <MenuItem value="Required">Required</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    ) : (
+                                        <Chip label={viewingManifest.updateType} color="primary" size="small" />
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                     <Typography variant="body2" color="text.secondary">Release Notes</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingManifest.releaseNotes || 'N/A'}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            multiline
+                                            rows={3}
+                                            value={viewingManifest.releaseNotes || ''}
+                                            onChange={(e) => handleManifestFieldChange('releaseNotes', e.target.value)}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.releaseNotes || 'N/A'}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 4 }}>
                                     <Typography variant="body2" color="text.secondary">Force Update</Typography>
-                                    <Chip label={viewingManifest.forceUpdate ? "Yes" : "No"} color={viewingManifest.forceUpdate ? "error" : "default"} size="small" />
+                                    {editingManifest ? (
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={viewingManifest.forceUpdate}
+                                                    onChange={(e) => handleManifestFieldChange('forceUpdate', e.target.checked)}
+                                                />
+                                            }
+                                            label="Force Update"
+                                        />
+                                    ) : (
+                                        <Chip label={viewingManifest.forceUpdate ? "Yes" : "No"} color={viewingManifest.forceUpdate ? "error" : "default"} size="small" />
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 4 }}>
                                     <Typography variant="body2" color="text.secondary">Is Stable</Typography>
-                                    <Chip label={viewingManifest.isStable ? "Yes" : "No"} color={viewingManifest.isStable ? "success" : "warning"} size="small" />
+                                    {editingManifest ? (
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={viewingManifest.isStable}
+                                                    onChange={(e) => handleManifestFieldChange('isStable', e.target.checked)}
+                                                />
+                                            }
+                                            label="Is Stable"
+                                        />
+                                    ) : (
+                                        <Chip label={viewingManifest.isStable ? "Yes" : "No"} color={viewingManifest.isStable ? "success" : "warning"} size="small" />
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 4 }}>
                                     <Typography variant="body2" color="text.secondary">Status</Typography>
@@ -1076,7 +1502,18 @@ export default function AdminApplicationPage() {
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Published At</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{FormatUtcTime.formatDateTime(viewingManifest.publishedAt)}</Typography>
+                                    {editingManifest ? (
+                                        <TextField
+                                            fullWidth
+                                            type="datetime-local"
+                                            size="small"
+                                            value={new Date(viewingManifest.publishedAt).toISOString().slice(0, 16)}
+                                            onChange={(e) => handleManifestFieldChange('publishedAt', e.target.value)}
+                                            InputLabelProps={{ shrink: true }}
+                                        />
+                                    ) : (
+                                        <Typography variant="body1" fontWeight={500}>{FormatUtcTime.formatDateTime(viewingManifest.publishedAt)}</Typography>
+                                    )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Updated At</Typography>
@@ -1089,7 +1526,21 @@ export default function AdminApplicationPage() {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseViewManifestDialog}>Close</Button>
+                    {editingManifest ? (
+                        <>
+                            <Button onClick={() => setEditingManifest(false)}>Cancel</Button>
+                            <Button
+                                onClick={handleSaveManifest}
+                                variant="contained"
+                                startIcon={<SaveIcon />}
+                                disabled={manifestLoading}
+                            >
+                                {manifestLoading ? "Saving..." : "Save Changes"}
+                            </Button>
+                        </>
+                    ) : (
+                        <Button onClick={handleCloseViewManifestDialog}>Close</Button>
+                    )}
                 </DialogActions>
             </Dialog>
 

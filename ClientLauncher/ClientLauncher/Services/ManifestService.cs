@@ -83,17 +83,17 @@ namespace ClientLauncher.Services
                 }
 
                 var jsonContent = await response.Content.ReadAsStringAsync();
-                var manifest = JsonSerializer.Deserialize<ManifestDto>(jsonContent,
+                var manifest = JsonSerializer.Deserialize<ApiBaseResponse<ManifestDto>>(jsonContent,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 if (manifest != null)
                 {
                     // Save to C:\CompanyApps\{appCode}\manifest.json
-                    await SaveManifestAsync(appCode, manifest);
+                    await SaveManifestAsync(appCode, manifest.Data);
                     Logger.Info("Successfully downloaded and saved manifest for {AppCode}", appCode);
                 }
 
-                return manifest;
+                return manifest.Data;
             }
             catch (Exception ex)
             {
