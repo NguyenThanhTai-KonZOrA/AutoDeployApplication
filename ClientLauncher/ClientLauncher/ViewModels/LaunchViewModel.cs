@@ -182,6 +182,7 @@ namespace ClientLauncher.ViewModels
                     StatusEmoji = "🔍";
 
                     var isUpdateAvailable = await _versionCheckService.IsUpdateAvailableAsync(AppCode);
+                    Logger.Info("isUpdateAvailable {isUpdateAvailable}", isUpdateAvailable);
                     var isForceUpdate = await _versionCheckService.IsForceUpdateRequiredAsync(AppCode);
 
                     if (isUpdateAvailable)
@@ -194,6 +195,7 @@ namespace ClientLauncher.ViewModels
                             StatusEmoji = "⚠️";
                             await Task.Delay(100);
                             await PerformUpdateAsync(manifest);
+                            await PerformInstallationAsync(manifest);
                         }
                         else
                         {
@@ -210,6 +212,8 @@ namespace ClientLauncher.ViewModels
                             {
                                 StatusEmoji = "✅";
                                 await PerformUpdateAsync(manifest);
+                                await PerformInstallationAsync(manifest);
+
                             }
                             else
                             {

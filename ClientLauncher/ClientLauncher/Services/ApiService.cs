@@ -220,5 +220,47 @@ namespace ClientLauncher.Services
                 return null;
             }
         }
+
+        public async Task NotifyInstallationAsync(string appCode, string version, bool success, TimeSpan duration, string? error = null, string? oldVersion = null, string action = "Install")
+        {
+            try
+            {
+                var logUrl = $"{_baseUrl}/api/Installation/log";
+                var logData = new
+                {
+                    appCode,
+                    version,
+                    oldVersion,
+                    action,
+                    userName = Environment.UserName,
+                    machineName = Environment.MachineName,
+                    success,
+                    error,
+                    durationSeconds = (int)duration.TotalSeconds,
+                    timestamp = DateTime.UtcNow
+                };
+
+                var content = new StringContent(
+                    JsonSerializer.Serialize(logData),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var response = await _httpClient.PostAsync(logUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Logger.Info("Installation logged to server successfully");
+                }
+                else
+                {
+                    Logger.Warn($"Failed to log installation: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to notify server about installation (non-critical)");
+            }
+        }
     }
 }

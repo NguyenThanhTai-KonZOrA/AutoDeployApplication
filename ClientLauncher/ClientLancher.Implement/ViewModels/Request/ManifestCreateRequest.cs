@@ -25,6 +25,7 @@
 
     public class ManifestUpdateRequest
     {
+        public string Version { get; set; } = string.Empty;
         public string? BinaryVersion { get; set; }
         public string? BinaryPackage { get; set; }
         public string? ConfigVersion { get; set; }

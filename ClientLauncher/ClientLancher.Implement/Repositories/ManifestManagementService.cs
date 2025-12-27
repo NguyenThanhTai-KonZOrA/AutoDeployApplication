@@ -83,6 +83,9 @@ namespace ClientLancher.Implement.Services
                 }
 
                 // Update only provided fields
+                if (!string.IsNullOrEmpty(request.Version))
+                    manifest.Version = request.Version;
+
                 if (!string.IsNullOrEmpty(request.BinaryVersion))
                     manifest.BinaryVersion = request.BinaryVersion;
 

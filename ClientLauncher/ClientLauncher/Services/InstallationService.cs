@@ -105,6 +105,7 @@ namespace ClientLauncher.Services
 
         public async Task<InstallationResult> UpdateApplicationAsync(string appCode, string userName)
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 Logger.Info("Starting update for {AppCode}", appCode);
@@ -160,7 +161,8 @@ namespace ClientLauncher.Services
                             await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
                         }
                     }
-
+                    stopwatch.Stop();
+                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty, true, stopwatch.Elapsed, null, null, "Update");
                     // 3. Update version info
                     SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
 
@@ -194,12 +196,16 @@ namespace ClientLauncher.Services
                         Directory.Move(backupPath, appPath);
                         Logger.Info("Rolled back to backup");
                     }
+                    stopwatch.Stop();
+                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty, false, stopwatch.Elapsed, "Rolled back to backup", null, "Update");
                     throw;
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Update failed for {AppCode}", appCode);
+                stopwatch.Stop();
+                await NotifyInstallationAsync(appCode, string.Empty, false, stopwatch.Elapsed, ex.Message, null, "Update");
                 return new InstallationResult
                 {
                     Success = false,

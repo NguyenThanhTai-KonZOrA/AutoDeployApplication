@@ -20,5 +20,6 @@ namespace ClientLauncher.Services.Interface
         /// <param name="appCode"></param>
         /// <returns></returns>
         Task<string?> GetInstalledVersionAsync(string appCode);
+        Task NotifyInstallationAsync(string appCode, string version, bool success, TimeSpan duration, string? error = null, string? oldVersion = null, string action = "Install");
     }
 }
