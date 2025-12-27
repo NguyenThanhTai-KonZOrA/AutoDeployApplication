@@ -1,0 +1,16 @@
+{
+  "appCode": "HTRAdminABVs",
+  "binary": {
+    "version": "v1.0",
+    "package": "HTRAdminABVs_v1.0.zip"
+  },
+  "config": {
+    "version": "v1.0",
+    "package": "HTRAdminABVs_v1.0.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

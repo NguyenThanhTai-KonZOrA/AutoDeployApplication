@@ -129,6 +129,29 @@ export default function AdminApplicationPage() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [existingPackages, setExistingPackages] = useState<ApplicationPackageResponse[]>([]);
 
+    // Form validation errors
+    const [appFormErrors, setAppFormErrors] = useState({
+        appCode: false,
+        name: false,
+        categoryId: false,
+    });
+
+    const [manifestFormErrors, setManifestFormErrors] = useState({
+        Version: false,
+        BinaryVersion: false,
+        BinaryPackage: false,
+        ConfigVersion: false,
+        ConfigPackage: false,
+    });
+
+    const [packageFormErrors, setPackageFormErrors] = useState({
+        Version: false,
+        PackageType: false,
+        ReleaseNotes: false,
+        MinimumClientVersion: false,
+        file: false,
+    });
+
     // Delete confirmation dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deletingApplication, setDeletingApplication] = useState<ApplicationResponse | null>(null);
@@ -211,6 +234,9 @@ export default function AdminApplicationPage() {
             PublishImmediately: true,
         });
         setSelectedFile(null);
+        setAppFormErrors({ appCode: false, name: false, categoryId: false });
+        setManifestFormErrors({ Version: false, BinaryVersion: false, BinaryPackage: false, ConfigVersion: false, ConfigPackage: false });
+        setPackageFormErrors({ Version: false, PackageType: false, ReleaseNotes: false, MinimumClientVersion: false, file: false });
         setDialogOpen(true);
         loadCategories();
     };
@@ -304,29 +330,55 @@ export default function AdminApplicationPage() {
     };
 
     const handleAppFormChange = (field: string, value: string | number) => {
-        setAppFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setAppFormData(prev => {
+            const newData = { ...prev, [field]: value };
+            // Auto-generate appCode from name (remove spaces) - only in create mode
+            if (field === "name" && dialogMode === "create") {
+                newData.appCode = String(value).replace(/\s+/g, "");
+            }
+            return newData;
+        });
+        // Clear error for this field
+        if (field === "appCode" || field === "name" || field === "categoryId") {
+            setAppFormErrors(prev => ({ ...prev, [field]: false }));
+        }
     };
 
     const handleManifestFormChange = (field: string, value: string | number | boolean) => {
-        setManifestFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setManifestFormData(prev => {
+            const newData = { ...prev, [field]: value };
+            // Auto-fill BinaryVersion and ConfigVersion when Version changes
+            if (field === "Version") {
+                newData.BinaryVersion = String(value);
+                newData.ConfigVersion = String(value);
+                // Auto-fill BinaryPackage and ConfigPackage with appCode + version
+                if (appFormData.appCode) {
+                    newData.BinaryPackage = `${appFormData.appCode}_${value}`;
+                    newData.ConfigPackage = `${appFormData.appCode}_${value}`;
+                }
+                // Sync package version with manifest version
+                setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
+            }
+            return newData;
+        });
+        // Clear error for this field
+        if (field === "Version" || field === "BinaryVersion" || field === "BinaryPackage" || field === "ConfigVersion" || field === "ConfigPackage") {
+            setManifestFormErrors(prev => ({ ...prev, [field]: false }));
+        }
     };
 
     const handlePackageFormChange = (field: string, value: string | boolean) => {
-        setPackageFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setPackageFormData(prev => ({ ...prev, [field]: value }));
+        // Clear error for this field
+        if (field === "Version" || field === "PackageType" || field === "ReleaseNotes" || field === "MinimumClientVersion") {
+            setPackageFormErrors(prev => ({ ...prev, [field]: false }));
+        }
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files && event.target.files[0]) {
             setSelectedFile(event.target.files[0]);
+            setPackageFormErrors((prev) => ({ ...prev, file: false }));
         }
     };
 
@@ -335,44 +387,102 @@ export default function AdminApplicationPage() {
     };
 
     const validateAppForm = (): boolean => {
-        if (!appFormData.appCode.trim()) {
-            showSnackbar("App Code is required", "error");
+        const errors = {
+            appCode: !appFormData.appCode.trim(),
+            name: !appFormData.name.trim(),
+            categoryId: !appFormData.categoryId || appFormData.categoryId === 0,
+        };
+        setAppFormErrors(errors);
+
+        if (errors.appCode) {
+            showSnackbar("Application Code is required", "error");
+            setTabValue(0);
             return false;
         }
-        if (!appFormData.name.trim()) {
+        if (errors.name) {
             showSnackbar("Application name is required", "error");
+            setTabValue(0);
             return false;
         }
-        if (!appFormData.categoryId || appFormData.categoryId === 0) {
+        if (errors.categoryId) {
             showSnackbar("Category is required", "error");
+            setTabValue(0);
             return false;
         }
         return true;
     };
 
     const validateManifestForm = (): boolean => {
-        if (!manifestFormData.Version.trim()) {
+        const errors = {
+            Version: !manifestFormData.Version.trim(),
+            BinaryVersion: !manifestFormData.BinaryVersion.trim(),
+            BinaryPackage: !manifestFormData.BinaryPackage.trim(),
+            ConfigVersion: !manifestFormData.ConfigVersion.trim(),
+            ConfigPackage: !manifestFormData.ConfigPackage.trim(),
+        };
+        setManifestFormErrors(errors);
+
+        if (errors.Version) {
             showSnackbar("Manifest Version is required", "error");
+            setTabValue(1);
             return false;
         }
-        if (!manifestFormData.BinaryVersion.trim()) {
+        if (errors.BinaryVersion) {
             showSnackbar("Manifest Binary Version is required", "error");
+            setTabValue(1);
             return false;
         }
-        if (!manifestFormData.BinaryPackage.trim()) {
+        if (errors.BinaryPackage) {
             showSnackbar("Manifest Binary Package is required", "error");
+            setTabValue(1);
+            return false;
+        }
+        if (errors.ConfigVersion) {
+            showSnackbar("Config Version is required", "error");
+            setTabValue(1);
+            return false;
+        }
+        if (errors.ConfigPackage) {
+            showSnackbar("Config Package is required", "error");
+            setTabValue(1);
             return false;
         }
         return true;
     };
 
     const validatePackageForm = (): boolean => {
-        if (!packageFormData.Version.trim()) {
+        const errors = {
+            Version: !packageFormData.Version.trim(),
+            PackageType: !packageFormData.PackageType.trim(),
+            ReleaseNotes: !packageFormData.ReleaseNotes.trim(),
+            MinimumClientVersion: !packageFormData.MinimumClientVersion.trim(),
+            file: !selectedFile,
+        };
+        setPackageFormErrors(errors);
+
+        if (errors.Version) {
             showSnackbar("Package Version is required", "error");
+            setTabValue(2);
             return false;
         }
-        if (!packageFormData.PackageType.trim()) {
+        if (errors.PackageType) {
             showSnackbar("Package Type is required", "error");
+            setTabValue(2);
+            return false;
+        }
+        if (errors.ReleaseNotes) {
+            showSnackbar("Release Notes is required", "error");
+            setTabValue(2);
+            return false;
+        }
+        if (errors.MinimumClientVersion) {
+            showSnackbar("Minimum Client Version is required", "error");
+            setTabValue(2);
+            return false;
+        }
+        if (errors.file) {
+            showSnackbar("Please select a package file", "error");
+            setTabValue(2);
             return false;
         }
 
@@ -701,6 +811,20 @@ export default function AdminApplicationPage() {
         setSearchTerm(event.target.value);
     };
 
+    const getColorChipByCategory = (categoryId: number) => {
+
+        switch (categoryId) {
+            case 1:
+                return <Chip label="Cage Applications" color="success" size="small" />;
+            case 2:
+                return <Chip label="HTR Applications" color="secondary" size="small" />;
+            case 3:
+                return <Chip label="Finance Applications" color="warning" size="small" />;
+            default:
+                return <Chip label="Other" color="default" size="small" />;
+        }
+    }
+
     return (
         <AdminLayout>
             <Box>
@@ -827,7 +951,7 @@ export default function AdminApplicationPage() {
                                             ID
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
-                                            App Code
+                                            Application Code
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
                                             Name
@@ -892,7 +1016,7 @@ export default function AdminApplicationPage() {
                                                     borderRight: '1px solid #e0e0e0'
                                                 }}>
                                                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                                                        <Tooltip title="View manifest">
+                                                        {/* <Tooltip title="View manifest">
                                                             <IconButton
                                                                 size="small"
                                                                 color="info"
@@ -900,7 +1024,7 @@ export default function AdminApplicationPage() {
                                                             >
                                                                 <VisibilityIcon />
                                                             </IconButton>
-                                                        </Tooltip>
+                                                        </Tooltip> */}
                                                         <Tooltip title="Edit application">
                                                             <IconButton
                                                                 size="small"
@@ -934,12 +1058,7 @@ export default function AdminApplicationPage() {
                                                     {application.description}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    <Chip
-                                                        label={application.categoryName}
-                                                        color="primary"
-                                                        size="small"
-                                                        variant="outlined"
-                                                    />
+                                                    {getColorChipByCategory(application.categoryId)}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {application.latestVersion || 'N/A'}
@@ -1020,28 +1139,41 @@ export default function AdminApplicationPage() {
                     <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                         <Tab label="Application Info" />
                         <Tab label={`Manifest ${dialogMode === "create" ? "(Mandatory)" : ""}`} />
-                        <Tab label="Upload Package (Mandatory)" />
+                        <Tab label={`Upload Package ${dialogMode === "create" ? "(Mandatory)" : ""}`} />
                     </Tabs>
 
                     <TabPanel value={tabValue} index={0}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            <TextField
-                                label="App Code"
-                                fullWidth
-                                required
-                                value={appFormData.appCode}
-                                onChange={(e) => handleAppFormChange("appCode", e.target.value)}
-                                disabled={dialogLoading || dialogMode === "edit"}
-                                autoFocus
-                                helperText="Unique identifier for the application"
-                            />
                             <TextField
                                 label="Application Name"
                                 fullWidth
                                 required
                                 value={appFormData.name}
                                 onChange={(e) => handleAppFormChange("name", e.target.value)}
+                                onBlur={() => {
+                                    if (!appFormData.name.trim()) {
+                                        setAppFormErrors(prev => ({ ...prev, name: true }));
+                                    }
+                                }}
+                                error={appFormErrors.name}
                                 disabled={dialogLoading}
+                                helperText={appFormErrors.name ? "Application Name is required" : ""}
+                            />
+                            <TextField
+                                label="Application Code"
+                                fullWidth
+                                required
+                                value={appFormData.appCode}
+                                onChange={(e) => handleAppFormChange("appCode", e.target.value)}
+                                onBlur={() => {
+                                    if (!appFormData.appCode.trim()) {
+                                        setAppFormErrors(prev => ({ ...prev, appCode: true }));
+                                    }
+                                }}
+                                error={appFormErrors.appCode}
+                                disabled={dialogLoading || dialogMode === "edit"}
+                                // autoFocus
+                                helperText={appFormErrors.appCode ? "Application Code is required" : "Unique identifier for the application (auto-generated from name)"}
                             />
                             <TextField
                                 label="Description"
@@ -1060,12 +1192,17 @@ export default function AdminApplicationPage() {
                                 disabled={dialogLoading}
                                 helperText="URL to application icon/logo"
                             />
-                            <FormControl fullWidth required disabled={dialogLoading}>
+                            <FormControl fullWidth required disabled={dialogLoading} error={appFormErrors.categoryId}>
                                 <InputLabel>Category</InputLabel>
                                 <Select
                                     label="Category"
                                     value={appFormData.categoryId}
                                     onChange={(e) => handleAppFormChange("categoryId", e.target.value)}
+                                    onBlur={() => {
+                                        if (!appFormData.categoryId || appFormData.categoryId === 0) {
+                                            setAppFormErrors(prev => ({ ...prev, categoryId: true }));
+                                        }
+                                    }}
                                 >
                                     <MenuItem value={0} disabled>
                                         <em>Select a category</em>
@@ -1076,6 +1213,11 @@ export default function AdminApplicationPage() {
                                         </MenuItem>
                                     ))}
                                 </Select>
+                                {appFormErrors.categoryId && (
+                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                        Category is required
+                                    </Typography>
+                                )}
                             </FormControl>
                         </Box>
                     </TabPanel>
@@ -1088,15 +1230,21 @@ export default function AdminApplicationPage() {
                                 </Alert>
                             )}
                             <Grid container spacing={2}>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                <Grid size={{ xs: 12 }}>
                                     <TextField
                                         label="Version"
                                         fullWidth
                                         required
                                         value={manifestFormData.Version}
                                         onChange={(e) => handleManifestFormChange("Version", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.Version.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, Version: true }));
+                                            }
+                                        }}
+                                        error={manifestFormErrors.Version}
                                         disabled={dialogLoading}
-                                        helperText="e.g., 1.0.0"
+                                        helperText={manifestFormErrors.Version ? "Version is required" : "e.g., 1.0.0 (auto-fills Binary/Config versions)"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1106,18 +1254,31 @@ export default function AdminApplicationPage() {
                                         required
                                         value={manifestFormData.BinaryVersion}
                                         onChange={(e) => handleManifestFormChange("BinaryVersion", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.BinaryVersion.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, BinaryVersion: true }));
+                                            }
+                                        }}
+                                        error={manifestFormErrors.BinaryVersion}
                                         disabled={dialogLoading}
+                                        helperText={manifestFormErrors.BinaryVersion ? "Binary Version is required" : "Auto-filled from Version"}
                                     />
                                 </Grid>
-                                <Grid size={{ xs: 12 }}>
+                                <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Binary Package"
                                         fullWidth
                                         required
                                         value={manifestFormData.BinaryPackage}
                                         onChange={(e) => handleManifestFormChange("BinaryPackage", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.BinaryPackage.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, BinaryPackage: true }));
+                                            }
+                                        }}
+                                        error={manifestFormErrors.BinaryPackage}
                                         disabled={dialogLoading}
-                                        helperText="Package identifier or URL"
+                                        helperText={manifestFormErrors.BinaryPackage ? "Binary Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1127,7 +1288,14 @@ export default function AdminApplicationPage() {
                                         required
                                         value={manifestFormData.ConfigVersion}
                                         onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.ConfigVersion.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, ConfigVersion: true }));
+                                            }
+                                        }}
+                                        error={manifestFormErrors.ConfigVersion}
                                         disabled={dialogLoading}
+                                        helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1137,7 +1305,14 @@ export default function AdminApplicationPage() {
                                         required
                                         value={manifestFormData.ConfigPackage}
                                         onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.ConfigPackage.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, ConfigPackage: true }));
+                                            }
+                                        }}
+                                        error={manifestFormErrors.ConfigPackage}
                                         disabled={dialogLoading}
+                                        helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1279,22 +1454,38 @@ export default function AdminApplicationPage() {
                                         required
                                         value={packageFormData.Version}
                                         onChange={(e) => handlePackageFormChange("Version", e.target.value)}
-                                        disabled={dialogLoading}
-                                        helperText="e.g., 1.0.0"
+                                        onBlur={() => {
+                                            if (!packageFormData.Version.trim()) {
+                                                setPackageFormErrors(prev => ({ ...prev, Version: true }));
+                                            }
+                                        }}
+                                        error={packageFormErrors.Version}
+                                        disabled={dialogLoading || dialogMode === "create"}
+                                        helperText={packageFormErrors.Version ? "Package Version is required" : "Synced with Manifest Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
-                                    <FormControl fullWidth disabled={dialogLoading} required>
+                                    <FormControl fullWidth disabled={dialogLoading} required error={packageFormErrors.PackageType}>
                                         <InputLabel>Package Type</InputLabel>
                                         <Select
                                             label="Package Type"
                                             value={packageFormData.PackageType}
                                             onChange={(e) => handlePackageFormChange("PackageType", e.target.value as string)}
+                                            onBlur={() => {
+                                                if (!packageFormData.PackageType.trim()) {
+                                                    setPackageFormErrors(prev => ({ ...prev, PackageType: true }));
+                                                }
+                                            }}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
                                             <MenuItem value="Config">Config</MenuItem>
                                             <MenuItem value="Full">Full Package</MenuItem>
                                         </Select>
+                                        {packageFormErrors.PackageType && (
+                                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                                Package Type is required
+                                            </Typography>
+                                        )}
                                     </FormControl>
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
@@ -1304,21 +1495,29 @@ export default function AdminApplicationPage() {
                                         fullWidth
                                         startIcon={<AttachFileIcon />}
                                         disabled={dialogLoading}
-                                        sx={{ py: 2 }}
+                                        sx={{
+                                            py: 2,
+                                            borderColor: packageFormErrors.file ? 'error.main' : undefined,
+                                            color: packageFormErrors.file ? 'error.main' : undefined,
+                                        }}
                                     >
-                                        {selectedFile ? selectedFile.name : "Choose Package File"}
+                                        {selectedFile ? selectedFile.name : "Choose Package File *"}
                                         <input
                                             type="file"
                                             hidden
                                             onChange={handleFileChange}
-                                            accept=".zip,.rar,.7z,.exe,.msi"
+                                            accept=".zip"
                                         />
                                     </Button>
-                                    {selectedFile && (
+                                    {selectedFile ? (
                                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                                             File size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                                         </Typography>
-                                    )}
+                                    ) : packageFormErrors.file ? (
+                                        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', ml: 1.75 }}>
+                                            Package file is required
+                                        </Typography>
+                                    ) : null}
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                     <TextField
@@ -1329,7 +1528,14 @@ export default function AdminApplicationPage() {
                                         rows={3}
                                         value={packageFormData.ReleaseNotes}
                                         onChange={(e) => handlePackageFormChange("ReleaseNotes", e.target.value)}
+                                        onBlur={() => {
+                                            if (!packageFormData.ReleaseNotes.trim()) {
+                                                setPackageFormErrors(prev => ({ ...prev, ReleaseNotes: true }));
+                                            }
+                                        }}
+                                        error={packageFormErrors.ReleaseNotes}
                                         disabled={dialogLoading}
+                                        helperText={packageFormErrors.ReleaseNotes ? "Release Notes is required" : ""}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1339,8 +1545,14 @@ export default function AdminApplicationPage() {
                                         required
                                         value={packageFormData.MinimumClientVersion}
                                         onChange={(e) => handlePackageFormChange("MinimumClientVersion", e.target.value)}
+                                        onBlur={() => {
+                                            if (!packageFormData.MinimumClientVersion.trim()) {
+                                                setPackageFormErrors(prev => ({ ...prev, MinimumClientVersion: true }));
+                                            }
+                                        }}
+                                        error={packageFormErrors.MinimumClientVersion}
                                         disabled={dialogLoading}
-                                        helperText="Minimum version required to install"
+                                        helperText={packageFormErrors.MinimumClientVersion ? "Minimum Client Version is required" : "Minimum version required to install"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>

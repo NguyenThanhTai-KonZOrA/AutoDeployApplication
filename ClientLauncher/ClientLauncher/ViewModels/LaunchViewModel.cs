@@ -37,7 +37,7 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _appName, value);
         }
 
-        private string _statusEmoji = "🔄";
+        private string _statusEmoji = "🚀";
         public string StatusEmoji
         {
             get => _statusEmoji;
@@ -144,14 +144,15 @@ namespace ClientLauncher.ViewModels
 
                 // Step 1: Connecting to server
                 UpdateStatus("🔌 Connecting to server...", 5);
-                await Task.Delay(500); // ✅ Increased delay for UI update
+                StatusEmoji = "🔌";
+                await Task.Delay(100); // ✅ Increased delay for UI update
 
                 var manifest = await _manifestService.GetManifestFromServerAsync(AppCode);
                 if (manifest == null)
                 {
                     Logger.Error("Failed to get manifest from server for {AppCode}", AppCode);
                     UpdateStatus("❌ Failed to connect to server", 0);
-                    await Task.Delay(2000);
+                    await Task.Delay(500);
                     Application.Current.Shutdown();
                     return;
                 }
@@ -161,7 +162,8 @@ namespace ClientLauncher.ViewModels
 
                 // Step 2: Checking installation status
                 UpdateStatus("🔍 Checking installation status...", 15);
-                await Task.Delay(500);
+                StatusEmoji = "🔍";
+                await Task.Delay(100);
 
                 var isInstalled = _installationChecker.IsApplicationInstalled(AppCode);
                 var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
@@ -173,10 +175,11 @@ namespace ClientLauncher.ViewModels
                 {
                     // ✅ FIX: App is installed, check for updates
                     UpdateStatus("✓ Application is installed", 25);
-                    await Task.Delay(500);
-
+                    await Task.Delay(100);
+                    StatusEmoji = "✅";
                     UpdateStatus("🔍 Checking for updates...", 35);
-                    await Task.Delay(500);
+                    await Task.Delay(100);
+                    StatusEmoji = "🔍";
 
                     var isUpdateAvailable = await _versionCheckService.IsUpdateAvailableAsync(AppCode);
                     var isForceUpdate = await _versionCheckService.IsForceUpdateRequiredAsync(AppCode);
@@ -188,11 +191,13 @@ namespace ClientLauncher.ViewModels
                         if (isForceUpdate)
                         {
                             UpdateStatus("⚠️ Mandatory update required...", 40);
-                            await Task.Delay(500);
+                            StatusEmoji = "⚠️";
+                            await Task.Delay(100);
                             await PerformUpdateAsync(manifest);
                         }
                         else
                         {
+                            StatusEmoji = "ℹ️";
                             var result = MessageBox.Show(
                                 $"A new version ({manifest.Binary?.Version}) is available.\n\n" +
                                 $"Current version: {currentVersion}\n" +
@@ -203,12 +208,14 @@ namespace ClientLauncher.ViewModels
 
                             if (result == MessageBoxResult.Yes)
                             {
+                                StatusEmoji = "✅";
                                 await PerformUpdateAsync(manifest);
                             }
                             else
                             {
                                 UpdateStatus("⏭️ Update skipped", 45);
-                                await Task.Delay(500);
+                                StatusEmoji = "⏭️";
+                                await Task.Delay(100);
                             }
                         }
                     }
@@ -216,7 +223,8 @@ namespace ClientLauncher.ViewModels
                     {
                         // ✅ No update needed - LAUNCH DIRECTLY
                         UpdateStatus("✓ Application is up to date", 45);
-                        await Task.Delay(500);
+                        StatusEmoji = "✅";
+                        await Task.Delay(100);
 
                         Logger.Info("No update needed, launching application directly");
                     }
@@ -229,11 +237,13 @@ namespace ClientLauncher.ViewModels
                     // Not installed - perform installation
                     Logger.Info("Application not installed. Starting installation...");
                     UpdateStatus("📦 Application not installed. Installing...", 30);
-                    await Task.Delay(500);
+                    StatusEmoji = "📦";
+                    await Task.Delay(100);
 
                     await PerformInstallationAsync(manifest);
 
                     // Launch after installation
+                    StatusEmoji = "🚀";
                     await LaunchApplicationAsync();
                 }
             }
@@ -257,7 +267,8 @@ namespace ClientLauncher.ViewModels
                 Logger.Info("Starting update process for {AppCode}", AppCode);
 
                 UpdateStatus("📥 Downloading update package...", 50);
-                await Task.Delay(800);
+                StatusEmoji = "📥";
+                await Task.Delay(500);
 
                 var updateType = manifest.UpdatePolicy?.Type ?? "both";
                 Logger.Info("Update type: {UpdateType}", updateType);
@@ -271,9 +282,11 @@ namespace ClientLauncher.ViewModels
                     Logger.Info("Update completed successfully");
 
                     UpdateStatus("📦 Extracting files...", 65);
+                    StatusEmoji = "📦";
                     await Task.Delay(500);
 
                     UpdateStatus("✓ Update completed successfully", 75);
+                    StatusEmoji = "✓";
                     await Task.Delay(500);
 
                     // Save updated manifest to C:\CompanyApps\{appCode}\manifest.json
@@ -299,10 +312,12 @@ namespace ClientLauncher.ViewModels
                 Logger.Info("Starting installation for {AppCode}", AppCode);
 
                 UpdateStatus("📥 Downloading installation package...", 40);
-                await Task.Delay(800);
+                StatusEmoji = "📥";
+                await Task.Delay(200);
 
                 UpdateStatus("📦 Extracting application files...", 55);
-                await Task.Delay(500);
+                StatusEmoji = "📦";
+                await Task.Delay(200);
 
                 var result = await _installationService.InstallApplicationAsync(
                     AppCode,
@@ -313,10 +328,12 @@ namespace ClientLauncher.ViewModels
                     Logger.Info("Installation completed successfully");
 
                     UpdateStatus("⚙️ Configuring application...", 70);
-                    await Task.Delay(500);
+                    StatusEmoji = "⚙️";
+                    await Task.Delay(200);
 
                     UpdateStatus("✓ Installation completed successfully", 80);
-                    await Task.Delay(500);
+                    StatusEmoji = "✓";
+                    await Task.Delay(200);
 
                     // Save manifest to C:\CompanyApps\{appCode}\manifest.json
                     await _manifestService.SaveManifestAsync(AppCode, manifest);
@@ -338,11 +355,13 @@ namespace ClientLauncher.ViewModels
         {
             // Verifying installation
             UpdateStatus("🔍 Verifying installation...", 85);
-            await Task.Delay(500);
+            StatusEmoji = "🔍";
+            await Task.Delay(100);
 
             // Launching application
             UpdateStatus("🚀 Launching application...", 92);
-            await Task.Delay(500);
+            StatusEmoji = "🚀";
+            await Task.Delay(100);
 
             var appPath = GetApplicationPath();
             if (string.IsNullOrEmpty(appPath) || !File.Exists(appPath))
@@ -362,10 +381,12 @@ namespace ClientLauncher.ViewModels
                 WorkingDirectory = Path.GetDirectoryName(appPath)
             });
 
+            StatusEmoji = "✓";
             UpdateStatus("✓ Application launched successfully!", 100);
-            await Task.Delay(1000);
+            await Task.Delay(500);
 
             Logger.Info("=== Launch process completed for {AppCode} ===", AppCode);
+            StatusEmoji = "🔒";
             Application.Current.Shutdown();
             _window.WindowState = WindowState.Minimized;
             _window.Hide();
