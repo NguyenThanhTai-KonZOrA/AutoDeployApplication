@@ -5,6 +5,7 @@ using ClientLauncher.Services.Interface;
 using NLog;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
@@ -137,8 +138,8 @@ namespace ClientLauncher.ViewModels
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
-                async _ => await InstallApplicationAsync(),
-                _ => SelectedApplication != null && !IsProcessing
+                async _ => await InstallSelectedApplicationsAsync(),
+                _ => HasSelectedApplications && !IsProcessing
             );
 
             UninstallCommand = new AsyncRelayCommand(
@@ -157,11 +158,24 @@ namespace ClientLauncher.ViewModels
         {
             try
             {
+
                 _logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
                 var apps = await _apiService.GetAllApplicationsAsync();
+                Applications = new ObservableCollection<ApplicationDto>(apps);
+                // Subscribe to selection changes
+                foreach (var app in Applications)
+                {
+                    app.SelectionChanged += (s, e) =>
+                    {
+                        OnPropertyChanged(nameof(HasSelectedApplications));
+                        InstallCommand?.RaiseCanExecuteChanged();
+                    };
+                }
+
+                StatusMessage = $"Loaded {apps.Count} applications";
 
                 foreach (var app in apps)
                 {
@@ -365,6 +379,119 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
+        /// Install multiple selected applications
+        /// </summary>
+        private async Task InstallSelectedApplicationsAsync()
+        {
+            var selectedApps = Applications.Where(a => a.IsSelected).ToList();
+            if (!selectedApps.Any()) return;
+
+            try
+            {
+                _logger.Info($"Starting installation for {selectedApps.Count} application(s)");
+
+                CurrentStep = 2;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                IsProcessing = true;
+                var successCount = 0;
+                var failedApps = new List<string>();
+
+                for (int i = 0; i < selectedApps.Count; i++)
+                {
+                    var app = selectedApps[i];
+                    ProgressValue = (i * 100.0 / selectedApps.Count);
+                    StatusMessage = $"Installing {app.Name} ({i + 1}/{selectedApps.Count})...";
+
+                    try
+                    {
+                        var localManifest = await _manifestService.GetLocalManifestAsync(app.AppCode);
+
+                        if (localManifest == null)
+                        {
+                            var serverManifest = await _manifestService.DownloadManifestFromServerAsync(app.AppCode);
+                            if (serverManifest == null)
+                            {
+                                throw new Exception("Failed to download manifest");
+                            }
+                            await _manifestService.SaveManifestAsync(app.AppCode, serverManifest);
+                            localManifest = serverManifest;
+                        }
+
+                        var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+                        var iconPath = GetIconPathForCategory(app.Category);
+
+                        var shortcutCreated = _shortcutService.CreateDesktopShortcut(
+                            app.AppCode,
+                            app.Name,
+                            launcherPath,
+                            iconPath
+                        );
+
+                        if (shortcutCreated)
+                        {
+                            successCount++;
+                            _logger.Info($"Successfully installed {app.Name}");
+                        }
+                        else
+                        {
+                            failedApps.Add(app.Name);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"Failed to install {app.Name}");
+                        failedApps.Add(app.Name);
+                    }
+                }
+
+                ProgressValue = 100;
+                StatusMessage = "Installation completed";
+
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = failedApps.Count == 0;
+
+                if (InstallationSuccess)
+                {
+                    InstallationResult = $"✓ Successfully installed {successCount} application(s)!\n\n" +
+                                         $"Applications:\n" +
+                                         string.Join("\n", selectedApps.Select(a => $"  • {a.Name}")) +
+                                         $"\n\nDesktop shortcuts created!";
+                }
+                else
+                {
+                    InstallationResult = $"⚠ Partially completed:\n\n" +
+                                         $"✓ Success: {successCount}\n" +
+                                         $"✗ Failed: {failedApps.Count}\n\n" +
+                                         $"Failed applications:\n" +
+                                         string.Join("\n", failedApps.Select(f => $"  • {f}"));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Batch installation failed");
+
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Installation failed\n\n{ex.Message}";
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        /// <summary>
         /// Get icon path based on category
         /// </summary>
         private string? GetIconPathForCategory(string category)
@@ -484,12 +611,21 @@ namespace ClientLauncher.ViewModels
             ProgressValue = 0;
             InstallationResult = string.Empty;
 
+            // Clear all selections
+            foreach (var app in Applications)
+            {
+                app.IsSelected = false;
+            }
+
             OnPropertyChanged(nameof(IsStep1Visible));
             OnPropertyChanged(nameof(IsStep2Visible));
             OnPropertyChanged(nameof(IsStep3Visible));
+            OnPropertyChanged(nameof(HasSelectedApplications));
 
             // Reload applications
             _ = LoadApplicationsAsync();
         }
+
+        public bool HasSelectedApplications => Applications?.Any(a => a.IsSelected) ?? false;
     }
 }

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Application Launcher" 
         Height="600" 
-        Width="900"
+        Width="950"
         WindowStartupLocation="CenterScreen"
         Icon="pack://application:,,,/Assets/Images/NewLogo-01.png"
         Background="#F5F5F5">
@@ -40,7 +40,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="80"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="60"/>
+            <RowDefinition Height="70"/>
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
@@ -163,10 +163,13 @@
                                        FontSize="18" 
                                        FontWeight="SemiBold"
                                        Foreground="#2C3E50"/>
-                            <TextBlock Text="{Binding StatusMessage}" 
-                                       FontSize="11" 
+                            <TextBlock FontSize="11" 
                                        Foreground="#7F8C8D"
-                                       Margin="0,5,0,0"/>
+                                       Margin="0,5,0,0">
+                                <Run Text="{Binding StatusMessage, Mode=OneWay}"/>
+                                <Run Text=" • " FontWeight="Bold" Foreground="#3498DB"/>
+                                <Run Text="Select one or more apps to install" FontStyle="Italic" Foreground="#16A085"/>
+                            </TextBlock>
                         </StackPanel>
 
                         <Button Grid.Column="1" 
@@ -206,16 +209,32 @@
                 <!-- Application List -->
                 <ListBox Grid.Row="1" 
                          ItemsSource="{Binding Applications}"
-                         SelectedItem="{Binding SelectedApplication}"
                          Background="White"
                          BorderBrush="#BDC3C7"
                          BorderThickness="1"
+                         SelectionMode="Extended"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <!-- Update the application list item template to show version info and uninstall button -->
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter />
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="10" 
-                                    Margin="3" 
+                            <Border Padding="12" 
+                                    Margin="4" 
                                     Background="#FAFAFA" 
                                     BorderBrush="#E0E0E0" 
                                     BorderThickness="1"
@@ -225,6 +244,7 @@
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
                                                 <Setter Property="Background" Value="#ECF0F1"/>
+                                                <Setter Property="BorderBrush" Value="#3498DB"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -232,18 +252,29 @@
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="10"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="60"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
+                                    <!-- Checkbox - FIXED: Removed EventSetter -->
+                                    <CheckBox Grid.Column="0" 
+                                              IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,12,0"
+                                              Width="20"
+                                              Height="20"
+                                              Cursor="Hand"/>
+
                                     <!-- Icon -->
-                                    <Border Grid.Column="0" 
+                                    <Border Grid.Column="1" 
                                             Width="50" 
                                             Height="50" 
                                             Background="Transparent" 
                                             CornerRadius="8"
-                                            VerticalAlignment="Top">
+                                            VerticalAlignment="Top"
+                                            Margin="0,0,12,0">
                                         <Image Stretch="Uniform">
                                             <Image.Source>
                                                 <MultiBinding Converter="{StaticResource IconConverter}">
@@ -255,23 +286,23 @@
                                     </Border>
 
                                     <!-- Info -->
-                                    <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" 
-                               FontSize="20" 
-                               FontWeight="SemiBold"
-                               Foreground="#2C3E50"/>
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   Foreground="#2C3E50"/>
                                         <TextBlock Text="{Binding Description}" 
-                               FontSize="15" 
-                               Foreground="#7F8C8D"
-                               TextWrapping="Wrap"
-                               Margin="0,5,0,0"/>
+                                   FontSize="13" 
+                                   Foreground="#7F8C8D"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
 
                                         <!-- Status and Version Info -->
                                         <TextBlock Text="{Binding StatusText}" 
-                               FontSize="15" 
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               Margin="0,8,0,0">
+                                   FontSize="13" 
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   Margin="0,6,0,0">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
@@ -289,64 +320,63 @@
                                             </TextBlock.Style>
                                         </TextBlock>
 
-                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                             <Border Background="#E74C3C" 
-                                Padding="6,3" 
-                                CornerRadius="3"
-                                Margin="0,0,8,0">
+                                    Padding="6,3" 
+                                    CornerRadius="3"
+                                    Margin="0,0,6,0">
                                                 <TextBlock Text="{Binding Category}" 
-                                       FontSize="14" 
-                                       Foreground="White"
-                                       FontWeight="SemiBold"/>
+                                           FontSize="11" 
+                                           Foreground="White"
+                                           FontWeight="SemiBold"/>
                                             </Border>
                                             <Border Background="#95A5A6" 
-                                Padding="6,3" 
-                                CornerRadius="3">
+                                    Padding="6,3" 
+                                    CornerRadius="3">
                                                 <TextBlock Text="{Binding AppCode}" 
-                                       FontSize="15" 
-                                       Foreground="White"
-                                       FontWeight="SemiBold"/>
+                                           FontSize="11" 
+                                           Foreground="White"
+                                           FontWeight="SemiBold"/>
                                             </Border>
 
                                             <!-- Update Available Badge -->
                                             <Border Background="#F39C12" 
-                                Padding="6,3" 
-                                CornerRadius="3"
-                                Margin="8,0,0,0"
-                                Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    Padding="6,3" 
+                                    CornerRadius="3"
+                                    Margin="6,0,0,0"
+                                    Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
                                                 <TextBlock Text="🆕 UPDATE" 
-                                       FontSize="10" 
-                                       Foreground="White"
-                                       FontWeight="Bold"/>
+                                           FontSize="10" 
+                                           Foreground="White"
+                                           FontWeight="Bold"/>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
 
                                     <!-- Uninstall Button (only for installed apps) -->
-                                    <Button Grid.Column="2"
-                                        Content="🗑️ Uninstall"
-                                        Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        Padding="10,10"
-                                        Background="#E74C3C"
-                                            Margin="40 70 5 5"
-                                        Foreground="White"
-                                        BorderThickness="0"
-                                        Cursor="Hand"
-                                        FontSize="11"
-                                        FontWeight="SemiBold"
-                                        VerticalAlignment="Center"
-                                        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <Button Grid.Column="3"
+                                            Content="🗑️ Uninstall"
+                                            Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Padding="12,8"
+                                            Background="#E74C3C"
+                                            Foreground="White"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}">
                                         <Button.Style>
                                             <Style TargetType="Button">
                                                 <Setter Property="Template">
                                                     <Setter.Value>
                                                         <ControlTemplate TargetType="Button">
                                                             <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="5" 
-                                                Padding="{TemplateBinding Padding}">
+                                                    CornerRadius="5" 
+                                                    Padding="{TemplateBinding Padding}">
                                                                 <ContentPresenter HorizontalAlignment="Center" 
-                                                              VerticalAlignment="Center"/>
+                                                                  VerticalAlignment="Center"/>
                                                             </Border>
                                                         </ControlTemplate>
                                                     </Setter.Value>
@@ -379,14 +409,14 @@
                                    HorizontalAlignment="Center"
                                    Margin="0,0,0,20"/>
 
-                        <TextBlock Text="Installing Application..." 
+                        <TextBlock Text="Installing Application(s)..." 
                                    FontSize="24" 
                                    FontWeight="SemiBold"
                                    HorizontalAlignment="Center"
                                    Foreground="#2C3E50"
                                    Margin="0,0,0,10"/>
 
-                        <TextBlock Text="{Binding SelectedApplication.Name}" 
+                        <TextBlock Text="{Binding StatusMessage}" 
                                    FontSize="16" 
                                    HorizontalAlignment="Center"
                                    Foreground="#7F8C8D"
@@ -398,7 +428,7 @@
                                      Maximum="100"
                                      Margin="0,0,0,15"/>
 
-                        <TextBlock Text="{Binding StatusMessage}" 
+                        <TextBlock Text="{Binding ProgressValue, StringFormat={}{0:F0}%}" 
                                    FontSize="14" 
                                    HorizontalAlignment="Center"
                                    Foreground="#34495E"/>
@@ -455,16 +485,17 @@
                 Background="White" 
                 BorderBrush="#BDC3C7" 
                 BorderThickness="0,1,0,0"
-                Padding="20,10">
+                Padding="20,12">
             <Grid>
                 <Button Content="⬅ Back to Applications" 
                         Command="{Binding BackToListCommand}"
                         HorizontalAlignment="Left"
-                        Padding="15,8"
+                        Padding="18,10"
                         Background="#95A5A6"
                         Foreground="White"
                         BorderThickness="0"
                         Cursor="Hand"
+                        FontSize="13"
                         FontWeight="SemiBold"
                         Visibility="{Binding IsStep3Visible, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Button.Style>
@@ -490,7 +521,7 @@
                     </Button.Style>
                 </Button>
 
-                <Button Content="▶ Install Selected Application" 
+                <Button Content="▶ Install Selected Applications" 
                         Command="{Binding InstallCommand}"
                         HorizontalAlignment="Right"
                         Padding="20,10"
@@ -521,6 +552,7 @@
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Background" Value="#BDC3C7"/>
+                                    <Setter Property="Foreground" Value="#7F8C8D"/>
                                     <Setter Property="Cursor" Value="No"/>
                                 </Trigger>
                             </Style.Triggers>
