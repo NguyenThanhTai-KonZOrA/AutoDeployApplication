@@ -5,7 +5,7 @@ import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRe
 import type { ManifestCreateRequest, ManifestResponse, ManifestUpdateRequest } from "../type/manifestType";
 import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
 import type { InstallationLogRequest, InstallationLogPaginationResponse } from "../type/installationLogType";
-import type { PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
+import type { ApplicationPackageHistoryResponse, ApplicationPackageResponse, PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
@@ -168,13 +168,35 @@ export const packageManagementService = {
         return unwrapApiEnvelope(response);
     },
 
-    downloadPackage: async (id: number): Promise<void> => {
-        const response = await api.get(`/api/PackageManagement/download/${id}`);
-        return unwrapApiEnvelope(response);
+    downloadPackage: async (id: number, packageName: string): Promise<void> => {
+        try {
+            const response = await api.get(`/api/PackageManagement/${id}/download`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `${packageName}.zip`);
+            document.body.appendChild(link);
+            link.click();
+        } catch (error) {
+            console.error("Error downloading package:", error);
+            throw error;
+        }
     },
 
     getPackageDetails: async (id: number): Promise<PackageVersionResponse> => {
         const response = await api.get(`/api/PackageManagement/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getPackageByApplicationId: async (applicationId: number): Promise<ApplicationPackageResponse[]> => {
+        const response = await api.get(`/api/PackageManagement/application/${applicationId}/history`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getPackageHistoryByApplication: async (): Promise<ApplicationPackageHistoryResponse> => {
+        const response = await api.get(`/api/PackageManagement/all-by-applications`);
         return unwrapApiEnvelope(response);
     }
 };

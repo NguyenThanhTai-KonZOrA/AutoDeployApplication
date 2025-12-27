@@ -20,7 +20,7 @@ namespace ClientLauncher.Services
 
         public ApiService()
         {
-            _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102/api";
+            _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
             _installationChecker = new InstallationChecker();
             _manifestService = new ManifestService();

@@ -15,6 +15,7 @@ namespace ClientLancher.Implement.Repositories
         {
             return await _dbSet
                 .Include(a => a.InstallationLogs)
+                .Include(a => a.PackageVersions)
                 .FirstOrDefaultAsync(a => a.AppCode == appCode);
         }
 

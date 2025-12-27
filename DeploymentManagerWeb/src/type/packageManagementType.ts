@@ -28,3 +28,23 @@ export interface PackageVersionResponse {
     uploadedBy: string;
     publishImmediately: boolean;
 }
+
+export interface ApplicationPackageResponse {
+    id: number;
+    applicationId: number;
+    applicationName: string;
+    version: string;
+    packageFileName: string;
+    packageType: string;
+    fileSizeBytes: number;
+    fileSizeFormatted: string;
+    storagePath: string;
+    downloadCount: number;
+    lastDownloadedAt: string;
+    replacesVersionId: number;
+    replacesVersionNumber: string;
+}
+
+export interface ApplicationPackageHistoryResponse {
+    [appCode: string]: ApplicationPackageResponse[];
+}

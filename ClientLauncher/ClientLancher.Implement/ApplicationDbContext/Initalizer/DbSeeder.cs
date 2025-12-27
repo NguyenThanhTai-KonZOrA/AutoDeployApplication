@@ -82,8 +82,87 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         IsActive = true
                     }
                 };
-
                 await context.Applications.AddRangeAsync(applications);
+
+                // Seed Applications Manifest
+                if (!await context.ApplicationManifests.AnyAsync())
+                {
+                    var LevyTicketMonitorApp = applications.First(a => a.AppCode == "LevyTicketMonitor");
+                    var HTCasinoEntryApp = applications.First(a => a.AppCode == "HTCasinoEntry");
+                    var QueueTicketDisplayApp = applications.First(a => a.AppCode == "QueueTicketDisplay");
+                    var manifests = new List<ApplicationManifest>
+                    {
+                        new ApplicationManifest
+                        {
+                            Application = LevyTicketMonitorApp,
+                            Version = "1.1.0",
+                            BinaryVersion = "1.1.0",
+                            BinaryPackage = "LevyTicketMonitor_v1.1.0.zip",
+                            ConfigMergeStrategy = "Overwrite",
+                            UpdateType = "Mandatory",
+                            ForceUpdate = true,
+                            IsStable = true,
+                            PublishedAt = DateTime.UtcNow,
+                            ApplicationId = LevyTicketMonitorApp.Id,
+                            ConfigPackage = "LevyTicketMonitor_v1.1.0.zip",
+                            ConfigVersion = "1.1.0",
+                            ReleaseNotes = "Initial release of Levy Ticket Monitor.",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = "System",
+                            UpdatedBy = "System",
+                            IsActive = true,
+                            IsDelete = false
+                        },
+                        new ApplicationManifest
+                        {
+                            Application = HTCasinoEntryApp,
+                            Version = "1.1.0",
+                            BinaryVersion = "1.1.0",
+                            BinaryPackage = "HTCasinoEntry_v1.1.0.zip",
+                            ConfigMergeStrategy = "Overwrite",
+                            UpdateType = "Mandatory",
+                            ForceUpdate = true,
+                            IsStable = true,
+                            PublishedAt = DateTime.UtcNow,
+                            ApplicationId = HTCasinoEntryApp.Id,
+                            ConfigPackage = "HTCasinoEntry_v1.1.0.zip",
+                            ConfigVersion = "1.1.0",
+                            ReleaseNotes = "Initial release of HT Casino Entry.",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = "System",
+                            UpdatedBy = "System",
+                            IsActive = true,
+                            IsDelete = false
+
+                        },
+                        new ApplicationManifest
+                        {
+                            Application = QueueTicketDisplayApp,
+                            Version = "1.1.0",
+                            BinaryVersion = "1.1.0",
+                            BinaryPackage = "QueueTicketDisplay_v1.1.0.zip",
+                            ConfigMergeStrategy = "Overwrite",
+                            UpdateType = "Mandatory",
+                            ForceUpdate = true,
+                            IsStable = true,
+                            PublishedAt = DateTime.UtcNow,
+                            ApplicationId = QueueTicketDisplayApp.Id,
+                            ConfigPackage = "QueueTicketDisplay_v1.1.0.zip",
+                            ConfigVersion = "1.1.0",
+                            ReleaseNotes = "Initial release of Queue Ticket Display.",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = "System",
+                            UpdatedBy = "System",
+                            IsActive = true,
+                            IsDelete = false
+                        }
+                    };
+                    await context.ApplicationManifests.AddRangeAsync(manifests);
+                }
+
                 await context.SaveChangesAsync();
             }
         }

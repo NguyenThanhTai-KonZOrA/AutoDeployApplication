@@ -61,7 +61,8 @@ namespace ClientLancher.Implement.Services
                 stream.Position = 0;
 
                 // 5. Determine storage path
-                var fileName = $"{application.AppCode}_v{request.Version}.zip";
+                //var fileName = $"{application.AppCode}_v{request.Version}.zip";
+                var fileName = $"{application.AppCode}_{request.Version}.zip";
                 var storagePath = Path.Combine(application.AppCode, request.Version, fileName);
                 var fullPath = Path.Combine(_packagesBasePath, storagePath);
 
@@ -363,6 +364,40 @@ namespace ClientLancher.Implement.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during rollback");
+                throw;
+            }
+        }
+
+        public async Task<Dictionary<string, IEnumerable<PackageVersionResponse>>> GetAllPackagesGroupedByApplicationAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Fetching all packages grouped by application");
+
+                // Get all active applications
+                var applications = await _unitOfWork.Applications.GetActiveApplicationsAsync();
+
+                var result = new Dictionary<string, IEnumerable<PackageVersionResponse>>();
+
+                foreach (var application in applications)
+                {
+                    // Get all packages for each application
+                    var packages = await _unitOfWork.PackageVersions.GetByApplicationIdAsync(application.Id);
+
+                    // Map to response objects
+                    var packageResponses = packages.Select(p => MapToResponse(p, application));
+
+                    // Add to dictionary with application name or AppCode as key
+                    result[application.AppCode] = packageResponses;
+                }
+
+                _logger.LogInformation("Successfully grouped packages for {Count} applications", result.Count);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all packages grouped by application");
                 throw;
             }
         }

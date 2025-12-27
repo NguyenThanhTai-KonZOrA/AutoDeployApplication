@@ -73,7 +73,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Package not found" });
                 }
-                return Ok(new { success = true, message = "Package deleted successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -91,7 +91,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _packageService.PublishPackageAsync(request);
-                return Ok(new { success = true, data = result, message = "Package published successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -113,7 +113,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Package not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -131,11 +131,32 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _packageService.GetPackagesByApplicationIdAsync(applicationId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting packages for application ID: {ApplicationId}", applicationId);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Get all packages grouped by application
+        /// </summary>
+        [HttpGet("all-by-applications")]
+        public async Task<IActionResult> GetAllPackagesByApplications()
+        {
+            try
+            {
+                _logger.LogInformation("Fetching all packages grouped by application");
+
+                var result = await _packageService.GetAllPackagesGroupedByApplicationAsync();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all packages grouped by application");
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
@@ -153,7 +174,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "No versions found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -171,7 +192,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _packageService.GetVersionHistoryAsync(applicationId, take);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -219,7 +240,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _packageService.RollbackToVersionAsync(applicationId, version, performedBy);
-                return Ok(new { success = true, data = result, message = "Rollback completed successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {

@@ -249,7 +249,7 @@ export default function AdminInstallationLogPage() {
                                 />
                             </Grid>
 
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                            {/* <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <TextField
                                     fullWidth
                                     size="small"
@@ -257,7 +257,7 @@ export default function AdminInstallationLogPage() {
                                     value={filters.MachineName}
                                     onChange={(e) => handleFilterChange("MachineName", e.target.value)}
                                 />
-                            </Grid>
+                            </Grid> */}
 
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth size="small">
@@ -319,11 +319,18 @@ export default function AdminInstallationLogPage() {
                                 <Box sx={{ display: 'flex', gap: 1 }}>
                                     <Button
                                         variant="contained"
-                                        fullWidth
                                         startIcon={<SearchIcon />}
                                         onClick={handleApplyFilters}
                                     >
                                         Search
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<RefreshIcon />}
+                                        onClick={loadLogs}
+                                        disabled={loading}
+                                    >
+                                        Refresh
                                     </Button>
                                     <Button
                                         variant="outlined"
@@ -355,18 +362,6 @@ export default function AdminInstallationLogPage() {
                                         <MenuItem value={100}>100</MenuItem>
                                     </Select>
                                 </FormControl>
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <Button
-                                    variant="contained"
-                                    fullWidth
-                                    startIcon={<RefreshIcon />}
-                                    onClick={loadLogs}
-                                    disabled={loading}
-                                >
-                                    Refresh
-                                </Button>
                             </Grid>
 
                             <Grid size={{ xs: 12, md: 6 }}>
@@ -429,7 +424,7 @@ export default function AdminInstallationLogPage() {
                                         }}>
                                             Actions
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
@@ -447,13 +442,13 @@ export default function AdminInstallationLogPage() {
                                         <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
                                             Status
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
-                                            Old Version
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }} align="center">
+                                            Old <br /> Version
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
-                                            New Version
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }} align="center">
+                                            New <br /> Version
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
                                             Duration (s)
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
@@ -475,8 +470,8 @@ export default function AdminInstallationLogPage() {
                                                 <TableCell><Skeleton width="100px" /></TableCell>
                                                 <TableCell align="center"><Skeleton width="80px" /></TableCell>
                                                 <TableCell align="center"><Skeleton width="80px" /></TableCell>
-                                                <TableCell><Skeleton width="60px" /></TableCell>
-                                                <TableCell><Skeleton width="60px" /></TableCell>
+                                                <TableCell align="center"><Skeleton width="60px" /></TableCell>
+                                                <TableCell align="center"><Skeleton width="60px" /></TableCell>
                                                 <TableCell align="center"><Skeleton width="60px" /></TableCell>
                                                 <TableCell><Skeleton width="150px" /></TableCell>
                                                 <TableCell><Skeleton width="150px" /></TableCell>
@@ -509,7 +504,7 @@ export default function AdminInstallationLogPage() {
                                                         <VisibilityIcon />
                                                     </IconButton>
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {log.id}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
@@ -535,10 +530,10 @@ export default function AdminInstallationLogPage() {
                                                         size="small"
                                                     />
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {log.oldVersion || 'N/A'}
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {log.newVersion || 'N/A'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>

@@ -52,6 +52,7 @@ import { applicationService, categoryService, packageManagementService } from ".
 import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRequest } from "../type/applicationType";
 import type { CategoryResponse } from "../type/categoryType";
 import type { ManifestCreateRequest, ManifestResponse } from "../type/manifestType";
+import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
@@ -126,6 +127,7 @@ export default function AdminApplicationPage() {
         PublishImmediately: true,
     });
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [existingPackages, setExistingPackages] = useState<ApplicationPackageResponse[]>([]);
 
     // Delete confirmation dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -233,6 +235,7 @@ export default function AdminApplicationPage() {
             PublishImmediately: true,
         });
         setSelectedFile(null);
+        setExistingPackages([]);
 
         // Load manifest if exists
         try {
@@ -267,6 +270,27 @@ export default function AdminApplicationPage() {
                 IsStable: true,
                 PublishedAt: new Date().toISOString().slice(0, 16),
             });
+        }
+
+        // Load existing packages
+        try {
+            const packages = await packageManagementService.getPackageByApplicationId(application.id);
+            setExistingPackages(packages);
+            // If there are packages, pre-fill the latest one
+            if (packages && packages.length > 0) {
+                const latestPackage = packages[0]; // Assuming the first one is the latest
+                setPackageFormData({
+                    Version: latestPackage.version || "",
+                    PackageType: latestPackage.packageType || "Binary",
+                    ReleaseNotes: "",
+                    IsStable: true,
+                    MinimumClientVersion: "",
+                    PublishImmediately: true,
+                });
+            }
+        } catch (error) {
+            console.error("Error loading packages:", error);
+            // No packages exist, keep default values
         }
 
         setDialogOpen(true);
@@ -328,17 +352,30 @@ export default function AdminApplicationPage() {
 
     const validateManifestForm = (): boolean => {
         if (!manifestFormData.Version.trim()) {
-            showSnackbar("Version is required", "error");
+            showSnackbar("Manifest Version is required", "error");
             return false;
         }
         if (!manifestFormData.BinaryVersion.trim()) {
-            showSnackbar("Binary Version is required", "error");
+            showSnackbar("Manifest Binary Version is required", "error");
             return false;
         }
         if (!manifestFormData.BinaryPackage.trim()) {
-            showSnackbar("Binary Package is required", "error");
+            showSnackbar("Manifest Binary Package is required", "error");
             return false;
         }
+        return true;
+    };
+
+    const validatePackageForm = (): boolean => {
+        if (!packageFormData.Version.trim()) {
+            showSnackbar("Package Version is required", "error");
+            return false;
+        }
+        if (!packageFormData.PackageType.trim()) {
+            showSnackbar("Package Type is required", "error");
+            return false;
+        }
+
         return true;
     };
 
@@ -347,6 +384,16 @@ export default function AdminApplicationPage() {
             // For create mode, validate app form
             if (!validateAppForm()) {
                 setTabValue(0); // Switch to app tab
+                return;
+            }
+
+            if (!validateManifestForm()) {
+                setTabValue(1); // Switch to manifest tab
+                return;
+            }
+
+            if (!validatePackageForm()) {
+                setTabValue(2); // Switch to package tab
                 return;
             }
 
@@ -363,7 +410,7 @@ export default function AdminApplicationPage() {
                 };
                 const createdApp = await applicationService.createApplication(appRequest);
                 showSnackbar(`Application "${createdApp.name}" created successfully!`, "success");
-
+                setTabValue(1);
                 // Step 2: Create manifest if form is filled
                 if (manifestFormData.Version.trim()) {
                     if (!validateManifestForm()) {
@@ -396,8 +443,8 @@ export default function AdminApplicationPage() {
                         formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
 
                         // Get current user from localStorage
-                        const user = JSON.parse(localStorage.getItem('user') || '{}');
-                        formData.append('UploadedBy', user.username || 'Unknown');
+                        const user = 'admin'
+                        formData.append('UploadedBy', user || 'Unknown');
 
                         await packageManagementService.uploadPackage(formData);
                         showSnackbar(`Package uploaded successfully!`, "success");
@@ -472,7 +519,6 @@ export default function AdminApplicationPage() {
                 // Step 3: Upload package if file is selected
                 if (selectedFile) {
                     try {
-                        debugger;
                         const formData = new FormData();
                         formData.append('ApplicationId', editingApplication.id.toString());
                         formData.append('Version', packageFormData.Version);
@@ -973,8 +1019,8 @@ export default function AdminApplicationPage() {
                 <DialogContent>
                     <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
                         <Tab label="Application Info" />
-                        <Tab label={`Manifest ${dialogMode === "create" ? "(Optional)" : ""}`} />
-                        <Tab label="Upload Package (Optional)" />
+                        <Tab label={`Manifest ${dialogMode === "create" ? "(Mandatory)" : ""}`} />
+                        <Tab label="Upload Package (Mandatory)" />
                     </Tabs>
 
                     <TabPanel value={tabValue} index={0}>
@@ -1038,7 +1084,7 @@ export default function AdminApplicationPage() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {dialogMode === "create" && (
                                 <Alert severity="info" sx={{ mb: 1 }}>
-                                    Fill out this section to create an initial manifest for the application. This is optional and can be done later.
+                                    Fill out this section to create an initial manifest for the application.
                                 </Alert>
                             )}
                             <Grid container spacing={2}>
@@ -1046,6 +1092,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Version"
                                         fullWidth
+                                        required
                                         value={manifestFormData.Version}
                                         onChange={(e) => handleManifestFormChange("Version", e.target.value)}
                                         disabled={dialogLoading}
@@ -1056,6 +1103,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Binary Version"
                                         fullWidth
+                                        required
                                         value={manifestFormData.BinaryVersion}
                                         onChange={(e) => handleManifestFormChange("BinaryVersion", e.target.value)}
                                         disabled={dialogLoading}
@@ -1065,6 +1113,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Binary Package"
                                         fullWidth
+                                        required
                                         value={manifestFormData.BinaryPackage}
                                         onChange={(e) => handleManifestFormChange("BinaryPackage", e.target.value)}
                                         disabled={dialogLoading}
@@ -1075,6 +1124,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Config Version"
                                         fullWidth
+                                        required
                                         value={manifestFormData.ConfigVersion}
                                         onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
                                         disabled={dialogLoading}
@@ -1084,6 +1134,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Config Package"
                                         fullWidth
+                                        required
                                         value={manifestFormData.ConfigPackage}
                                         onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
                                         disabled={dialogLoading}
@@ -1170,13 +1221,62 @@ export default function AdminApplicationPage() {
                     <TabPanel value={tabValue} index={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                             <Alert severity="info" sx={{ mb: 1 }}>
-                                Upload a package file for this application. This is optional.
+                                Upload a package file for this application.
                             </Alert>
+
+                            {/* Existing Packages Section - Only show in Edit mode */}
+                            {dialogMode === "edit" && existingPackages.length > 0 && (
+                                <Box sx={{ mb: 2 }}>
+                                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
+                                        Existing Packages
+                                    </Typography>
+                                    <TableContainer component={Paper} variant="outlined">
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Version</TableCell>
+                                                    <TableCell>Type</TableCell>
+                                                    <TableCell>File Name</TableCell>
+                                                    <TableCell>Size</TableCell>
+                                                    <TableCell>Downloads</TableCell>
+                                                    <TableCell>Last Downloaded</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {existingPackages.map((pkg) => (
+                                                    <TableRow key={pkg.id}>
+                                                        <TableCell>
+                                                            <Chip label={pkg.version} size="small" color="primary" variant="outlined" />
+                                                        </TableCell>
+                                                        <TableCell>{pkg.packageType}</TableCell>
+                                                        <TableCell>{pkg.packageFileName}</TableCell>
+                                                        <TableCell>{pkg.fileSizeFormatted}</TableCell>
+                                                        <TableCell>{pkg.downloadCount}</TableCell>
+                                                        <TableCell>
+                                                            {pkg.lastDownloadedAt ? FormatUtcTime.formatDateTime(pkg.lastDownloadedAt) : 'Never'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                        Upload a new package to add a new version
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {/* Upload New Package Form */}
+                            <Typography variant="subtitle1" fontWeight={600} sx={{ mt: 2 }}>
+                                {dialogMode === "edit" ? "Upload New Package Version" : "Upload Package"}
+                            </Typography>
+
                             <Grid container spacing={2}>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Package Version"
                                         fullWidth
+                                        required
                                         value={packageFormData.Version}
                                         onChange={(e) => handlePackageFormChange("Version", e.target.value)}
                                         disabled={dialogLoading}
@@ -1184,7 +1284,7 @@ export default function AdminApplicationPage() {
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
-                                    <FormControl fullWidth disabled={dialogLoading}>
+                                    <FormControl fullWidth disabled={dialogLoading} required>
                                         <InputLabel>Package Type</InputLabel>
                                         <Select
                                             label="Package Type"
@@ -1223,6 +1323,7 @@ export default function AdminApplicationPage() {
                                 <Grid size={{ xs: 12 }}>
                                     <TextField
                                         label="Release Notes"
+                                        required
                                         fullWidth
                                         multiline
                                         rows={3}
@@ -1235,6 +1336,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Minimum Client Version"
                                         fullWidth
+                                        required
                                         value={packageFormData.MinimumClientVersion}
                                         onChange={(e) => handlePackageFormChange("MinimumClientVersion", e.target.value)}
                                         disabled={dialogLoading}

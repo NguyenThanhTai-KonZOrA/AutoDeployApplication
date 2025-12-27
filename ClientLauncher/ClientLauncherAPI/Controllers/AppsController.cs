@@ -73,14 +73,22 @@ namespace ClientLauncherAPI.Controllers
 
                 // Check if app exists
                 var app = await _appCatalogService.GetApplicationAsync(appCode);
-                if (app == null)
+                if (app == null || app.PackageVersions == null)
                 {
                     _logger.LogWarning("Application {AppCode} not found", appCode);
                     return NotFound();
                 }
 
                 // Construct file path
-                var filePath = Path.Combine(_packagesBasePath, appCode, packageName);
+                string filePath = string.Empty;
+                if (app.PackageVersions.Any())
+                {
+                    filePath = Path.Combine(_packagesBasePath, app?.PackageVersions?.LastOrDefault()?.StoragePath);
+                }
+                else
+                {
+                    filePath = Path.Combine(_packagesBasePath, appCode, packageName);
+                }
 
                 _logger.LogInformation("Looking for package at: {FilePath}", filePath);
 

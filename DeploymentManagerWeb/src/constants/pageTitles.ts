@@ -19,5 +19,6 @@ export const PAGE_TITLES = {
     APPLICATIONS: "Application Management",
     CATEGORIES: "Category Management",
     INSTALLATION_LOGS: "Installation Logs",
+    PACKAGES: "Package Management",
     DEFAULT: "Deployment Manager"
 } as const;

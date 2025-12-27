@@ -27,6 +27,7 @@ import AdminEmployeePage from './pages/AdminEmployeePage'
 import AdminApplicationPage from './pages/AdminApplicationPage'
 import AdminCategoryPage from './pages/AdminCategoryPage'
 import AdminInstallationLogPage from './pages/AdminInstallationLogPage'
+import AdminPackagesPage from './pages/AdminPackagesPage'
 
 function AppContent() {
   const networkStatus = useNetworkStatus();
@@ -68,6 +69,11 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
+        <Route path="/admin-package" element={
+          <ProtectedRoute>
+            <AdminPackagesPage />
+          </ProtectedRoute>
+        } />
 
       </Routes>
     </>
