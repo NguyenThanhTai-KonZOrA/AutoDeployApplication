@@ -375,7 +375,7 @@ namespace ClientLancher.Implement.Services
                 _logger.LogInformation("Fetching all packages grouped by application");
 
                 // Get all active applications
-                var applications = await _unitOfWork.Applications.GetActiveApplicationsAsync();
+                var applications = await _unitOfWork.Applications.GetActiveApplicationsForAdminAsync();
 
                 var result = new Dictionary<string, IEnumerable<PackageVersionResponse>>();
 
