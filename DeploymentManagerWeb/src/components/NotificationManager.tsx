@@ -2,7 +2,6 @@
 import React, { useCallback } from 'react';
 import { Snackbar, Alert, AlertTitle } from '@mui/material';
 import { useState } from 'react';
-import { useSignalR } from '../hooks/useSignalR';
 import type { ChangeQueueStatusResponse, TicketResponse } from '../type/type';
 
 interface NotificationState {
@@ -19,7 +18,6 @@ export const NotificationManager: React.FC = () => {
         severity: 'info'
     });
 
-    const { useQueueStatusChanged, useRegistrationChanged } = useSignalR();
 
     // Handle queue status changes
     const handleQueueStatusChanged = useCallback((data: ChangeQueueStatusResponse) => {
@@ -34,7 +32,7 @@ export const NotificationManager: React.FC = () => {
     // Handle new ticket registrations
     const handleRegistrationChanged = useCallback((data: TicketResponse) => {
         console.log('🔔 New ticket registration notification:', data);
-        
+
         setNotification({
             open: true,
             title: 'New Ticket Registered',
@@ -42,10 +40,6 @@ export const NotificationManager: React.FC = () => {
             severity: 'success'
         });
     }, []);
-
-    // Register SignalR event listeners
-    useQueueStatusChanged(handleQueueStatusChanged);
-    useRegistrationChanged(handleRegistrationChanged);
 
     const handleClose = () => {
         setNotification(prev => ({ ...prev, open: false }));
@@ -58,9 +52,9 @@ export const NotificationManager: React.FC = () => {
             onClose={handleClose}
             anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-            <Alert 
-                onClose={handleClose} 
-                severity={notification.severity} 
+            <Alert
+                onClose={handleClose}
+                severity={notification.severity}
                 sx={{ width: '100%', minWidth: '300px' }}
             >
                 {notification.title && <AlertTitle>{notification.title}</AlertTitle>}

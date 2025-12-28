@@ -165,7 +165,7 @@ namespace ClientLancher.Implement.Services
 
         public async Task<IEnumerable<ApplicationDetailResponse>> GetAllApplicationsAsync()
         {
-            var applications = await _unitOfWork.Applications.GetActiveApplicationsAsync();
+            var applications = await _unitOfWork.Applications.GetActiveApplicationsForAdminAsync();
             var responses = new List<ApplicationDetailResponse>();
 
             foreach (var app in applications)

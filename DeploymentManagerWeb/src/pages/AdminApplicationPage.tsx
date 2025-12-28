@@ -115,6 +115,8 @@ export default function AdminApplicationPage() {
         ReleaseNotes: "",
         IsStable: true,
         PublishedAt: new Date().toISOString().slice(0, 16),
+        BinaryFiles: [],
+        ConfigFiles: [],
     });
 
     // Form states - Package Upload
@@ -223,6 +225,8 @@ export default function AdminApplicationPage() {
             ForceUpdate: false,
             ReleaseNotes: "",
             IsStable: true,
+            BinaryFiles: [],
+            ConfigFiles: [],
             PublishedAt: new Date().toISOString().slice(0, 16),
         });
         setPackageFormData({
@@ -278,6 +282,8 @@ export default function AdminApplicationPage() {
                     ForceUpdate: manifest.forceUpdate || false,
                     ReleaseNotes: manifest.releaseNotes || "",
                     IsStable: manifest.isStable !== undefined ? manifest.isStable : true,
+                    BinaryFiles: manifest.binaryFiles || [],
+                    ConfigFiles: manifest.configFiles || [],
                     PublishedAt: manifest.publishedAt ? new Date(manifest.publishedAt).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
                 });
             }
@@ -294,6 +300,8 @@ export default function AdminApplicationPage() {
                 ForceUpdate: false,
                 ReleaseNotes: "",
                 IsStable: true,
+                BinaryFiles: [],
+                ConfigFiles: [],
                 PublishedAt: new Date().toISOString().slice(0, 16),
             });
         }
@@ -748,6 +756,8 @@ export default function AdminApplicationPage() {
                     ReleaseNotes: viewingManifest.releaseNotes,
                     IsStable: viewingManifest.isStable,
                     PublishedAt: viewingManifest.publishedAt,
+                    BinaryFiles: viewingManifest.binaryFiles,
+                    ConfigFiles: viewingManifest.configFiles,
                 }
             );
             setViewingManifest(updatedManifest);
@@ -815,10 +825,12 @@ export default function AdminApplicationPage() {
 
         switch (categoryId) {
             case 1:
-                return <Chip label="Cage Applications" color="success" size="small" />;
+                return <Chip label="IT Ho Tram Applications" color="success" size="small" />;
             case 2:
-                return <Chip label="HTR Applications" color="secondary" size="small" />;
+                return <Chip label="Case Applications" color="secondary" size="small" />;
             case 3:
+                return <Chip label="HTR Applications" color="primary" size="small" />;
+            case 4:
                 return <Chip label="Finance Applications" color="warning" size="small" />;
             default:
                 return <Chip label="Other" color="default" size="small" />;
@@ -1323,9 +1335,9 @@ export default function AdminApplicationPage() {
                                             value={manifestFormData.ConfigMergeStrategy}
                                             onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
                                         >
-                                            <MenuItem value="Replace">Replace</MenuItem>
-                                            <MenuItem value="Merge">Merge</MenuItem>
-                                            <MenuItem value="KeepExisting">Keep Existing</MenuItem>
+                                            <MenuItem value="ReplaceAll">Replace All</MenuItem>
+                                            <MenuItem value="Selective">Selective</MenuItem>
+                                            <MenuItem value="PreserveLocal">Preserve Local</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>
@@ -1337,9 +1349,9 @@ export default function AdminApplicationPage() {
                                             value={manifestFormData.UpdateType}
                                             onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
                                         >
-                                            <MenuItem value="Optional">Optional</MenuItem>
-                                            <MenuItem value="Recommended">Recommended</MenuItem>
-                                            <MenuItem value="Required">Required</MenuItem>
+                                            <MenuItem value="Binary">Binary</MenuItem>
+                                            <MenuItem value="Config">Config</MenuItem>
+                                            <MenuItem value="Both">Both</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>

@@ -8,5 +8,6 @@ namespace ClientLancher.Implement.Repositories.Interface
         Task<IEnumerable<Application>> GetActiveApplicationsAsync();
         Task<IEnumerable<Application>> GetApplicationsByCategoryAsync(string category);
         void Delete(Application application);
+        Task<IEnumerable<Application>> GetActiveApplicationsForAdminAsync();
     }
 }

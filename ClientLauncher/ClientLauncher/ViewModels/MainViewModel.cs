@@ -618,6 +618,7 @@ namespace ClientLauncher.ViewModels
                 await _apiService.NotifyInstallationAsync(SelectedApplication.AppCode, SelectedApplication.InstalledVersion, true, stopwatch.Elapsed, null, SelectedApplication.InstalledVersion, "Uninstall");
 
                 InstallationSuccess = uninstallResult.Success;
+                StatusMessage = "Uninstallation completed";
                 InstallationResult = uninstallResult.Success
                     ? $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
                       $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +

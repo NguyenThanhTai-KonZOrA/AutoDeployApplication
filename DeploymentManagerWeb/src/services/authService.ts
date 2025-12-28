@@ -3,7 +3,7 @@ import type {
     LoginResponse,
     LoginRequest,
     RefreshTokenRequest
-} from "../type/type";
+} from "../type/authenType";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
 import type { ApiEnvelope } from "../type/commonType";
 

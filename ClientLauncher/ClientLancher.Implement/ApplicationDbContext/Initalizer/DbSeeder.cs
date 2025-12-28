@@ -14,11 +14,20 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 {
                     new ApplicationCategory
                     {
+                        Name = "IT_HoTram",
+                        DisplayName = "IT Ho Tram Applications",
+                        Description = "Applications for IT Ho Tram operations",
+                        IconUrl = "/icons/it.png",
+                        DisplayOrder = 1,
+                        IsActive = true
+                    },
+                    new ApplicationCategory
+                    {
                         Name = "Cage",
                         DisplayName = "Cage Applications",
                         Description = "Applications for casino cage operations",
                         IconUrl = "/icons/cage.png",
-                        DisplayOrder = 1,
+                        DisplayOrder = 2,
                         IsActive = true
                     },
                     new ApplicationCategory
@@ -27,7 +36,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         DisplayName = "HTR Applications",
                         Description = "Hotel and Restaurant management applications",
                         IconUrl = "/icons/htr.png",
-                        DisplayOrder = 2,
+                        DisplayOrder = 3,
                         IsActive = true
                     },
                     new ApplicationCategory
@@ -36,7 +45,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         DisplayName = "Finance Applications",
                         Description = "Financial management and reporting applications",
                         IconUrl = "/icons/finance.png",
-                        DisplayOrder = 3,
+                        DisplayOrder = 4,
                         IsActive = true
                     }
                 };
@@ -51,15 +60,24 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 var cageCategory = await context.ApplicationCategories.FirstOrDefaultAsync(c => c.Name == "Cage");
                 var htrCategory = await context.ApplicationCategories.FirstOrDefaultAsync(c => c.Name == "HTR");
                 var financeCategory = await context.ApplicationCategories.FirstOrDefaultAsync(c => c.Name == "Finance");
-
+                var itHotramApp = await context.ApplicationCategories.FirstOrDefaultAsync(c => c.Name == "IT_HoTram");
                 var applications = new List<Application>
                 {
+                    new Application
+                    {
+                        AppCode = "ClientApplication",
+                        Name = "Client Application",
+                        Description = "Application for auto install",
+                        IconUrl = "/icons/ClientApplication.png",
+                        CategoryId = itHotramApp?.Id,
+                        IsActive = true
+                    },
                     new Application
                     {
                         AppCode = "LevyTicketMonitor",
                         Name = "Levy Ticket Monitor",
                         Description = "Application for monitoring levy tickets",
-                        IconUrl = "/icons/levy.png",
+                        IconUrl = "/icons/LevyTicketMonitor.png",
                         CategoryId = cageCategory?.Id,
                         IsActive = true
                     },
@@ -77,7 +95,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         AppCode = "QueueTicketDisplay",
                         Name = "Queue Ticket Display",
                         Description = "Application for display queue ticket",
-                        IconUrl = "/icons/levy.png",
+                        IconUrl = "/icons/QueueTicketDisplay.png",
                         CategoryId = htrCategory?.Id,
                         IsActive = true
                     }
@@ -87,6 +105,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 // Seed Applications Manifest
                 if (!await context.ApplicationManifests.AnyAsync())
                 {
+                    var clientApplication = applications.First(a => a.AppCode == "ClientApplication");
                     var LevyTicketMonitorApp = applications.First(a => a.AppCode == "LevyTicketMonitor");
                     var HTCasinoEntryApp = applications.First(a => a.AppCode == "HTCasinoEntry");
                     var QueueTicketDisplayApp = applications.First(a => a.AppCode == "QueueTicketDisplay");
@@ -94,12 +113,34 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     {
                         new ApplicationManifest
                         {
+                            Application = clientApplication,
+                            Version = "1.1.0",
+                            BinaryVersion = "1.1.0",
+                            BinaryPackage = "ClientApplication_v1.1.0.zip",
+                            ConfigMergeStrategy = "ReplaceAll",
+                            UpdateType = "Binary",
+                            ForceUpdate = true,
+                            IsStable = true,
+                            PublishedAt = DateTime.UtcNow,
+                            ApplicationId = clientApplication.Id,
+                            ConfigPackage = "ClientApplication_v1.1.0.zip",
+                            ConfigVersion = "1.1.0",
+                            ReleaseNotes = "Initial release of Client application.",
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = "System",
+                            UpdatedBy = "System",
+                            IsActive = true,
+                            IsDelete = false
+                        },
+                        new ApplicationManifest
+                        {
                             Application = LevyTicketMonitorApp,
                             Version = "1.1.0",
                             BinaryVersion = "1.1.0",
                             BinaryPackage = "LevyTicketMonitor_v1.1.0.zip",
-                            ConfigMergeStrategy = "Overwrite",
-                            UpdateType = "Mandatory",
+                            ConfigMergeStrategy = "ReplaceAll",
+                            UpdateType = "Binary",
                             ForceUpdate = true,
                             IsStable = true,
                             PublishedAt = DateTime.UtcNow,
@@ -120,8 +161,8 @@ namespace ClientLancher.Implement.ApplicationDbContext
                             Version = "1.1.0",
                             BinaryVersion = "1.1.0",
                             BinaryPackage = "HTCasinoEntry_v1.1.0.zip",
-                            ConfigMergeStrategy = "Overwrite",
-                            UpdateType = "Mandatory",
+                            ConfigMergeStrategy = "ReplaceAll",
+                            UpdateType = "Binary",
                             ForceUpdate = true,
                             IsStable = true,
                             PublishedAt = DateTime.UtcNow,
@@ -143,8 +184,8 @@ namespace ClientLancher.Implement.ApplicationDbContext
                             Version = "1.1.0",
                             BinaryVersion = "1.1.0",
                             BinaryPackage = "QueueTicketDisplay_v1.1.0.zip",
-                            ConfigMergeStrategy = "Overwrite",
-                            UpdateType = "Mandatory",
+                            ConfigMergeStrategy = "ReplaceAll",
+                            UpdateType = "Binary",
                             ForceUpdate = true,
                             IsStable = true,
                             PublishedAt = DateTime.UtcNow,
@@ -161,8 +202,119 @@ namespace ClientLancher.Implement.ApplicationDbContext
                         }
                     };
                     await context.ApplicationManifests.AddRangeAsync(manifests);
-                }
 
+                    // Seed Applications Manifest
+                    if (!await context.PackageVersions.AnyAsync())
+                    {
+                        var packageVersions = new List<PackageVersion>
+                        {
+                            new PackageVersion
+                            {
+                                ApplicationId = clientApplication.Id,
+                                Version = "1.1.0",
+                                PackageFileName = "ClientApplication_v1.1.0.zip",
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                                CreatedBy = "System",
+                                UpdatedBy = "System",
+                                IsActive = true,
+                                IsDelete = false,
+                                Application = clientApplication,
+                                DownloadCount = 0,
+                                FileHash = "abc123def456ghi789jkl012mno345pq",
+                                PackageType = "Binary",
+                                ReleaseNotes = "Initial release of Levy Ticket Monitor.",
+                                StoragePath = "ClientApplication/v1.1.0/ClientApplication_v1.1.0.zip",
+                                DeploymentHistories = new List<DeploymentHistory>(),
+                                DownloadStatistics = new List<DownloadStatistic>(),
+                                IsStable = true,
+                                LastDownloadedAt = null,
+                                MinimumClientVersion = "1.0.0",
+                                UploadedAt = DateTime.UtcNow,
+                                UploadedBy = "System",
+                                FileSizeBytes = 15000000
+                            },
+                            new PackageVersion
+                            {
+                                ApplicationId = LevyTicketMonitorApp.Id,
+                                Version = "1.1.0",
+                                PackageFileName = "LevyTicketMonitor_v1.1.0.zip",
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                                CreatedBy = "System",
+                                UpdatedBy = "System",
+                                IsActive = true,
+                                IsDelete = false,
+                                Application = LevyTicketMonitorApp,
+                                DownloadCount = 0,
+                                FileHash = "abc123def456ghi789jkl012mno345pq",
+                                PackageType = "Binary",
+                                ReleaseNotes = "Initial release of Levy Ticket Monitor.",
+                                StoragePath = "LevyTicketMonitor/v1.1.0/LevyTicketMonitor_v1.1.0.zip",
+                                DeploymentHistories = new List<DeploymentHistory>(),
+                                DownloadStatistics = new List<DownloadStatistic>(),
+                                IsStable = true,
+                                LastDownloadedAt = null,
+                                MinimumClientVersion = "1.0.0",
+                                UploadedAt = DateTime.UtcNow,
+                                UploadedBy = "System",
+                                FileSizeBytes = 15000000
+                            },
+                            new PackageVersion
+                            {
+                                ApplicationId = HTCasinoEntryApp.Id,
+                                Version = "1.1.0",
+                                PackageFileName = "HTCasinoEntry_v1.1.0.zip",
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                                CreatedBy = "System",
+                                UpdatedBy = "System",
+                                IsActive = true,
+                                IsDelete = false,
+                                Application = HTCasinoEntryApp,
+                                DownloadCount = 0,
+                                FileHash = "def456ghi789jkl012mno345pqabc123",
+                                PackageType = "Binary",
+                                ReleaseNotes = "Initial release of HT Casino Entry.",
+                                StoragePath = "HTCasinoEntry/v1.1.0/HTCasinoEntry_v1.1.0.zip",
+                                DeploymentHistories = new List<DeploymentHistory>(),
+                                DownloadStatistics = new List<DownloadStatistic>(),
+                                IsStable = true,
+                                LastDownloadedAt = null,
+                                MinimumClientVersion = "1.0.0",
+                                UploadedAt = DateTime.UtcNow,
+                                UploadedBy = "System",
+                                FileSizeBytes = 20000000
+                            },
+                            new PackageVersion
+                            {
+                                ApplicationId = QueueTicketDisplayApp.Id,
+                                Version = "1.1.0",
+                                PackageFileName = "QueueTicketDisplay_v1.1.0.zip",
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow,
+                                CreatedBy = "System",
+                                UpdatedBy = "System",
+                                IsActive = true,
+                                IsDelete = false,
+                                Application = QueueTicketDisplayApp,
+                                DownloadCount = 0,
+                                FileHash = "abc123def456ghi789jkl012mno345pq",
+                                PackageType = "Binary",
+                                ReleaseNotes = "Initial release of Levy Ticket Monitor.",
+                                StoragePath = "QueueTicketDisplay/v1.1.0/QueueTicketDisplay_v1.1.0.zip",
+                                DeploymentHistories = new List<DeploymentHistory>(),
+                                DownloadStatistics = new List<DownloadStatistic>(),
+                                LastDownloadedAt = null,
+                                MinimumClientVersion = "1.0.0",
+                                UploadedAt = DateTime.UtcNow,
+                                UploadedBy = "System",
+                                FileSizeBytes = 15000000
+                            }
+                        };
+                        await context.PackageVersions.AddRangeAsync(packageVersions);
+                    }
+                }
                 await context.SaveChangesAsync();
             }
         }

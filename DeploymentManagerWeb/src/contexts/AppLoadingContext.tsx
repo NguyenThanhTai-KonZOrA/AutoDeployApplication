@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { signalRService } from '../services/signalRService';
 import { Box, CircularProgress, Typography, LinearProgress } from '@mui/material';
 
 interface AppLoadingContextType {
