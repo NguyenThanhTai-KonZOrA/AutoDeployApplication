@@ -17,6 +17,7 @@ namespace ClientLauncher.Services
         private readonly string _baseUrl;
         private readonly string _appBasePath;
         private readonly IManifestService _manifestService;
+        private readonly ISelectiveUpdateService _selectiveUpdateService;
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public InstallationService()
@@ -27,6 +28,7 @@ namespace ClientLauncher.Services
             // Base path at C:\CompanyApps
             _appBasePath = @"C:\CompanyApps";
             _manifestService = new ManifestService();
+            _selectiveUpdateService = new SelectiveUpdateService(_manifestService);
 
             if (!Directory.Exists(_appBasePath))
             {
@@ -121,6 +123,7 @@ namespace ClientLauncher.Services
                 Logger.Info("Update type: {UpdateType}", updateType);
 
                 var appPath = Path.Combine(_appBasePath, appCode, "App");
+                var configPath = Path.Combine(_appBasePath, appCode, "Config");
                 var backupPath = Path.Combine(_appBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
 
                 // 2. Backup current installation
@@ -132,44 +135,58 @@ namespace ClientLauncher.Services
 
                 try
                 {
-                    // Update binary if needed
+                    // === UPDATE BINARY ===
                     if (updateType == "binary" || updateType == "both")
                     {
                         Logger.Info("Updating binary package");
                         await DownloadAndExtractAsync(appCode, manifest.Binary?.Package!, appPath);
+                        SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
                     }
 
-                    // Update config if needed
+                    // === UPDATE CONFIG (SELECTIVE) ===
                     if ((updateType == "config" || updateType == "both") &&
                         !string.IsNullOrEmpty(manifest.Config?.Package))
                     {
-                        var configPath = Path.Combine(_appBasePath, appCode, "Config");
-                        var mergeStrategy = manifest.Config?.MergeStrategy ?? "preserveLocal";
+                        Logger.Info("Updating config with strategy: {Strategy}", manifest.Config.MergeStrategy);
 
-                        Logger.Info("Updating config with merge strategy: {Strategy}", mergeStrategy);
+                        // Download config package to temp location
+                        var tempConfigZip = Path.Combine(Path.GetTempPath(), $"{appCode}_config_{Guid.NewGuid()}.zip");
+                        var configUrl = $"{_baseUrl}/api/apps/{appCode}/download/{manifest.Config.Package}";
 
-                        if (mergeStrategy == "preserveLocal")
+                        var response = await _httpClient.GetAsync(configUrl);
+                        if (response.IsSuccessStatusCode)
                         {
-                            // Only update if no local config exists
-                            if (!Directory.Exists(configPath))
+                            var configData = await response.Content.ReadAsByteArrayAsync();
+                            await File.WriteAllBytesAsync(tempConfigZip, configData);
+
+                            // Apply selective update
+                            await _selectiveUpdateService.ApplySelectiveConfigUpdateAsync(
+                                appCode,
+                                manifest,
+                                tempConfigZip
+                            );
+
+                            // Clean up temp file
+                            if (File.Exists(tempConfigZip))
                             {
-                                await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
+                                File.Delete(tempConfigZip);
                             }
-                        }
-                        else
-                        {
-                            await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
+
+                            Logger.Info("Config update completed successfully");
                         }
                     }
+
                     stopwatch.Stop();
-                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty, true, stopwatch.Elapsed, null, null, "Update");
-                    // 3. Update version info
+                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty,
+                        true, stopwatch.Elapsed, null, null, "Update");
+
+                    // Update version info
                     SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
 
-                    // 4. Update local manifest
+                    // Update local manifest
                     await _manifestService.SaveManifestAsync(appCode, manifest);
 
-                    // 5. Delete backup on success
+                    // Delete backup on success
                     if (Directory.Exists(backupPath))
                     {
                         Directory.Delete(backupPath, true);
@@ -196,8 +213,10 @@ namespace ClientLauncher.Services
                         Directory.Move(backupPath, appPath);
                         Logger.Info("Rolled back to backup");
                     }
+
                     stopwatch.Stop();
-                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty, false, stopwatch.Elapsed, "Rolled back to backup", null, "Update");
+                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty,
+                        false, stopwatch.Elapsed, "Rolled back to backup", null, "Update");
                     throw;
                 }
             }

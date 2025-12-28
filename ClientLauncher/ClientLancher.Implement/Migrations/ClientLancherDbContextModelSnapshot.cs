@@ -148,8 +148,14 @@ namespace ClientLancher.Implement.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AllowSkip")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ApplicationId")
                         .HasColumnType("int");
+
+                    b.Property<string>("BinaryFilesJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("BinaryPackage")
                         .IsRequired()
@@ -160,6 +166,9 @@ namespace ClientLancher.Implement.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ConfigFilesJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConfigMergeStrategy")
                         .IsRequired()
@@ -196,10 +205,17 @@ namespace ClientLancher.Implement.Migrations
                     b.Property<bool>("IsStable")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("NotifyUser")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ReleaseNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UpdateDescription")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UpdateType")
