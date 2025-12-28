@@ -53,10 +53,19 @@
     <None Update="Packages\HTCasinoEntry\HTCasinoEntry_v1.1.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Packages\HTCasinoEntry\v1.1.0\HTCasinoEntry_v1.1.0.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Packages\LevyTicketMonitor\LevyTicketMonitor_v1.1.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Packages\LevyTicketMonitor\v1.1.0\LevyTicketMonitor_v1.1.0.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Packages\QueueTicketDisplay\QueueTicketDisplay_v1.1.0.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Packages\QueueTicketDisplay\v1.1.0\QueueTicketDisplay_v1.1.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
