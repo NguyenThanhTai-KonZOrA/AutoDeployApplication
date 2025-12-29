@@ -5,6 +5,7 @@ using ClientLauncher.Services.Interface;
 using NLog;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -97,12 +98,17 @@ namespace ClientLauncher.ViewModels
 
         private string _currentTime = string.Empty;
         private string _currentDate = string.Empty;
+        private string _currentVersion;
         public string CurrentTime
         {
             get => _currentTime;
             set { _currentTime = value; OnPropertyChanged(); }
         }
-
+        public string CurrentVersion
+        {
+            get => _currentVersion;
+            set { _currentVersion = value; OnPropertyChanged(); }
+        }
         public string CurrentDate
         {
             get => DateTime.Now.ToString("dddd, dd MMMM yyyy");
@@ -180,7 +186,7 @@ namespace ClientLauncher.ViewModels
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
-
+            CurrentVersion = $"Version: {ConfigurationManager.AppSettings["ApplicationVersion"]}";
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
                 async _ => await InstallSelectedApplicationsAsync(),
