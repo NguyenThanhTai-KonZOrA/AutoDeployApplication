@@ -19,12 +19,12 @@ const RoleBasedRedirect: React.FC = () => {
     } else if (roles.includes(UserRole.MANAGER)) {
         return <Navigate to="/admin-application" replace />;
     } else if (roles.includes(UserRole.COUNTERSTAFF)) {
-        return <Navigate to="/admin-call" replace />;
+        return <Navigate to="/admin-application" replace />;
     } else if (roles.includes(UserRole.USER)) {
-        return <Navigate to="/admin-call" replace />;
+        return <Navigate to="/admin-application" replace />;
     } else {
         // Default fallback for unknown roles
-        return <Navigate to="/admin-call" replace />;
+        return <Navigate to="/admin-application" replace />;
     }
 };
 

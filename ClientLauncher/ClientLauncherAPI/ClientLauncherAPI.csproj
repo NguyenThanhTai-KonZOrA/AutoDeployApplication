@@ -50,6 +50,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Packages\ClientLauncher\v1.1.0\ClientLauncher_v1.1.0.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Packages\HTCasinoEntry\HTCasinoEntry_v1.1.0.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

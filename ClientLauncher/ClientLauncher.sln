@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLancher.Implement", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLancher.Common", "ClientLancher.Common\ClientLancher.Common.csproj", "{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "ClientLauncherSetup", "ClientLauncherSetup\ClientLauncherSetup.vdproj", "{D06F1FC8-1B01-B26E-7EDB-7103B95E6870}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,8 @@ Global
 		{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D06F1FC8-1B01-B26E-7EDB-7103B95E6870}.Debug|Any CPU.ActiveCfg = Debug
+		{D06F1FC8-1B01-B26E-7EDB-7103B95E6870}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
