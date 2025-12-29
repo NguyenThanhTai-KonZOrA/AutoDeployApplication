@@ -96,7 +96,7 @@
 
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Application Deployment Manager"
-                                   FontSize="28"
+                                   FontSize="25"
                                    FontWeight="Bold"
                                    Foreground="White"
                                    Effect="{DynamicResource TextShadowEffect}"/>
@@ -726,9 +726,6 @@
                         </Style>
                     </Button.Style>
                 </Button>
-
-<Stack>
-</Stack>
 
                 <Button Content="▶ Install Selected Applications" 
                         Command="{Binding InstallCommand}"
