@@ -1,0 +1,16 @@
+{
+  "appCode": "TGQueueKiosk",
+  "binary": {
+    "version": "v1.1.0",
+    "package": "TGQueueKiosk_v1.1.0.zip"
+  },
+  "config": {
+    "version": "v1.1.0",
+    "package": "TGQueueKiosk_v1.1.0.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

@@ -28,4 +28,5 @@ public interface IPackageVersionService
     // Validation
     Task<bool> ValidatePackageAsync(IFormFile file);
     Task<string> CalculateFileHashAsync(Stream fileStream);
+    Task UpdatePackageDownloadCountAsync(int packageId);
 }

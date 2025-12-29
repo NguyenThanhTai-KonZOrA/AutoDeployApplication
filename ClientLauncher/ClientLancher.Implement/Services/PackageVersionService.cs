@@ -402,6 +402,18 @@ namespace ClientLancher.Implement.Services
             }
         }
 
+        public async Task UpdatePackageDownloadCountAsync(int packageId)
+        {
+            if (packageId <= 0) return;
+            var package = await _unitOfWork.PackageVersions.GetByIdAsync(packageId);
+            if (package != null)
+            {
+                package.DownloadCount++;
+                _unitOfWork.PackageVersions.Update(package);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
         public async Task<bool> ValidatePackageAsync(IFormFile file)
         {
             if (file == null || file.Length == 0)

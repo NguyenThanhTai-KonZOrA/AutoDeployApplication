@@ -122,7 +122,7 @@ export default function AdminDashboard() {
                 return <DownloadIcon fontSize="small" color="info" />;
             case "install":
             case "installation":
-                return <InstallMobileIcon fontSize="small" color="success" />;
+                return <InstallDesktopIcon fontSize="small" color="success" />;
             case "failed":
             case "error":
                 return <ErrorIcon fontSize="small" color="error" />;
@@ -280,8 +280,8 @@ export default function AdminDashboard() {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell>#</TableCell>
-                                                    <TableCell>Application</TableCell>
-                                                    <TableCell>App Code</TableCell>
+                                                    <TableCell>Application Name</TableCell>
+                                                    <TableCell>Application Code</TableCell>
                                                     <TableCell>Latest Version</TableCell>
                                                     <TableCell align="right">Downloads</TableCell>
                                                 </TableRow>
