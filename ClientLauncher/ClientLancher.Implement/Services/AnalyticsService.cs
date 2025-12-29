@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.Services.Interface;
+﻿using ClientLancher.Implement.EntityModels;
+using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using ClientLancher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Logging;
@@ -25,6 +26,7 @@ namespace ClientLancher.Implement.Services
                 var allVersions = (await _unitOfWork.PackageVersions.GetAllAsync()).ToList();
                 var allInstalls = (await _unitOfWork.InstallationLogs.GetAllAsync()).ToList();
                 var allDownloads = (await _unitOfWork.DownloadStatistics.GetAllAsync()).ToList();
+                var allCategories = (await _unitOfWork.ApplicationCategories.GetAllAsync()).ToList();
 
                 var now = DateTime.UtcNow;
                 var todayDownloads = allDownloads.Count(d => d.DownloadedAt.Date == now.Date && d.Success);
@@ -38,6 +40,7 @@ namespace ClientLancher.Implement.Services
 
                 var topApps = await GetTopApplicationsAsync(5);
                 var recentActivities = await GetRecentActivitiesAsync(10);
+                var categories = allCategories.Select(MapToResponse).OrderBy(x => x.DisplayOrder).ToList();
 
                 return new DashboardStatistics
                 {
@@ -53,7 +56,8 @@ namespace ClientLancher.Implement.Services
                     PendingDeployments = pendingDeployments,
                     FailedInstallations = failedInstalls,
                     TopApplications = topApps.ToList(),
-                    RecentActivities = recentActivities.ToList()
+                    RecentActivities = recentActivities.ToList(),
+                    Categories = categories
                 };
             }
             catch (Exception ex)
@@ -169,6 +173,21 @@ namespace ClientLancher.Implement.Services
                 len = len / 1024;
             }
             return $"{len:0.##} {sizes[order]}";
+        }
+
+        private CategoryResponse MapToResponse(ApplicationCategory category)
+        {
+            return new CategoryResponse
+            {
+                Id = category.Id,
+                Name = category.Name,
+                DisplayName = category.DisplayName,
+                Description = category.Description,
+                IconUrl = category.IconUrl,
+                DisplayOrder = category.DisplayOrder,
+                IsActive = category.IsActive,
+                ApplicationCount = category.Applications?.Count ?? 0
+            };
         }
     }
 }

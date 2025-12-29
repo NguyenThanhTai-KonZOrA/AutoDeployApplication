@@ -46,6 +46,7 @@ import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/ca
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import { AVAILABLE_ICONS } from "../type/commonType";
 
 export default function AdminCategoryPage() {
     useSetPageTitle(PAGE_TITLES.CATEGORIES);
@@ -72,6 +73,7 @@ export default function AdminCategoryPage() {
         description: "",
         icon: "",
         displayOrder: 0,
+        iconUrl: "",
     });
 
     // Delete confirmation dialog
@@ -114,8 +116,9 @@ export default function AdminCategoryPage() {
             name: "",
             displayName: "",
             description: "",
-            icon: "",
+            icon: AVAILABLE_ICONS[0].value,
             displayOrder: categories.length + 1,
+            iconUrl: AVAILABLE_ICONS[0].value,
         });
         setDialogOpen(true);
     };
@@ -129,6 +132,7 @@ export default function AdminCategoryPage() {
             description: category.description || "",
             icon: category.icon,
             displayOrder: category.displayOrder,
+            iconUrl: category.icon,
         });
         setDialogOpen(true);
     };
@@ -169,13 +173,13 @@ export default function AdminCategoryPage() {
 
         try {
             setDialogLoading(true);
-
             const request: CategoryCreateOrUpdateRequest = {
                 name: formData.name.trim(),
                 displayName: formData.displayName.trim(),
                 description: formData.description?.trim(),
                 icon: formData.icon.trim(),
                 displayOrder: formData.displayOrder,
+                iconUrl: formData.icon.trim(),
             };
 
             if (dialogMode === "create") {
@@ -494,8 +498,14 @@ export default function AdminCategoryPage() {
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {category.id}
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    <Typography variant="h5">{category.icon}</Typography>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <img
+                                                            src={`/images/icons/${category.iconUrl}`}
+                                                            alt={category.name}
+                                                            style={{ width: 30, height: 30 }}
+                                                        />
+                                                    </Box>
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {category.name}
@@ -608,15 +618,37 @@ export default function AdminCategoryPage() {
                             onChange={(e) => handleFormChange("description", e.target.value)}
                             disabled={dialogLoading}
                         />
-                        <TextField
-                            label="Icon"
-                            fullWidth
-                            required
-                            value={formData.icon}
-                            onChange={(e) => handleFormChange("icon", e.target.value)}
-                            disabled={dialogLoading}
-                            helperText="Emoji or icon character"
-                        />
+                        <FormControl fullWidth required disabled={dialogLoading}>
+                            <InputLabel>Icon</InputLabel>
+                            <Select
+                                value={formData.icon}
+                                label="Icon"
+                                onChange={(e) => handleFormChange("icon", e.target.value)}
+                                renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <img
+                                            src={`/images/icons/${selected}`}
+                                            alt={selected}
+                                            style={{ width: 20, height: 20 }}
+                                        />
+                                        <Typography>{AVAILABLE_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
+                                    </Box>
+                                )}
+                            >
+                                {AVAILABLE_ICONS.map((icon) => (
+                                    <MenuItem key={icon.value} value={icon.value}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <img
+                                                src={`/images/icons/${icon.value}`}
+                                                alt={icon.label}
+                                                style={{ width: 20, height: 20 }}
+                                            />
+                                            <Typography>{icon.label}</Typography>
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         <TextField
                             label="Display Order"
                             fullWidth
@@ -662,7 +694,7 @@ export default function AdminCategoryPage() {
                     </Typography>
                     {deletingCategory && deletingCategory.applicationCount > 0 && (
                         <Alert severity="warning" sx={{ mt: 2 }}>
-                            This category has {deletingCategory.applicationCount} application(s) assigned. 
+                            This category has {deletingCategory.applicationCount} application(s) assigned.
                             Please reassign those applications before deleting this category.
                         </Alert>
                     )}

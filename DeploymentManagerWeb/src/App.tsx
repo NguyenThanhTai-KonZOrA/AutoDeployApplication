@@ -45,6 +45,12 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
+        <Route path="/admin-dashboard" element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+
         <Route path="/admin-application" element={
           <ProtectedRoute>
             <AdminApplicationPage />

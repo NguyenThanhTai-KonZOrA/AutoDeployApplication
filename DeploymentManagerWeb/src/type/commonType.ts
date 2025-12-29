@@ -18,3 +18,10 @@ export type ApiEnvelope<T> = {
     data: T;
     success: boolean;
 };
+
+export const AVAILABLE_ICONS = [
+    { value: "app_default.ico", label: "- Default Icon" },
+    { value: "app_cage.ico", label: "- Cage Icon" },
+    { value: "app_finance.ico", label: "- Finance Icon" },
+    { value: "app_htr.ico", label: "- HTR Icon" },
+];

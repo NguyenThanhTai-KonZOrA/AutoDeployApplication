@@ -148,7 +148,8 @@ namespace ClientLancher.Implement.Services
                 IconUrl = category.IconUrl,
                 DisplayOrder = category.DisplayOrder,
                 IsActive = category.IsActive,
-                ApplicationCount = category.Applications?.Count ?? 0
+                ApplicationCount = category.Applications?.Count ?? 0,
+                UpdatedAt = category.UpdatedAt
             };
         }
     }

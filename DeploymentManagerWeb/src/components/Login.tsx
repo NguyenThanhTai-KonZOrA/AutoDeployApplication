@@ -48,23 +48,23 @@ const Login: React.FC = () => {
 
                 if (roles.includes(UserRole.ADMIN)) {
                     //console.log('✅ [Redirect] Redirecting to /admin-application (Admin)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 } else if (roles.includes(UserRole.MANAGER)) {
                     //console.log('✅ [Redirect] Redirecting to /admin-application (Manager)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 } else if (roles.includes(UserRole.COUNTERSTAFF)) {
                     //console.log('✅ [Redirect] Redirecting to /admin-call (Counter Staff)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 } else if (roles.includes(UserRole.USER)) {
                     //console.log('✅ [Redirect] Redirecting to /admin-call (User)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 } else if (roles.includes(UserRole.VIEWER)) {
                     //console.log('✅ [Redirect] Redirecting to /admin-application (Viewer)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 } else {
                     // Default fallback if no recognized role
                     //console.log('⚠️ [Redirect] No recognized role, redirecting to /admin-call (Default)');
-                    navigate('/admin-application', { replace: true });
+                    navigate('/admin-dashboard', { replace: true });
                 }
             }
         }

@@ -44,7 +44,7 @@ const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     requiredPermission,
     requiredPermissions,
     requireAll = false,
-    fallbackPath = '/admin-application',
+    fallbackPath = '/admin-dashboard',
     showAccessDenied = true,
 }) => {
     const { token } = useAuth();

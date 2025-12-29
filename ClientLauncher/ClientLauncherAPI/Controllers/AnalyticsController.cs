@@ -27,7 +27,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _analyticsService.GetDashboardStatisticsAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -45,7 +45,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _analyticsService.GetRecentDownloadsAsync(take);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -63,7 +63,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _analyticsService.GetDownloadsByDateAsync(packageVersionId, days);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -81,7 +81,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _analyticsService.GetTopApplicationsAsync(take);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {

@@ -3,6 +3,7 @@ export interface CategoryCreateOrUpdateRequest {
     displayName: string;
     description?: string;
     icon: string;
+    iconUrl: string;
     displayOrder: number;
 }
 
@@ -17,4 +18,5 @@ export interface CategoryResponse {
     createdAt: string;
     updatedAt: string;
     applicationCount: number;
+    iconUrl: string;
 }

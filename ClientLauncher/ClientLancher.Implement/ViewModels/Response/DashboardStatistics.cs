@@ -19,6 +19,8 @@
 
         public List<TopApplicationDownload> TopApplications { get; set; } = new();
         public List<RecentActivity> RecentActivities { get; set; } = new();
+
+        public List<CategoryResponse> Categories { get; set; } = new();
     }
 
     public class TopApplicationDownload

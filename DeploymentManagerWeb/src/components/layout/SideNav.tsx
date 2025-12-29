@@ -36,6 +36,13 @@ import type { NavItem } from '../../type/commonType';
 
 const navItems: NavItem[] = [
     {
+        key: 'dashboard',
+        title: 'Dashboard',
+        href: '/admin-dashboard',
+        icon: DashboardIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
+    {
         key: 'application',
         title: 'Application Management',
         href: '/admin-application',

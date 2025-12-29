@@ -56,6 +56,7 @@ import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import { AVAILABLE_ICONS } from "../type/commonType";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -821,19 +822,19 @@ export default function AdminApplicationPage() {
         setSearchTerm(event.target.value);
     };
 
-    const getColorChipByCategory = (categoryId: number) => {
+    const getColorChipByCategory = (categoryId: number, categoryName: string) => {
 
         switch (categoryId) {
             case 1:
-                return <Chip label="IT Ho Tram Applications" color="success" size="small" />;
+                return <Chip label={categoryName} color="success" size="small" />;
             case 2:
-                return <Chip label="Case Applications" color="secondary" size="small" />;
+                return <Chip label={categoryName} color="secondary" size="small" />;
             case 3:
-                return <Chip label="HTR Applications" color="primary" size="small" />;
+                return <Chip label={categoryName} color="primary" size="small" />;
             case 4:
-                return <Chip label="Finance Applications" color="warning" size="small" />;
+                return <Chip label={categoryName} color="warning" size="small" />;
             default:
-                return <Chip label="Other" color="default" size="small" />;
+                return <Chip label={categoryName} color="default" size="small" />;
         }
     }
 
@@ -1070,7 +1071,7 @@ export default function AdminApplicationPage() {
                                                     {application.description}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {getColorChipByCategory(application.categoryId)}
+                                                    {getColorChipByCategory(application.categoryId, application.categoryName)}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {application.latestVersion || 'N/A'}
@@ -1196,14 +1197,39 @@ export default function AdminApplicationPage() {
                                 onChange={(e) => handleAppFormChange("description", e.target.value)}
                                 disabled={dialogLoading}
                             />
-                            <TextField
-                                label="Icon URL"
-                                fullWidth
-                                value={appFormData.iconUrl}
-                                onChange={(e) => handleAppFormChange("iconUrl", e.target.value)}
-                                disabled={dialogLoading}
-                                helperText="URL to application icon/logo"
-                            />
+
+                            <FormControl fullWidth required disabled={dialogLoading}>
+                                <InputLabel>Icon</InputLabel>
+                                <Select
+                                    value={appFormData.iconUrl}
+                                    label="Icon"
+                                    onChange={(e) => handleAppFormChange("iconUrl", e.target.value)}
+                                    renderValue={(selected) => (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <img
+                                                src={`/images/icons/${selected}`}
+                                                alt={selected}
+                                                style={{ width: 20, height: 20 }}
+                                            />
+                                            <Typography>{AVAILABLE_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
+                                        </Box>
+                                    )}
+                                >
+                                    {AVAILABLE_ICONS.map((icon) => (
+                                        <MenuItem key={icon.value} value={icon.value}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <img
+                                                    src={`/images/icons/${icon.value}`}
+                                                    alt={icon.label}
+                                                    style={{ width: 20, height: 20 }}
+                                                />
+                                                <Typography>{icon.label}</Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
                             <FormControl fullWidth required disabled={dialogLoading} error={appFormErrors.categoryId}>
                                 <InputLabel>Category</InputLabel>
                                 <Select

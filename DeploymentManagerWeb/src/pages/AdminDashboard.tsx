@@ -1,657 +1,452 @@
-// src/pages/AdminDashboard.tsx
 import {
     Box,
     Card,
     CardContent,
     Typography,
-    Grid,
-    Paper,
+    LinearProgress,
+    Alert,
+    Snackbar,
+    IconButton,
+    Tooltip,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    LinearProgress,
-    IconButton,
-    Skeleton,
-    Alert,
-    Pagination,
-    Badge,
-    FormControl,
-    Select,
-    MenuItem,
-    InputLabel
+    Chip,
+    Avatar,
+    List,
+    ListItem,
+    ListItemAvatar,
+    ListItemText,
+    Divider,
 } from "@mui/material";
 import {
-    People as PeopleIcon,
-    AccessTime as AccessTimeIcon,
+    Refresh as RefreshIcon,
+    Apps as AppsIcon,
+    CheckCircle as CheckCircleIcon,
+    Inventory as InventoryIcon,
+    Download as DownloadIcon,
+    Storage as StorageIcon,
+    Warning as WarningIcon,
+    Error as ErrorIcon,
     TrendingUp as TrendingUpIcon,
-    Star as StarIcon,
-    Person as PersonIcon,
-    Refresh as RefreshIcon
+    Update as UpdateIcon,
+    InstallMobile as InstallMobileIcon,
+    Category as CategoryIcon,
+    InstallDesktop as InstallDesktopIcon
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
-import { queueAdminService } from "../services/queueService";
-import type { DashboardResponse, CounterDashboardResponse } from "../type/type";
+import { dashboardService } from "../services/deploymentManagerService";
+import type { AnalyticDashboardResponse } from "../type/dashboardType";
+import { FormatUtcTime } from "../utils/formatUtcTime";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    icon: React.ReactNode;
+    color: string;
+    subtitle?: string;
+}
+
+const StatCard = ({ title, value, icon, color, subtitle }: StatCardProps) => (
+    <Card sx={{ height: "100%", position: "relative", overflow: "visible" }}>
+        <CardContent>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Box>
+                    <Typography color="text.secondary" variant="body2" gutterBottom>
+                        {title}
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+                        {value}
+                    </Typography>
+                    {subtitle && (
+                        <Typography variant="caption" color="text.secondary">
+                            {subtitle}
+                        </Typography>
+                    )}
+                </Box>
+                <Avatar
+                    sx={{
+                        bgcolor: color,
+                        width: 56,
+                        height: 56,
+                        boxShadow: 2,
+                    }}
+                >
+                    {icon}
+                </Avatar>
+            </Box>
+        </CardContent>
+    </Card>
+);
+
 export default function AdminDashboard() {
     useSetPageTitle(PAGE_TITLES.DASHBOARD);
-    const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
-    const [counterOperators, setCounterOperators] = useState<CounterDashboardResponse[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Pagination states
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(3);
-
-    // Update time every minute
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 60000);
-        return () => clearInterval(timer);
-    }, []);
-
-    // Auto refresh data every 5 minutes
-    useEffect(() => {
-        loadDashboardData();
-        const refreshTimer = setInterval(() => {
-            loadDashboardData();
-        }, 5 * 60 * 1000); // 5 minutes
-        return () => clearInterval(refreshTimer);
-    }, []);
-
-    // Reset to first page when data changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [counterOperators.length]);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [dashboardData, setDashboardData] = useState<AnalyticDashboardResponse | null>(null);
+    const [snackbar, setSnackbar] = useState<{
+        open: boolean;
+        message: string;
+        severity: "success" | "error" | "info";
+    }>({ open: false, message: "", severity: "info" });
 
     const loadDashboardData = async () => {
+        setLoading(true);
         try {
-            if (!dashboardData) setLoading(true); // Only show loading on first load
-            setError(null);
-
-            // Load both dashboard summary and counter operators
-            const [dashboardResult, counterResult] = await Promise.all([
-                queueAdminService.getSummary(),
-                queueAdminService.getcountersSummary()
-            ]);
-
-            setDashboardData(dashboardResult);
-            setCounterOperators(counterResult);
-        } catch (error) {
+            const data = await dashboardService.getDashboardData();
+            setDashboardData(data);
+        } catch (error: any) {
             console.error("Error loading dashboard data:", error);
-            setError("Failed to load dashboard data");
+            setSnackbar({
+                open: true,
+                message: error?.response?.data?.message || "Failed to load dashboard data",
+                severity: "error",
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    const formatTime = (date: Date) => {
-        return date.toLocaleDateString('en-GB', {
-            weekday: 'short',
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        }) + ' ' + date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
+    const getActivityIcon = (type: string) => {
+        switch (type.toLowerCase()) {
+            case "upload":
+            case "created":
+                return <UpdateIcon fontSize="small" color="primary" />;
+            case "download":
+                return <DownloadIcon fontSize="small" color="info" />;
+            case "install":
+            case "installation":
+                return <InstallMobileIcon fontSize="small" color="success" />;
+            case "failed":
+            case "error":
+                return <ErrorIcon fontSize="small" color="error" />;
+            default:
+                return <CheckCircleIcon fontSize="small" color="action" />;
+        }
     };
 
-    // Pagination calculations
-    const totalPages = Math.ceil(counterOperators.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentPageData = counterOperators.slice(startIndex, endIndex);
-
-    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
-        setCurrentPage(value);
+    const getStatusColor = (status: string): "success" | "error" | "warning" | "default" => {
+        switch (status.toLowerCase()) {
+            case "success":
+            case "completed":
+                return "success";
+            case "failed":
+            case "error":
+                return "error";
+            case "pending":
+            case "processing":
+                return "warning";
+            default:
+                return "default";
+        }
     };
 
-    const handleItemsPerPageChange = (event: any) => {
-        setItemsPerPage(event.target.value);
-        setCurrentPage(1); // Reset to first page when changing items per page
-    };
+    useEffect(() => {
+        loadDashboardData();
+    }, []);
 
-    const StatCard = ({ title, value, subtitle, icon, color = "primary", loading = false }: {
-        title: string;
-        value: string | number;
-        subtitle?: string;
-        icon: React.ReactNode;
-        color?: "primary" | "secondary" | "success" | "warning" | "error";
-        loading?: boolean;
-    }) => (
-        <Card sx={{ height: '100%' }}>
-            <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{
-                        p: 1,
-                        borderRadius: 1,
-                        bgcolor: `${color}.lighter`,
-                        color: `${color}.main`,
-                        mr: 2
-                    }}>
-                        {icon}
-                    </Box>
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                        {title}
-                    </Typography>
+    if (!dashboardData && !loading) {
+        return (
+            <AdminLayout>
+                <Box sx={{ p: 3 }}>
+                    <Alert severity="info">No dashboard data available</Alert>
                 </Box>
-                {loading ? (
-                    <Skeleton variant="text" width="60%" height={48} />
-                ) : (
-                    <Typography variant="h4" component="div" fontWeight={700} color={`${color}.main`}>
-                        {value}
-                    </Typography>
-                )}
-                {subtitle && (
-                    <Typography variant="body2" color="text.secondary">
-                        {subtitle}
-                    </Typography>
-                )}
-            </CardContent>
-        </Card>
-    );
+            </AdminLayout>
+        );
+    }
 
     return (
         <AdminLayout>
-            <Box>
-                {/* Header */}
-                <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 3,
-                    p: 2,
-                    bgcolor: 'background.paper',
-                    borderRadius: 1,
-                    boxShadow: 1
-                }}>
-                    {/* <Box>
-                        <Typography variant="h5" fontWeight={600}>
-                            Branch
-                        </Typography>
-                        <Typography variant="h6" color="text.secondary">
-                            Johor Bahru Service Centre 1
-                        </Typography>
-                    </Box> */}
-                    <Box sx={{ textAlign: 'left' }}>
-                        <Typography variant="h5" fontWeight={600}>
-                            Today
-                        </Typography>
-                        <Typography variant="h6" color="text.secondary">
-                            {formatTime(currentTime)}
+            <Box sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+                    <Box>
+                        {/* <Typography variant="h4" fontWeight={700} gutterBottom>
+                            Dashboard
+                        </Typography> */}
+                        <Typography variant="body2" color="text.secondary">
+                            Overview of your deployment management system
                         </Typography>
                     </Box>
-                    <IconButton onClick={loadDashboardData} disabled={loading}>
-                        <RefreshIcon />
-                    </IconButton>
-                </Box>
-
-                {loading && <LinearProgress sx={{ mb: 2 }} />}
-
-                {error && (
-                    <Alert severity="error" sx={{ mb: 2 }} action={
-                        <IconButton size="small" onClick={loadDashboardData}>
+                    <Tooltip title="Refresh">
+                        <IconButton onClick={loadDashboardData} disabled={loading} color="primary">
                             <RefreshIcon />
                         </IconButton>
-                    }>
-                        {error}
-                    </Alert>
-                )}
+                    </Tooltip>
+                </Box>
 
-                {/* Stats Cards */}
-                <Grid container spacing={3} sx={{ mb: 3 }}>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <StatCard
-                            title="Average waiting time"
-                            value={dashboardData?.averageWaitingTime || "00:12:34"}
-                            icon={<AccessTimeIcon />}
-                            color="primary"
-                            loading={loading}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <StatCard
-                            title="Exceeds waiting time"
-                            value={dashboardData?.waitingExceeds || "0"}
-                            subtitle="Tickets"
-                            icon={<TrendingUpIcon />}
-                            color="warning"
-                            loading={loading}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <StatCard
-                            title="Average Serving time"
-                            value={dashboardData?.averageServingTime || "00:00:26"}
-                            icon={<AccessTimeIcon />}
-                            color="success"
-                            loading={loading}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <StatCard
-                            title="Exceeds Serving time"
-                            value={dashboardData?.servingExceeds || "0"}
-                            subtitle="Tickets"
-                            icon={<TrendingUpIcon />}
-                            color="error"
-                            loading={loading}
-                        />
-                    </Grid>
-                </Grid>
+                {loading && <LinearProgress sx={{ mb: 3 }} />}
 
-                <Grid container spacing={3}>
-                    {/* Queue Performance Chart */}
-                    <Grid size={{ xs: 12, lg: 8 }}>
+                {dashboardData && (
+                    <>
+                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" }, gap: 3, mb: 3 }}>
+                            <StatCard
+                                title="Total Applications"
+                                value={dashboardData.totalApplications}
+                                icon={<AppsIcon />}
+                                color="primary.main"
+                                subtitle={`${dashboardData.activeApplications} active`}
+                            />
+                            <StatCard
+                                title="Total Versions"
+                                value={dashboardData.totalVersions}
+                                icon={<InventoryIcon />}
+                                color="success.main"
+                                subtitle="Package versions"
+                            />
+                            <StatCard
+                                title="Storage Used"
+                                value={dashboardData.totalStorageFormatted}
+                                icon={<StorageIcon />}
+                                color="warning.main"
+                                subtitle={`${dashboardData.totalStorageUsed.toLocaleString()} bytes`}
+                            />
+                            <StatCard
+                                title="Total Installations"
+                                value={dashboardData.totalInstallations}
+                                icon={<InstallDesktopIcon />}
+                                color="info.main"
+                                subtitle="All time"
+                            />
+                        </Box>
+
+                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" }, gap: 3, mb: 3 }}>
+                            <Card>
+                                <CardContent>
+                                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <DownloadIcon color="primary" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>
+                                            Downloads
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ mb: 2 }}>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                                            <Typography variant="body2" color="text.secondary">Today</Typography>
+                                            <Typography variant="h6" fontWeight={600}>{dashboardData.todayDownloads}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                                            <Typography variant="body2" color="text.secondary">This Week</Typography>
+                                            <Typography variant="h6" fontWeight={600}>{dashboardData.weekDownloads}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                                            <Typography variant="body2" color="text.secondary">This Month</Typography>
+                                            <Typography variant="h6" fontWeight={600}>{dashboardData.monthDownloads}</Typography>
+                                        </Box>
+                                    </Box>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardContent>
+                                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <WarningIcon color="warning" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>Pending Deployments</Typography>
+                                    </Box>
+                                    <Typography variant="h3" fontWeight={700} color="warning.main">
+                                        {dashboardData.pendingDeployments}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">Waiting to be deployed</Typography>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardContent>
+                                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <ErrorIcon color="error" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>Failed Installations</Typography>
+                                    </Box>
+                                    <Typography variant="h3" fontWeight={700} color="error.main">
+                                        {dashboardData.failedInstallations}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">Require attention</Typography>
+                                </CardContent>
+                            </Card>
+                        </Box>
+
+                        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" }, gap: 3, mb: 3 }}>
+                            <Card>
+                                <CardContent>
+                                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>Top Applications</Typography>
+                                    </Box>
+                                    <TableContainer>
+                                        <Table size="small">
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>#</TableCell>
+                                                    <TableCell>Application</TableCell>
+                                                    <TableCell>App Code</TableCell>
+                                                    <TableCell>Latest Version</TableCell>
+                                                    <TableCell align="right">Downloads</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {dashboardData.topApplications.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={5} align="center">
+                                                            <Typography variant="body2" color="text.secondary">
+                                                                No application data available
+                                                            </Typography>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    dashboardData.topApplications.map((app, index) => (
+                                                        <TableRow key={app.appCode} hover>
+                                                            <TableCell>
+                                                                <Chip
+                                                                    label={index + 1}
+                                                                    size="small"
+                                                                    color={index === 0 ? "primary" : index === 1 ? "success" : index === 2 ? "warning" : "default"}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Typography variant="body2" fontWeight={600}>
+                                                                    {app.applicationName}
+                                                                </Typography>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Chip label={app.appCode} size="small" variant="outlined" />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Chip label={app.latestVersion} size="small" color="info" />
+                                                            </TableCell>
+                                                            <TableCell align="right">
+                                                                <Typography variant="body2" fontWeight={600}>
+                                                                    {app.downloadCount.toLocaleString()}
+                                                                </Typography>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </TableContainer>
+                                </CardContent>
+                            </Card>
+
+                            <Card sx={{ height: "100%" }}>
+                                <CardContent>
+                                    <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                        <CategoryIcon color="primary" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>Categories</Typography>
+                                    </Box>
+                                    <List dense>
+                                        {dashboardData.categories.length === 0 ? (
+                                            <Typography variant="body2" color="text.secondary" align="center">
+                                                No categories available
+                                            </Typography>
+                                        ) : (
+                                            dashboardData.categories.map((category, index) => (
+                                                <Box key={category.id}>
+                                                    <ListItem>
+                                                        <ListItemAvatar>
+                                                            <Avatar sx={{ bgcolor: "primary.light" }}>
+                                                                <CategoryIcon fontSize="small" />
+                                                            </Avatar>
+                                                        </ListItemAvatar>
+                                                        <ListItemText
+                                                            primary={category.name}
+                                                            secondary={category.description}
+                                                            primaryTypographyProps={{ fontWeight: 600 }}
+                                                        />
+                                                    </ListItem>
+                                                    {index < dashboardData.categories.length - 1 && <Divider variant="inset" component="li" />}
+                                                </Box>
+                                            ))
+                                        )}
+                                    </List>
+                                </CardContent>
+                            </Card>
+                        </Box>
+
                         <Card>
                             <CardContent>
-                                <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                                    Queue Performance
-                                </Typography>
-
-                                {/* Custom Bar Chart */}
-                                <Box sx={{ height: 300, position: 'relative' }}>
-                                    {loading ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-around', height: '100%', px: 2 }}>
-                                            {[1, 2, 3, 4, 5, 6].map((index) => (
-                                                <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Skeleton variant="rectangular" width="100%" height={Math.random() * 200 + 50} sx={{ mb: 1, borderRadius: 1 }} />
-                                                    <Skeleton variant="text" width="80px" />
-                                                    <Skeleton variant="text" width="60px" />
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                    ) : (() => {
-                                        // Calculate max value for consistent chart scaling
-                                        const maxValue = Math.max(
-                                            dashboardData?.totalCustomers || 0,
-                                            dashboardData?.totalTickets || 0,
-                                            dashboardData?.customersWaiting || 0,
-                                            dashboardData?.customersStored || 0,
-                                            dashboardData?.customersInService || 0,
-                                            dashboardData?.customersServedToday || 0,
-                                            dashboardData?.servingExceeds || 0,
-                                            1 // minimum value to prevent division by zero
-                                        );
-
-                                        // Helper function to calculate bar height
-                                        const getBarHeight = (value: number) => {
-                                            if (maxValue === 0) return 30;
-                                            return Math.max((value / maxValue) * 200, 30); // minimum 30px height
-                                        };
-
-                                        return (
-                                            <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-around', height: '100%', px: 2 }}>
-                                                {/* Total Customers */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.totalTickets || 0)}px`,
-                                                            bgcolor: '#546e7a',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.totalTickets || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Total
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Queue Tickets
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Customers Waiting */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.customersWaiting || 0)}px`,
-                                                            bgcolor: '#0091ea',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.customersWaiting || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Waiting
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Customers
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Customers Stored */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.customersStored || 0)}px`,
-                                                            bgcolor: '#ffab91',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.customersStored || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Stored
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Customers
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Customers In Service */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.customersInService || 0)}px`,
-                                                            bgcolor: 'warning.main',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.customersInService || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        In Service
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Customers
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Customers Served Today */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.customersServedToday || 0)}px`,
-                                                            bgcolor: 'success.main',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.customersServedToday || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Served
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Today
-                                                    </Typography>
-                                                </Box>
-
-                                                {/* Customers Exceeds Serving */}
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, mx: 1 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: '80%',
-                                                            height: `${getBarHeight(dashboardData?.servingExceeds || 0)}px`,
-                                                            bgcolor: '#dd2c00',
-                                                            borderRadius: 1,
-                                                            mb: 1,
-                                                            display: 'flex',
-                                                            alignItems: 'end',
-                                                            justifyContent: 'center',
-                                                            color: 'white',
-                                                            fontWeight: 'bold',
-                                                            minHeight: '30px'
-                                                        }}
-                                                    >
-                                                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                                            {dashboardData?.servingExceeds || 0}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Exceeds Serving
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                                                        Today
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
-                                        );
-                                    })()}
+                                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                                    <UpdateIcon color="primary" sx={{ mr: 1 }} />
+                                    <Typography variant="h6" fontWeight={600}>Recent Activities</Typography>
                                 </Box>
+                                <TableContainer>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Type</TableCell>
+                                                <TableCell>Application</TableCell>
+                                                <TableCell>Version</TableCell>
+                                                <TableCell>User</TableCell>
+                                                <TableCell>Timestamp</TableCell>
+                                                <TableCell>Status</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {dashboardData.recentActivities.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} align="center">
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            No recent activities
+                                                        </Typography>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                dashboardData.recentActivities.map((activity, index) => (
+                                                    <TableRow key={index} hover>
+                                                        <TableCell>
+                                                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                                                                {getActivityIcon(activity.type)}
+                                                                <Typography variant="body2" sx={{ ml: 1 }}>
+                                                                    {activity.type}
+                                                                </Typography>
+                                                            </Box>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Typography variant="body2" fontWeight={600}>
+                                                                {activity.applicationName}
+                                                            </Typography>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip label={activity.version ? activity.version : "Not available"} size="small" variant="outlined" />
+                                                        </TableCell>
+                                                        <TableCell>{activity.user}</TableCell>
+                                                        <TableCell>
+                                                            {FormatUtcTime.formatDateTime(activity.timestamp)}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
+                                                                label={activity.status}
+                                                                size="small"
+                                                                color={getStatusColor(activity.status)}
+                                                            />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
                             </CardContent>
                         </Card>
-                    </Grid>
+                    </>
+                )}
 
-                    {/* Counter Statistics */}
-                    <Grid size={{ xs: 12, lg: 4 }}>
-                        <Grid container spacing={2}>
-                            <Grid size={6}>
-                                <Card>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <PeopleIcon sx={{ fontSize: 40, color: '#0091ea', mb: 1 }} />
-                                        {loading ? (
-                                            <Skeleton variant="text" width="60%" height={48} sx={{ mx: 'auto' }} />
-                                        ) : (
-                                            <Typography variant="h4" fontWeight={700} color="#0091ea">
-                                                {dashboardData?.customersWaiting || 0}
-                                            </Typography>
-                                        )}
-                                        <Typography variant="body2" color="text.secondary">
-                                            Customer<br />Waiting
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid size={6}>
-                                <Card>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <PeopleIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                                        {loading ? (
-                                            <Skeleton variant="text" width="60%" height={48} sx={{ mx: 'auto' }} />
-                                        ) : (
-                                            <Typography variant="h4" fontWeight={700} color="success.main">
-                                                {dashboardData?.customersServedToday || 0}
-                                            </Typography>
-                                        )}
-                                        <Typography variant="body2" color="text.secondary">
-                                            Customer<br />Served
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid size={6}>
-                                <Card>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <PersonIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
-                                        {loading ? (
-                                            <Skeleton variant="text" width="60%" height={48} sx={{ mx: 'auto' }} />
-                                        ) : (
-                                            <Typography variant="h4" fontWeight={700}>
-                                                {dashboardData?.totalCounters || 2}
-                                            </Typography>
-                                        )}
-                                        <Typography variant="body2" color="text.secondary">
-                                            Counter<br />Operator
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid size={6}>
-                                <Card>
-                                    <CardContent sx={{ textAlign: 'center', py: 3 }}>
-                                        <StarIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                                        <Typography variant="h4" fontWeight={700}>
-                                            0 / 5
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Customer<br />Rating
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                        </Grid>
-                    </Grid>
-                </Grid>
-
-                {/* Counter Operator Table */}
-                <Card sx={{ mt: 3 }}>
-                    <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="h6" fontWeight={600}>
-                                Counter operator
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    Total counter operator: {counterOperators.length}
-                                </Typography>
-                                <FormControl size="small" sx={{ minWidth: 120 }}>
-                                    <InputLabel id="items-per-page-label">Items per page</InputLabel>
-                                    <Select
-                                        labelId="items-per-page-label"
-                                        value={itemsPerPage}
-                                        label="Items per page"
-                                        onChange={handleItemsPerPageChange}
-                                    >
-                                        <MenuItem value={3}>3</MenuItem>
-                                        <MenuItem value={5}>5</MenuItem>
-                                        <MenuItem value={10}>10</MenuItem>
-                                        <MenuItem value={20}>20</MenuItem>
-                                        <MenuItem value={50}>50</MenuItem>
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        </Box>
-                        <TableContainer component={Paper} variant="outlined">
-                            <Table>
-                                <TableHead>
-                                    <TableRow>
-                                        <TableCell>Counter Name</TableCell>
-                                        <TableCell>Description</TableCell>
-                                        <TableCell>Host Name</TableCell>
-                                        <TableCell>Average Serving Time</TableCell>
-                                        <TableCell>Status</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {loading ? (
-                                        // Loading skeleton rows
-                                        Array.from({ length: itemsPerPage }).map((_, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell><Skeleton width="80px" /></TableCell>
-                                                <TableCell><Skeleton width="120px" /></TableCell>
-                                                <TableCell><Skeleton width="100px" /></TableCell>
-                                                <TableCell><Skeleton width="100px" /></TableCell>
-                                                <TableCell><Skeleton width="80px" /></TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : currentPageData.length > 0 ? (
-                                        currentPageData.map((operator, index) => (
-                                            <TableRow key={operator.Id || index}>
-                                                <TableCell>{operator.counterName}</TableCell>
-                                                <TableCell>{operator.description}</TableCell>
-                                                <TableCell>{operator.hostName}</TableCell>
-                                                <TableCell>{operator.averageServingTime}</TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        badgeContent={operator.statusName}
-                                                        color={operator.status === true ? "success" : "error"}
-                                                        sx={{
-                                                            '& .MuiBadge-badge': {
-                                                                fontSize: '0.75rem',
-                                                                minWidth: '20px',
-                                                                height: '20px',
-                                                                paddingLeft: '6px',
-                                                            }
-                                                        }}
-                                                    >
-                                                        <Box sx={{ width: 8 }} />
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={5} sx={{ textAlign: 'center', py: 3 }}>
-                                                <Typography color="text.secondary">
-                                                    No counter operators found
-                                                </Typography>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-
-                        {/* Pagination */}
-                        {counterOperators.length > 0 && (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, gap: 2 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    Showing {counterOperators.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, counterOperators.length)} of {counterOperators.length} items
-                                </Typography>
-                                {counterOperators.length > itemsPerPage && (
-                                    <Pagination
-                                        count={totalPages}
-                                        page={currentPage}
-                                        onChange={handlePageChange}
-                                        color="primary"
-                                        size="small"
-                                    />
-                                )}
-                            </Box>
-                        )}
-                    </CardContent>
-                </Card>
+                <Snackbar
+                    open={snackbar.open}
+                    autoHideDuration={4000}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                >
+                    <Alert
+                        onClose={() => setSnackbar({ ...snackbar, open: false })}
+                        severity={snackbar.severity}
+                        sx={{ width: "100%" }}
+                    >
+                        {snackbar.message}
+                    </Alert>
+                </Snackbar>
             </Box>
         </AdminLayout>
     );

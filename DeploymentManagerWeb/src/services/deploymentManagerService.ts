@@ -6,6 +6,7 @@ import type { ManifestCreateRequest, ManifestResponse, ManifestUpdateRequest } f
 import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
 import type { InstallationLogRequest, InstallationLogPaginationResponse } from "../type/installationLogType";
 import type { ApplicationPackageHistoryResponse, ApplicationPackageResponse, PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
+import type { AnalyticDashboardResponse } from "../type/dashboardType";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
@@ -136,7 +137,7 @@ export const categoryService = {
     },
 
     updateCategory: async (id: number, request: CategoryCreateOrUpdateRequest): Promise<CategoryResponse> => {
-        const response = await api.put(`/api/Category/update/${id}`, request);
+        const response = await api.post(`/api/Category/update/${id}`, request);
         return unwrapApiEnvelope(response);
     },
 
@@ -197,6 +198,13 @@ export const packageManagementService = {
 
     getPackageHistoryByApplication: async (): Promise<ApplicationPackageHistoryResponse> => {
         const response = await api.get(`/api/PackageManagement/all-by-applications`);
+        return unwrapApiEnvelope(response);
+    }
+};
+
+export const dashboardService = {
+    getDashboardData: async (): Promise<AnalyticDashboardResponse> => {
+        const response = await api.get(`/api/Analytics/Dashboard`);
         return unwrapApiEnvelope(response);
     }
 };
