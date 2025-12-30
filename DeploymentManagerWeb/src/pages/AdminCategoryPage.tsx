@@ -132,7 +132,7 @@ export default function AdminCategoryPage() {
             description: category.description || "",
             icon: category.icon,
             displayOrder: category.displayOrder,
-            iconUrl: category.icon,
+            iconUrl: category.iconUrl,
         });
         setDialogOpen(true);
     };
@@ -150,6 +150,7 @@ export default function AdminCategoryPage() {
     };
 
     const handleSubmit = async () => {
+        debugger
         // Validation
         if (!formData.name.trim()) {
             showSnackbar("Category name is required", "error");
@@ -161,7 +162,7 @@ export default function AdminCategoryPage() {
             return;
         }
 
-        if (!formData.icon.trim()) {
+        if (!formData.iconUrl.trim()) {
             showSnackbar("Icon is required", "error");
             return;
         }
@@ -177,9 +178,9 @@ export default function AdminCategoryPage() {
                 name: formData.name.trim(),
                 displayName: formData.displayName.trim(),
                 description: formData.description?.trim(),
-                icon: formData.icon.trim(),
+                icon: formData.iconUrl.trim(),
                 displayOrder: formData.displayOrder,
-                iconUrl: formData.icon.trim(),
+                iconUrl: formData.iconUrl.trim(),
             };
 
             if (dialogMode === "create") {
@@ -621,9 +622,9 @@ export default function AdminCategoryPage() {
                         <FormControl fullWidth required disabled={dialogLoading}>
                             <InputLabel>Icon</InputLabel>
                             <Select
-                                value={formData.icon}
+                                value={formData.iconUrl}
                                 label="Icon"
-                                onChange={(e) => handleFormChange("icon", e.target.value)}
+                                onChange={(e) => handleFormChange("iconUrl", e.target.value)}
                                 renderValue={(selected) => (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <img

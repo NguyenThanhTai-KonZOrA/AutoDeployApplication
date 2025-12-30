@@ -142,7 +142,7 @@ export const categoryService = {
     },
 
     deleteCategory: async (id: number): Promise<void> => {
-        const response = await api.delete(`/api/Category/delete/${id}`);
+        const response = await api.post(`/api/Category/delete/${id}`);
         return unwrapApiEnvelope(response);
     },
 

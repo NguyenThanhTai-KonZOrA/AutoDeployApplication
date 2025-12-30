@@ -105,11 +105,11 @@
                                    Foreground="#E1B7A7"
                                    FontWeight="Medium"
                                    Margin="0,3,0,0"/>
-                        <TextBlock Text="{Binding CurrentVersion}"
+                        <!--<TextBlock Text="{Binding CurrentVersion}"
                                    FontSize="13"
                                    FontWeight="Bold"
                                    Foreground="White"
-                                   Effect="{DynamicResource TextShadowEffect}"/>
+                                   Effect="{DynamicResource TextShadowEffect}"/>-->
                     </StackPanel>
                 </StackPanel>
 

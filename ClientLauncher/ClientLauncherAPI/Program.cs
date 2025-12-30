@@ -5,6 +5,7 @@ using ClientLancher.Implement.Services;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using ClientLancher.Implement.ViewModels;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
@@ -34,6 +35,32 @@ try
     logger.Info("🟢 Deployment Manager API initializing...");
 
     var builder = WebApplication.CreateBuilder(args);
+
+    // ================================================================
+    // 🔧 Configure Request Size Limits (FIX 413 Error)
+    // ================================================================
+
+    // Configure Kestrel
+    builder.WebHost.ConfigureKestrel(serverOptions =>
+    {
+        serverOptions.Limits.MaxRequestBodySize = 524288000; // 500 MB
+        serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+        serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    });
+
+    // Configure IIS
+    builder.Services.Configure<IISServerOptions>(options =>
+    {
+        options.MaxRequestBodySize = 524288000; // 500 MB
+    });
+
+    // Configure Form Options
+    builder.Services.Configure<FormOptions>(options =>
+    {
+        options.MultipartBodyLengthLimit = 524288000; // 500 MB
+        options.ValueLengthLimit = 524288000;
+        options.MultipartHeadersLengthLimit = 524288000;
+    });
 
     // ================================================================
     // 🔧 Configure Logging
@@ -124,6 +151,7 @@ try
     app.UseAuthorization();
     app.MapControllers();
 
+    logger.Info("✅ API started successfully. Listening on configured ports...");
     app.Run();
 }
 catch (Exception ex)

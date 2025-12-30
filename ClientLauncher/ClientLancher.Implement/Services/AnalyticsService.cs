@@ -38,7 +38,7 @@ namespace ClientLancher.Implement.Services
 
                 var totalStorage = await _unitOfWork.PackageVersions.GetTotalStorageSizeAsync();
 
-                var topApps = await GetTopApplicationsAsync(5);
+                var topApps = await GetTopApplicationsAsync(10);
                 var recentActivities = await GetRecentActivitiesAsync(10);
                 var categories = allCategories.Select(MapToResponse).OrderBy(x => x.DisplayOrder).ToList();
 

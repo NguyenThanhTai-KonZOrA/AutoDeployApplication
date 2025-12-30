@@ -335,6 +335,9 @@ export default function AdminApplicationPage() {
     const handleCloseDialog = () => {
         setDialogOpen(false);
         setEditingApplication(null);
+        setAppFormErrors({ appCode: false, name: false, categoryId: false });
+        setManifestFormErrors({ BinaryPackage: false, BinaryVersion: false, ConfigPackage: false, ConfigVersion: false, Version: false });
+        setPackageFormErrors({ file: false, MinimumClientVersion: false, PackageType: false, ReleaseNotes: false, Version: false });
         setTabValue(0);
     };
 
@@ -960,14 +963,14 @@ export default function AdminApplicationPage() {
                                         }}>
                                             Actions
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
+                                        {/* <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
-                                        </TableCell>
+                                        </TableCell> */}
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
                                             Application Code
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 180 }}>
-                                            Name
+                                            Application Name
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 250 }}>
                                             Description
@@ -1058,9 +1061,9 @@ export default function AdminApplicationPage() {
                                                         </Tooltip>
                                                     </Box>
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                {/* <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {application.id}
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {application.appCode}
                                                 </TableCell>
