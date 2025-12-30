@@ -89,7 +89,7 @@ namespace ClientLauncherAPI.Controllers
                 string filePath = string.Empty;
                 if (app.PackageVersions.Any())
                 {
-                    filePath = Path.Combine(_packagesBasePath, app?.PackageVersions?.LastOrDefault()?.StoragePath);
+                    filePath = Path.Combine(_packagesBasePath, app?.PackageVersions?.LastOrDefault(x => x.PackageFileName == packageName)?.StoragePath);
                 }
                 else
                 {
@@ -122,7 +122,7 @@ namespace ClientLauncherAPI.Controllers
                         }
                     }
                     // Record download failure statistic
-                    await _packageVersionService.UpdatePackageDownloadCountAsync(app?.PackageVersions.LastOrDefault()?.Id ?? 0);
+                    await _packageVersionService.UpdatePackageDownloadCountAsync(app?.PackageVersions?.LastOrDefault(x => x.PackageFileName == packageName)?.Id ?? 0);
                     await _packageVersionService.RecordDownloadStatisticAsync(
                         app?.PackageVersions.LastOrDefault()?.Id ?? 0, machineName, userName, ipAddress, false, 0, 0);
 
@@ -141,7 +141,7 @@ namespace ClientLauncherAPI.Controllers
                         : "application/octet-stream";
 
                 // Record download success statistic
-                await _packageVersionService.UpdatePackageDownloadCountAsync(app?.PackageVersions.LastOrDefault()?.Id ?? 0);
+                await _packageVersionService.UpdatePackageDownloadCountAsync(app?.PackageVersions?.LastOrDefault(x => x.PackageFileName == packageName)?.Id ?? 0);
                 await _packageVersionService.RecordDownloadStatisticAsync(
                     app?.PackageVersions.LastOrDefault()?.Id ?? 0, machineName, userName, ipAddress, true, fileBytes.Length, 0);
 

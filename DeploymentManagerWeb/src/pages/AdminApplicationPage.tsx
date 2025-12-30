@@ -120,6 +120,13 @@ export default function AdminApplicationPage() {
         ConfigFiles: [],
     });
 
+    // ConfigFile form states
+    const [configFileForm, setConfigFileForm] = useState({
+        name: "",
+        updatePolicy: "merge",
+        priority: "server"
+    });
+
     // Form states - Package Upload
     const [packageFormData, setPackageFormData] = useState({
         Version: "",
@@ -143,8 +150,8 @@ export default function AdminApplicationPage() {
         Version: false,
         BinaryVersion: false,
         BinaryPackage: false,
-        ConfigVersion: false,
-        ConfigPackage: false,
+        //ConfigVersion: false,
+        //ConfigPackage: false,
     });
 
     const [packageFormErrors, setPackageFormErrors] = useState({
@@ -240,7 +247,7 @@ export default function AdminApplicationPage() {
         });
         setSelectedFile(null);
         setAppFormErrors({ appCode: false, name: false, categoryId: false });
-        setManifestFormErrors({ Version: false, BinaryVersion: false, BinaryPackage: false, ConfigVersion: false, ConfigPackage: false });
+        setManifestFormErrors({ Version: false, BinaryVersion: false, BinaryPackage: false/*, ConfigVersion: false, ConfigPackage: false*/ });
         setPackageFormErrors({ Version: false, PackageType: false, ReleaseNotes: false, MinimumClientVersion: false, file: false });
         setDialogOpen(true);
         loadCategories();
@@ -336,7 +343,7 @@ export default function AdminApplicationPage() {
         setDialogOpen(false);
         setEditingApplication(null);
         setAppFormErrors({ appCode: false, name: false, categoryId: false });
-        setManifestFormErrors({ BinaryPackage: false, BinaryVersion: false, ConfigPackage: false, ConfigVersion: false, Version: false });
+        setManifestFormErrors({ BinaryPackage: false, BinaryVersion: false/*, ConfigPackage: false, ConfigVersion: false*/, Version: false });
         setPackageFormErrors({ file: false, MinimumClientVersion: false, PackageType: false, ReleaseNotes: false, Version: false });
         setTabValue(0);
     };
@@ -362,11 +369,11 @@ export default function AdminApplicationPage() {
             // Auto-fill BinaryVersion and ConfigVersion when Version changes
             if (field === "Version") {
                 newData.BinaryVersion = String(value);
-                newData.ConfigVersion = String(value);
+                //newData.ConfigVersion = String(value);
                 // Auto-fill BinaryPackage and ConfigPackage with appCode + version
                 if (appFormData.appCode) {
-                    newData.BinaryPackage = `${appFormData.appCode}_${value}`;
-                    newData.ConfigPackage = `${appFormData.appCode}_${value}`;
+                    newData.BinaryPackage = `${appFormData.appCode}_${value}.zip`;
+                    //newData.ConfigPackage = `${appFormData.appCode}_${value}.zip`;
                 }
                 // Sync package version with manifest version
                 setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
@@ -396,6 +403,51 @@ export default function AdminApplicationPage() {
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
+    };
+
+    // ConfigFile handlers
+    const handleConfigFileFormChange = (field: string, value: string) => {
+        setConfigFileForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleAddConfigFile = () => {
+        if (!configFileForm.name.trim()) {
+            showSnackbar("Config file name is required", "error");
+            return;
+        }
+
+        // Check if file already exists
+        const exists = manifestFormData.ConfigFiles.some(
+            (file) => file.name.toLowerCase() === configFileForm.name.trim().toLowerCase()
+        );
+
+        if (exists) {
+            showSnackbar("Config file with this name already exists", "error");
+            return;
+        }
+
+        setManifestFormData(prev => ({
+            ...prev,
+            ConfigFiles: [...prev.ConfigFiles, {
+                name: configFileForm.name.trim(),
+                updatePolicy: configFileForm.updatePolicy,
+                priority: configFileForm.priority
+            }]
+        }));
+
+        // Reset form
+        setConfigFileForm({
+            name: "",
+            updatePolicy: "merge",
+            priority: "server"
+        });
+    };
+
+    const handleRemoveConfigFile = (index: number) => {
+        setManifestFormData(prev => ({
+            ...prev,
+            ConfigFiles: prev.ConfigFiles.filter((_, i) => i !== index)
+        }));
     };
 
     const validateAppForm = (): boolean => {
@@ -429,8 +481,8 @@ export default function AdminApplicationPage() {
             Version: !manifestFormData.Version.trim(),
             BinaryVersion: !manifestFormData.BinaryVersion.trim(),
             BinaryPackage: !manifestFormData.BinaryPackage.trim(),
-            ConfigVersion: !manifestFormData.ConfigVersion.trim(),
-            ConfigPackage: !manifestFormData.ConfigPackage.trim(),
+            //ConfigVersion: !manifestFormData.ConfigVersion.trim(),
+            //ConfigPackage: !manifestFormData.ConfigPackage.trim(),
         };
         setManifestFormErrors(errors);
 
@@ -449,16 +501,16 @@ export default function AdminApplicationPage() {
             setTabValue(1);
             return false;
         }
-        if (errors.ConfigVersion) {
-            showSnackbar("Config Version is required", "error");
-            setTabValue(1);
-            return false;
-        }
-        if (errors.ConfigPackage) {
-            showSnackbar("Config Package is required", "error");
-            setTabValue(1);
-            return false;
-        }
+        // if (errors.ConfigVersion) {
+        //     showSnackbar("Config Version is required", "error");
+        //     setTabValue(1);
+        //     return false;
+        // }
+        // if (errors.ConfigPackage) {
+        //     showSnackbar("Config Package is required", "error");
+        //     setTabValue(1);
+        //     return false;
+        // }
         return true;
     };
 
@@ -1324,7 +1376,7 @@ export default function AdminApplicationPage() {
                                     <TextField
                                         label="Config Version"
                                         fullWidth
-                                        required
+                                        //required
                                         value={manifestFormData.ConfigVersion}
                                         onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
                                         onBlur={() => {
@@ -1332,16 +1384,16 @@ export default function AdminApplicationPage() {
                                                 setManifestFormErrors(prev => ({ ...prev, ConfigVersion: true }));
                                             }
                                         }}
-                                        error={manifestFormErrors.ConfigVersion}
+                                        //error={manifestFormErrors.ConfigVersion}
                                         disabled={dialogLoading}
-                                        helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
+                                    //helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Config Package"
                                         fullWidth
-                                        required
+                                        //required
                                         value={manifestFormData.ConfigPackage}
                                         onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
                                         onBlur={() => {
@@ -1349,9 +1401,9 @@ export default function AdminApplicationPage() {
                                                 setManifestFormErrors(prev => ({ ...prev, ConfigPackage: true }));
                                             }
                                         }}
-                                        error={manifestFormErrors.ConfigPackage}
+                                        //error={manifestFormErrors.ConfigPackage}
                                         disabled={dialogLoading}
-                                        helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
+                                    //helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1382,6 +1434,134 @@ export default function AdminApplicationPage() {
                                         </Select>
                                     </FormControl>
                                 </Grid>
+
+                                {/* Config Files Management Section */}
+                                <Grid size={{ xs: 12 }}>
+                                    <Box sx={{ mt: 2, mb: 1 }}>
+                                        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                                            Config Files
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Manage configuration file update policies and priorities
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+
+                                {/* Add Config File Form */}
+                                <Grid size={{ xs: 12 }}>
+                                    <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+                                        <Typography variant="body2" fontWeight={600} sx={{ mb: 2 }}>
+                                            Add Config File
+                                        </Typography>
+                                        <Grid container spacing={2}>
+                                            <Grid size={{ xs: 12, sm: 6 }}>
+                                                <TextField
+                                                    label="File Name"
+                                                    fullWidth
+                                                    size="small"
+                                                    placeholder="e.g., appsettings.json"
+                                                    value={configFileForm.name}
+                                                    onChange={(e) => handleConfigFileFormChange("name", e.target.value)}
+                                                    disabled={dialogLoading}
+                                                    helperText="Enter the config file name"
+                                                />
+                                            </Grid>
+                                            <Grid size={{ xs: 12, sm: 3 }}>
+                                                <FormControl fullWidth size="small" disabled={dialogLoading}>
+                                                    <InputLabel>Update Policy</InputLabel>
+                                                    <Select
+                                                        label="Update Policy"
+                                                        value={configFileForm.updatePolicy}
+                                                        onChange={(e) => handleConfigFileFormChange("updatePolicy", e.target.value)}
+                                                    >
+                                                        <MenuItem value="merge">Merge</MenuItem>
+                                                        <MenuItem value="replace">Replace</MenuItem>
+                                                        <MenuItem value="preserve">Preserve</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 12, sm: 3 }}>
+                                                <FormControl fullWidth size="small" disabled={dialogLoading}>
+                                                    <InputLabel>Priority</InputLabel>
+                                                    <Select
+                                                        label="Priority"
+                                                        value={configFileForm.priority}
+                                                        onChange={(e) => handleConfigFileFormChange("priority", e.target.value)}
+                                                    >
+                                                        <MenuItem value="server">Server</MenuItem>
+                                                        <MenuItem value="local">Local</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            </Grid>
+                                            <Grid size={{ xs: 12 }}>
+                                                <Button
+                                                    variant="outlined"
+                                                    startIcon={<AddIcon />}
+                                                    onClick={handleAddConfigFile}
+                                                    disabled={dialogLoading}
+                                                    size="small"
+                                                >
+                                                    Add Config File
+                                                </Button>
+                                            </Grid>
+                                        </Grid>
+                                    </Paper>
+                                </Grid>
+
+                                {/* Config Files List */}
+                                {manifestFormData.ConfigFiles.length > 0 && (
+                                    <Grid size={{ xs: 12 }}>
+                                        <TableContainer component={Paper} variant="outlined">
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                                                        <TableCell sx={{ fontWeight: 600 }}>File Name</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>Update Policy</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>Priority</TableCell>
+                                                        <TableCell align="center" sx={{ fontWeight: 600 }}>Action</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {manifestFormData.ConfigFiles.map((file, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{file.name}</TableCell>
+                                                            <TableCell>
+                                                                <Chip
+                                                                    label={file.updatePolicy}
+                                                                    size="small"
+                                                                    color={
+                                                                        file.updatePolicy === 'merge' ? 'primary' :
+                                                                            file.updatePolicy === 'replace' ? 'warning' : 'success'
+                                                                    }
+                                                                    variant="outlined"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Chip
+                                                                    label={file.priority}
+                                                                    size="small"
+                                                                    color={file.priority === 'server' ? 'info' : 'secondary'}
+                                                                    variant="outlined"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                <IconButton
+                                                                    size="small"
+                                                                    color="error"
+                                                                    onClick={() => handleRemoveConfigFile(index)}
+                                                                    disabled={dialogLoading}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    </Grid>
+                                )}
+
                                 <Grid size={{ xs: 12 }}>
                                     <TextField
                                         label="Release Notes"
@@ -1434,11 +1614,11 @@ export default function AdminApplicationPage() {
 
                     <TabPanel value={tabValue} index={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                             {dialogMode === "create" && (
-                            <Alert severity="info" sx={{ mb: 1 }}>
-                                Upload a package file for this application.
-                            </Alert>
-)}
+                            {dialogMode === "create" && (
+                                <Alert severity="info" sx={{ mb: 1 }}>
+                                    Upload a package file for this application.
+                                </Alert>
+                            )}
                             {/* Existing Packages Section - Only show in Edit mode */}
                             {dialogMode === "edit" && existingPackages.length > 0 && (
                                 <Box sx={{ mb: 2 }}>
@@ -1805,6 +1985,51 @@ export default function AdminApplicationPage() {
                                         <Chip label={viewingManifest.updateType} color="primary" size="small" />
                                     )}
                                 </Grid>
+
+                                {/* Config Files Section */}
+                                {viewingManifest.configFiles && viewingManifest.configFiles.length > 0 && (
+                                    <Grid size={{ xs: 12 }}>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Config Files</Typography>
+                                        <TableContainer component={Paper} variant="outlined">
+                                            <Table size="small">
+                                                <TableHead>
+                                                    <TableRow sx={{ bgcolor: 'grey.100' }}>
+                                                        <TableCell sx={{ fontWeight: 600 }}>File Name</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>Update Policy</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>Priority</TableCell>
+                                                    </TableRow>
+                                                </TableHead>
+                                                <TableBody>
+                                                    {viewingManifest.configFiles.map((file, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{file.name}</TableCell>
+                                                            <TableCell>
+                                                                <Chip
+                                                                    label={file.updatePolicy}
+                                                                    size="small"
+                                                                    color={
+                                                                        file.updatePolicy === 'merge' ? 'primary' :
+                                                                            file.updatePolicy === 'replace' ? 'warning' : 'success'
+                                                                    }
+                                                                    variant="outlined"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Chip
+                                                                    label={file.priority}
+                                                                    size="small"
+                                                                    color={file.priority === 'server' ? 'info' : 'secondary'}
+                                                                    variant="outlined"
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </TableContainer>
+                                    </Grid>
+                                )}
+
                                 <Grid size={{ xs: 12 }}>
                                     <Typography variant="body2" color="text.secondary">Release Notes</Typography>
                                     {editingManifest ? (

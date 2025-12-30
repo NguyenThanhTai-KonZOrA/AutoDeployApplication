@@ -186,7 +186,8 @@ namespace ClientLauncher.ViewModels
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
-            CurrentVersion = $"Version: {ConfigurationManager.AppSettings["ApplicationVersion"]}";
+            string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.0.0";
+            CurrentVersion = $"Version: {currentVersion}";
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
             InstallCommand = new AsyncRelayCommand(
                 async _ => await InstallSelectedApplicationsAsync(),

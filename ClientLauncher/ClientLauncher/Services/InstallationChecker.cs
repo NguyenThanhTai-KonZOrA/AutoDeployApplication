@@ -19,7 +19,7 @@ namespace ClientLauncher.Services
         {
             try
             {
-                var versionFilePath = Path.Combine(_appBasePath, appCode, "version.txt");
+                var versionFilePath = Path.Combine(_appBasePath, $"{appCode}/App", "version.txt");
                 var appFolderPath = Path.Combine(_appBasePath, appCode, "App");
 
                 bool versionFileExists = File.Exists(versionFilePath);
@@ -58,7 +58,7 @@ namespace ClientLauncher.Services
         {
             try
             {
-                var versionFilePath = Path.Combine(_appBasePath, appCode, "version.txt");
+                var versionFilePath = Path.Combine(_appBasePath, $"{appCode}/App", "version.txt");
 
                 if (!File.Exists(versionFilePath))
                 {

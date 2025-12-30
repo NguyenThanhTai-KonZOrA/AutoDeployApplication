@@ -50,7 +50,7 @@ export default function AdminPackagesPage() {
 
     // Delete confirmation dialog
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [deletingPackage, setDeletingPackage] = useState<string | null>(null);
+    const [deletingPackage, setDeletingPackage] = useState<ApplicationPackageResponse | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -116,22 +116,22 @@ export default function AdminPackagesPage() {
         }
     };
 
-    const handleDeletePackage = async (pkg: ApplicationPackageResponse) => {
-        debugger;
+    const handleDeletePackage = async () => {
+        if (!deletingPackage) return;
         try {
             setSnackbar({
                 open: true,
-                message: `Deleting ${pkg.packageFileName}...`,
+                message: `Deleting ${deletingPackage?.packageFileName}...`,
                 severity: "info",
             });
 
-            await packageManagementService.deletePackage(pkg.id);
-
+            await packageManagementService.deletePackage(deletingPackage.id);
             setSnackbar({
                 open: true,
-                message: `${pkg.packageFileName} deleted successfully`,
+                message: `${deletingPackage?.packageFileName} deleted successfully`,
                 severity: "success",
             });
+            handleCloseDeleteDialog();
         } catch (error: any) {
             console.error("Error deleting package:", error);
             setSnackbar({
@@ -139,6 +139,9 @@ export default function AdminPackagesPage() {
                 message: error?.response?.data?.message || "Failed to delete package",
                 severity: "error",
             });
+        } finally {
+            setDeleteLoading(false);
+            loadPackageHistory();
         }
     }
 
@@ -162,9 +165,8 @@ export default function AdminPackagesPage() {
     };
 
     const handleOpenDeleteDialog = (pkg: ApplicationPackageResponse) => {
-        setDeletingPackage(pkg.packageFileName);
         setDeleteDialogOpen(true);
-        handleDeletePackage(pkg);
+        setDeletingPackage(pkg);
     };
 
     return (
@@ -320,7 +322,7 @@ export default function AdminPackagesPage() {
                     <DialogTitle>Confirm Delete</DialogTitle>
                     <DialogContent>
                         <Typography>
-                            Are you sure you want to delete the application <strong>"{deletingPackage}"</strong>?
+                            Are you sure you want to delete the package <strong>"{deletingPackage?.packageFileName}"</strong> of the application <strong>"{deletingPackage?.applicationName}"</strong>?
                         </Typography>
                         <Alert severity="warning" sx={{ mt: 2 }}>
                             This action cannot be undone. All associated data will be permanently deleted.
@@ -339,6 +341,7 @@ export default function AdminPackagesPage() {
                             variant="contained"
                             color="error"
                             disabled={deleteLoading}
+                            onClick={handleDeletePackage}
                             startIcon={<DeleteIcon />}
                         >
                             {deleteLoading ? "Deleting..." : "Delete"}

@@ -74,7 +74,7 @@ namespace ClientLauncher.Services
                 }
 
                 // 4. Save version info to C:\CompanyApps\{appCode}\version.txt
-                SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
+                SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
 
                 // Save manifest to C:\CompanyApps\{appCode}\manifest.json
                 await _manifestService.SaveManifestAsync(appCode, manifest);
@@ -140,7 +140,7 @@ namespace ClientLauncher.Services
                     {
                         Logger.Info("Updating binary package");
                         await DownloadAndExtractAsync(appCode, manifest.Binary?.Package!, appPath);
-                        SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
+                        SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
                     }
 
                     // === UPDATE CONFIG (SELECTIVE) ===
@@ -181,7 +181,7 @@ namespace ClientLauncher.Services
                         true, stopwatch.Elapsed, null, null, "Update");
 
                     // Update version info
-                    SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0");
+                    SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
 
                     // Update local manifest
                     await _manifestService.SaveManifestAsync(appCode, manifest);
@@ -305,18 +305,36 @@ namespace ClientLauncher.Services
             }
         }
 
-        private void SaveVersionInfo(string appCode, string version)
+        private void SaveVersionInfo(string appCode, string binaryVersion, string configVersion)
         {
-            var versionFile = Path.Combine(_appBasePath, appCode, "version.txt");
-            var versionDir = Path.GetDirectoryName(versionFile);
-
-            if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
+            if (!string.IsNullOrEmpty(binaryVersion))
             {
-                Directory.CreateDirectory(versionDir);
+                var versionFile = Path.Combine(_appBasePath, $"{appCode}/App", "version.txt");
+                var versionDir = Path.GetDirectoryName(versionFile);
+
+                if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
+                {
+                    Directory.CreateDirectory(versionDir);
+                }
+
+                File.WriteAllText(versionFile, binaryVersion);
+                Logger.Info("Saved version {Version} to {Path}", binaryVersion, versionFile);
             }
 
-            File.WriteAllText(versionFile, version);
-            Logger.Info("Saved version {Version} to {Path}", version, versionFile);
+            if (!string.IsNullOrEmpty(configVersion))
+            {
+                var configVersionFile = Path.Combine(_appBasePath, $"{appCode}/Config", "version.txt");
+                var versionDir = Path.GetDirectoryName(configVersionFile);
+
+                if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
+                {
+                    Directory.CreateDirectory(versionDir);
+                }
+
+                File.WriteAllText(configVersionFile, configVersion);
+                Logger.Info("Saved version {Version} to {Path}", configVersion, configVersionFile);
+            }
+
         }
 
         private async Task NotifyInstallationAsync(string appCode, string version, bool success, TimeSpan duration, string? error = null, string? oldVersion = null, string action = "Install")
