@@ -18,12 +18,18 @@ import {
     Paper,
     Chip,
     Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
 } from "@mui/material";
 import {
     Refresh as RefreshIcon,
     ExpandMore as ExpandMoreIcon,
     ChevronRight as ChevronRightIcon,
     Download as DownloadIcon,
+    Delete as DeleteIcon,
+    FileDownload as FileDownloadIcon
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -41,6 +47,11 @@ interface ApplicationWithPackages {
 
 export default function AdminPackagesPage() {
     useSetPageTitle(PAGE_TITLES.PACKAGES);
+
+    // Delete confirmation dialog
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deletingPackage, setDeletingPackage] = useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const [loading, setLoading] = useState<boolean>(false);
     const [applications, setApplications] = useState<ApplicationWithPackages[]>([]);
@@ -105,6 +116,32 @@ export default function AdminPackagesPage() {
         }
     };
 
+    const handleDeletePackage = async (pkg: ApplicationPackageResponse) => {
+        debugger;
+        try {
+            setSnackbar({
+                open: true,
+                message: `Deleting ${pkg.packageFileName}...`,
+                severity: "info",
+            });
+
+            await packageManagementService.deletePackage(pkg.id);
+
+            setSnackbar({
+                open: true,
+                message: `${pkg.packageFileName} deleted successfully`,
+                severity: "success",
+            });
+        } catch (error: any) {
+            console.error("Error deleting package:", error);
+            setSnackbar({
+                open: true,
+                message: error?.response?.data?.message || "Failed to delete package",
+                severity: "error",
+            });
+        }
+    }
+
     // Toggle application expansion
     const toggleApplication = (index: number) => {
         setApplications((prev) =>
@@ -118,6 +155,17 @@ export default function AdminPackagesPage() {
     useEffect(() => {
         loadPackageHistory();
     }, []);
+
+    const handleCloseDeleteDialog = () => {
+        setDeleteDialogOpen(false);
+        setDeletingPackage(null);
+    };
+
+    const handleOpenDeleteDialog = (pkg: ApplicationPackageResponse) => {
+        setDeletingPackage(pkg.packageFileName);
+        setDeleteDialogOpen(true);
+        handleDeletePackage(pkg);
+    };
 
     return (
         <AdminLayout>
@@ -225,7 +273,8 @@ export default function AdminPackagesPage() {
                                                                         <Tooltip title="Download Package">
                                                                             <IconButton
                                                                                 size="small"
-                                                                                color="primary"
+                                                                                color="success"
+                                                                                sx={{ mr: 1 }}
                                                                                 onClick={() =>
                                                                                     handleDownloadPackage(
                                                                                         pkg.id,
@@ -233,7 +282,17 @@ export default function AdminPackagesPage() {
                                                                                     )
                                                                                 }
                                                                             >
-                                                                                <DownloadIcon />
+                                                                                <FileDownloadIcon />
+                                                                            </IconButton>
+                                                                        </Tooltip>
+
+                                                                        <Tooltip title="Delete Package">
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                color="error"
+                                                                                onClick={() => handleOpenDeleteDialog(pkg)}
+                                                                            >
+                                                                                <DeleteIcon />
                                                                             </IconButton>
                                                                         </Tooltip>
                                                                     </TableCell>
@@ -250,6 +309,42 @@ export default function AdminPackagesPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={handleCloseDeleteDialog}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle>Confirm Delete</DialogTitle>
+                    <DialogContent>
+                        <Typography>
+                            Are you sure you want to delete the application <strong>"{deletingPackage}"</strong>?
+                        </Typography>
+                        <Alert severity="warning" sx={{ mt: 2 }}>
+                            This action cannot be undone. All associated data will be permanently deleted.
+                        </Alert>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={handleCloseDeleteDialog}
+                            sx={{ border: 1 }}
+                            disabled={deleteLoading}
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            variant="contained"
+                            color="error"
+                            disabled={deleteLoading}
+                            startIcon={<DeleteIcon />}
+                        >
+                            {deleteLoading ? "Deleting..." : "Delete"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
 
                 {/* Snackbar for notifications */}
                 <Snackbar

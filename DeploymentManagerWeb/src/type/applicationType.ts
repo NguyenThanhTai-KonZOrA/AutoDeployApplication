@@ -30,4 +30,12 @@ export interface ApplicationResponse {
     totalVersions: number;
     totalInstalls: number;
     totalStorageSize: number;
+    //package information
+    packageId: number;
+    packageFileName: string;
+    packageType: string;
+    packageVersion: string;
+    isStable: boolean;
+    releaseNotes: string;
+    minimumClientVersion: string;
 }

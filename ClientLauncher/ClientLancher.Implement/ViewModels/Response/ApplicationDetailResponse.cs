@@ -28,5 +28,15 @@
         public int TotalVersions { get; set; }
         public int TotalInstalls { get; set; }
         public long TotalStorageSize { get; set; }
+
+        // Lastest Package Info
+        public int? PackageId { get; set; }
+        public string PackageFileName { get; set; }
+        public string PackageType { get; set; }
+        public string? PackageVersion { get; set; }
+        public string? PackageUrl { get; set; }
+        public bool? IsStable { get; set; }
+        public string? ReleaseNotes { get; set; }
+        public string? MinimumClientVersion { get; set; }
     }
 }

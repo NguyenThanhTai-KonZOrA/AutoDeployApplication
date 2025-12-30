@@ -258,11 +258,11 @@ export default function AdminApplicationPage() {
             categoryId: application.categoryId,
         });
         setPackageFormData({
-            Version: "",
-            PackageType: "Binary",
-            ReleaseNotes: "",
-            IsStable: true,
-            MinimumClientVersion: "",
+            Version: application.packageVersion || "",
+            PackageType: application.packageType || "Binary",
+            ReleaseNotes: application.releaseNotes || "",
+            IsStable: application.isStable !== undefined ? application.isStable : true,
+            MinimumClientVersion: application.minimumClientVersion || "",
             PublishImmediately: true,
         });
         setSelectedFile(null);
@@ -317,9 +317,9 @@ export default function AdminApplicationPage() {
                 setPackageFormData({
                     Version: latestPackage.version || "",
                     PackageType: latestPackage.packageType || "Binary",
-                    ReleaseNotes: "",
-                    IsStable: true,
-                    MinimumClientVersion: "",
+                    ReleaseNotes: application.releaseNotes || "",
+                    IsStable: application.isStable !== undefined ? application.isStable : true,
+                    MinimumClientVersion: application.minimumClientVersion || "",
                     PublishImmediately: true,
                 });
             }
@@ -595,9 +595,7 @@ export default function AdminApplicationPage() {
             // Edit mode - update application, manifest, and optionally upload package
             if (!validateAppForm()) {
                 return;
-            }
-
-            if (!editingApplication) return;
+            } if (!editingApplication) return;
 
             try {
                 setDialogLoading(true);
@@ -646,9 +644,9 @@ export default function AdminApplicationPage() {
                         formData.append('Version', packageFormData.Version);
                         formData.append('PackageType', packageFormData.PackageType);
                         formData.append('PackageFile', selectedFile);
-                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes);
+                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes ?? 'ReleaseNotes not provided');
                         formData.append('IsStable', packageFormData.IsStable.toString());
-                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
+                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion ?? 'MinimumClientVersion not provided');
                         formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
 
                         formData.append('UploadedBy', 'admin'); // Replace with actual user
@@ -1436,10 +1434,11 @@ export default function AdminApplicationPage() {
 
                     <TabPanel value={tabValue} index={2}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                             {dialogMode === "create" && (
                             <Alert severity="info" sx={{ mb: 1 }}>
                                 Upload a package file for this application.
                             </Alert>
-
+)}
                             {/* Existing Packages Section - Only show in Edit mode */}
                             {dialogMode === "edit" && existingPackages.length > 0 && (
                                 <Box sx={{ mb: 2 }}>

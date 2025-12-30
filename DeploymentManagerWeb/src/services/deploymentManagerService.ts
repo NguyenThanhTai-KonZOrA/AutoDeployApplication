@@ -199,6 +199,11 @@ export const packageManagementService = {
     getPackageHistoryByApplication: async (): Promise<ApplicationPackageHistoryResponse> => {
         const response = await api.get(`/api/PackageManagement/all-by-applications`);
         return unwrapApiEnvelope(response);
+    },
+
+    deletePackage: async (id: number): Promise<boolean> => {
+        const response = await api.post(`/api/PackageManagement/delete/${id}`);
+        return unwrapApiEnvelope(response);
     }
 };
 

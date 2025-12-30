@@ -213,6 +213,9 @@ namespace ClientLancher.Implement.Services
             // Get total storage size
             var totalStorage = await _unitOfWork.PackageVersions.GetTotalStorageSizeAsync(app.Id);
 
+            // Get latest package info
+            var latestPackage = app.PackageVersions?.OrderByDescending(p => p.UploadedAt).FirstOrDefault();
+
             // Get total installs
             var installLogs = await _unitOfWork.InstallationLogs.GetByApplicationIdAsync(app.Id);
             var totalInstalls = installLogs.Count();
@@ -234,7 +237,15 @@ namespace ClientLancher.Implement.Services
                 LatestVersionDate = latestVersion?.PublishedAt ?? latestVersion?.UploadedAt,
                 TotalVersions = totalVersions,
                 TotalInstalls = totalInstalls,
-                TotalStorageSize = totalStorage
+                TotalStorageSize = totalStorage,
+                PackageId = latestPackage?.Id,
+                PackageFileName = latestPackage?.PackageFileName ?? string.Empty,
+                PackageType = latestPackage?.PackageType ?? string.Empty,
+                PackageVersion = latestPackage?.Version,
+                PackageUrl = latestPackage?.StoragePath,
+                IsStable = latestPackage?.IsStable,
+                ReleaseNotes = latestPackage?.ReleaseNotes,
+                MinimumClientVersion = latestPackage?.MinimumClientVersion
             };
         }
     }
