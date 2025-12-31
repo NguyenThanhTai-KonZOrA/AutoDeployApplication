@@ -20,6 +20,8 @@ namespace ClientLauncher.Models
         public string? InstalledVersion { get; set; }
         public string? ServerVersion { get; set; }
         public bool HasUpdate { get; set; }
+        public bool HasBinaryUpdate { get; set; }
+        public bool HasConfigUpdate { get; set; }
         public string StatusText { get; set; } = "Not Installed";
 
         // NEW: For multi-selection with property changed notification

@@ -166,6 +166,7 @@ namespace ClientLauncher.ViewModels
                 await Task.Delay(100);
 
                 var isInstalled = _installationChecker.IsApplicationInstalled(AppCode);
+                //var currentVersion = _installationChecker.GetInstalledBinaryVersion(AppCode);
                 var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
 
                 Logger.Info("Installation check: IsInstalled={IsInstalled}, Version={Version}",

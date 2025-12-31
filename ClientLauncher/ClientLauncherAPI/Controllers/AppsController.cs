@@ -89,7 +89,9 @@ namespace ClientLauncherAPI.Controllers
                 string filePath = string.Empty;
                 if (app.PackageVersions.Any())
                 {
-                    filePath = Path.Combine(_packagesBasePath, app?.PackageVersions?.LastOrDefault(x => x.PackageFileName == packageName)?.StoragePath);
+                    var fileAppPath = app?.PackageVersions?.FirstOrDefault(x => x.PackageFileName == packageName);
+
+                    filePath = Path.Combine(_packagesBasePath, fileAppPath?.StoragePath);
                 }
                 else
                 {

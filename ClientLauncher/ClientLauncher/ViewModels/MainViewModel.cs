@@ -421,6 +421,53 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
+        /// Check if there are any updates available (binary OR config)
+        /// </summary>
+        private (bool, bool) HasAnyUpdate(VersionInfoDto serverVersionInfo, string installedVersion)
+        {
+            try
+            {
+                // Check binary version update
+                bool binaryUpdate = false;
+                if (!string.IsNullOrEmpty(serverVersionInfo.BinaryVersion))
+                {
+                    binaryUpdate = IsNewerVersion(serverVersionInfo.BinaryVersion, installedVersion);
+                }
+
+                // Check config version update
+                bool configUpdate = false;
+                if (!string.IsNullOrEmpty(serverVersionInfo.ConfigVersion))
+                {
+                    // Get local config version from manifest
+                    var localManifest = _manifestService.GetLocalManifestAsync(serverVersionInfo.AppCode).Result;
+                    if (localManifest != null && !string.IsNullOrEmpty(localManifest.Config?.Version))
+                    {
+                        configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, localManifest.Config.Version);
+                    }
+                }
+
+                // Return true if either binary or config has update
+                bool hasUpdate = binaryUpdate || configUpdate;
+
+                if (hasUpdate)
+                {
+                    var updateParts = new List<string>();
+                    if (binaryUpdate) updateParts.Add($"Binary: {serverVersionInfo.BinaryVersion}");
+                    if (configUpdate) updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
+
+                    _logger.Info("Update available - {Updates}", string.Join(", ", updateParts));
+                }
+
+                return (binaryUpdate, configUpdate);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error checking for updates");
+                return (false, false);
+            }
+        }
+
+        /// <summary>
         /// Install multiple selected applications
         /// </summary>
         private async Task InstallSelectedApplicationsAsync()
@@ -559,24 +606,94 @@ namespace ClientLauncher.ViewModels
         /// <summary>
         /// Uninstall application
         /// </summary>
+        /// <summary>
+        /// Uninstall application with process check
+        /// </summary>
         private async Task UninstallApplicationAsync()
         {
             var stopwatch = Stopwatch.StartNew();
             if (SelectedApplication == null || !SelectedApplication.IsInstalled) return;
 
-            var result = MessageBox.Show(
-                $"Are you sure you want to uninstall '{SelectedApplication.Name}'?\n\n" +
-                $"This will remove all application files from C:\\CompanyApps\\{SelectedApplication.AppCode}",
-                "Confirm Uninstall",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning
-            );
-
-            if (result != MessageBoxResult.Yes)
-                return;
-
             try
             {
+                _logger.Info("Checking if {AppCode} is currently running", SelectedApplication.AppCode);
+
+                // Check if application is running
+                var runningProcesses = ProcessHelper.GetRunningProcessesForApp(SelectedApplication.AppCode);
+
+                if (runningProcesses.Any())
+                {
+                    _logger.Warn("Application {AppCode} has running processes: {Processes}",
+                        SelectedApplication.AppCode, string.Join(", ", runningProcesses));
+
+                    var processNames = string.Join("\n  • ", runningProcesses);
+                    var result = MessageBox.Show(
+                        $"❌ Cannot uninstall '{SelectedApplication.Name}'\n\n" +
+                        $"The following processes are currently running:\n  • {processNames}\n\n" +
+                        $"Please close the application and try again.\n\n" +
+                        $"Do you want to force close these processes and continue uninstallation?\n" +
+                        $"⚠️ WARNING: This may cause data loss if the application has unsaved work.",
+                        "Application Running",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning
+                    );
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        _logger.Info("User chose to force close processes for {AppCode}", SelectedApplication.AppCode);
+
+                        StatusMessage = "Force closing application processes...";
+
+                        if (!ProcessHelper.TryKillApplicationProcesses(SelectedApplication.AppCode, out var failedProcesses))
+                        {
+                            MessageBox.Show(
+                                $"❌ Failed to close some processes:\n  • {string.Join("\n  • ", failedProcesses)}\n\n" +
+                                $"Please close these processes manually and try again.",
+                                "Force Close Failed",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                            );
+                            return;
+                        }
+
+                        // Wait a bit for processes to fully terminate
+                        await Task.Delay(2000);
+
+                        // Double check if processes are really terminated
+                        runningProcesses = ProcessHelper.GetRunningProcessesForApp(SelectedApplication.AppCode);
+                        if (runningProcesses.Any())
+                        {
+                            MessageBox.Show(
+                                $"❌ Some processes are still running:\n  • {string.Join("\n  • ", runningProcesses)}\n\n" +
+                                $"Please close these processes manually and try again.",
+                                "Processes Still Running",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                            );
+                            return;
+                        }
+
+                        _logger.Info("Successfully closed all processes for {AppCode}", SelectedApplication.AppCode);
+                    }
+                    else
+                    {
+                        _logger.Info("User cancelled uninstallation for {AppCode}", SelectedApplication.AppCode);
+                        return;
+                    }
+                }
+
+                // Confirm uninstallation
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to uninstall '{SelectedApplication.Name}'?\n\n" +
+                    $"This will remove all application files from C:\\CompanyApps\\{SelectedApplication.AppCode}",
+                    "Confirm Uninstall",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning
+                );
+
+                if (confirmResult != MessageBoxResult.Yes)
+                    return;
+
                 _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
 
                 CurrentStep = 2;
@@ -610,6 +727,17 @@ namespace ClientLauncher.ViewModels
 
                     _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
                 }
+                else
+                {
+                    InstallationResult = $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
+                    CurrentStep = 3;
+                    OnPropertyChanged(nameof(IsStep1Visible));
+                    OnPropertyChanged(nameof(IsStep2Visible));
+                    OnPropertyChanged(nameof(IsStep3Visible));
+
+                    InstallationSuccess = false;
+                    return;
+                }
 
                 StatusMessage = "Finalizing...";
                 ProgressValue = 100;
@@ -622,20 +750,80 @@ namespace ClientLauncher.ViewModels
 
                 // Write Log
                 stopwatch.Stop();
-                await _apiService.NotifyInstallationAsync(SelectedApplication.AppCode, SelectedApplication.InstalledVersion, true, stopwatch.Elapsed, null, SelectedApplication.InstalledVersion, "Uninstall");
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    true,
+                    stopwatch.Elapsed,
+                    null,
+                    SelectedApplication.InstalledVersion,
+                    "Uninstall");
 
                 InstallationSuccess = uninstallResult.Success;
                 StatusMessage = "Uninstallation completed";
-                InstallationResult = uninstallResult.Success
-                    ? $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
-                      $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +
-                      $"Desktop shortcut removed\n\n" +
-                      $"Uninstalled by: {Environment.UserName}"
-                    : $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
+                InstallationResult = $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
+                                   $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +
+                                   $"Desktop shortcut removed\n\n" +
+                                   $"Uninstalled by: {Environment.UserName}";
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                _logger.Error(uaEx, "Access denied during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Uninstallation failed - Access Denied\n\n" +
+                                   $"Some files are in use or you don't have permission to delete them.\n\n" +
+                                   $"Please make sure:\n" +
+                                   $"  • The application is completely closed\n" +
+                                   $"  • No files are open in other programs\n" +
+                                   $"  • You have administrator permissions\n\n" +
+                                   $"Error: {uaEx.Message}";
+
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    $"Access Denied: {uaEx.Message}",
+                    SelectedApplication.InstalledVersion,
+                    "Uninstall");
+            }
+            catch (IOException ioEx)
+            {
+                _logger.Error(ioEx, "IO error during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Uninstallation failed - File Access Error\n\n" +
+                                   $"Some files are currently in use.\n\n" +
+                                   $"Please close all applications and try again.\n\n" +
+                                   $"Error: {ioEx.Message}";
+
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    $"File in use: {ioEx.Message}",
+                    SelectedApplication.InstalledVersion,
+                    "Uninstall");
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication.AppCode);
+                _logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication?.AppCode);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -644,9 +832,17 @@ namespace ClientLauncher.ViewModels
 
                 InstallationSuccess = false;
                 InstallationResult = $"✗ Uninstallation failed\n\n{ex.Message}";
+
                 // Write Log
                 stopwatch.Stop();
-                await _apiService.NotifyInstallationAsync(SelectedApplication.AppCode, SelectedApplication.InstalledVersion, false, stopwatch.Elapsed, null, SelectedApplication.InstalledVersion, "Uninstall");
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    ex.Message,
+                    SelectedApplication.InstalledVersion,
+                    "Uninstall");
             }
             finally
             {

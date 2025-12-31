@@ -186,6 +186,56 @@ namespace ClientLauncher.Services
             }
         }
 
+        public async Task<string?> GetInstalledBinaryVersionAsync(string appCode)
+        {
+            try
+            {
+                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+                var version = _installationChecker.GetInstalledBinaryVersion(appCode);
+
+                if (version != null)
+                {
+                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                }
+                else
+                {
+                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                }
+
+                return version;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to get installed version for {AppCode}", appCode);
+                return null;
+            }
+        }
+
+        public async Task<string?> GetInstalledConfigVersionAsync(string appCode)
+        {
+            try
+            {
+                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+                var version = _installationChecker.GetInstalledConfigVersion(appCode);
+
+                if (version != null)
+                {
+                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                }
+                else
+                {
+                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                }
+
+                return version;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to get installed version for {AppCode}", appCode);
+                return null;
+            }
+        }
+
         public async Task<VersionInfoDto?> GetServerVersionAsync(string appCode)
         {
             try

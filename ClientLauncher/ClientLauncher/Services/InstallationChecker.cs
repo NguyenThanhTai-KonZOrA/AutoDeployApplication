@@ -76,5 +76,51 @@ namespace ClientLauncher.Services
                 return null;
             }
         }
+
+        public string? GetInstalledBinaryVersion(string appCode)
+        {
+            try
+            {
+                var versionFilePath = Path.Combine(_appBasePath, $"{appCode}/App", "version.txt");
+
+                if (!File.Exists(versionFilePath))
+                {
+                    Logger.Debug("Version file not found for {AppCode} at {Path}", appCode, versionFilePath);
+                    return null;
+                }
+
+                var version = File.ReadAllText(versionFilePath).Trim();
+                Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                return version;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error reading version for {AppCode}", appCode);
+                return null;
+            }
+        }
+
+        public string? GetInstalledConfigVersion(string appCode)
+        {
+            try
+            {
+                var versionFilePath = Path.Combine(_appBasePath, $"{appCode}/Config", "version.txt");
+
+                if (!File.Exists(versionFilePath))
+                {
+                    Logger.Debug("Version file not found for {AppCode} at {Path}", appCode, versionFilePath);
+                    return null;
+                }
+
+                var version = File.ReadAllText(versionFilePath).Trim();
+                Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                return version;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error reading version for {AppCode}", appCode);
+                return null;
+            }
+        }
     }
 }
