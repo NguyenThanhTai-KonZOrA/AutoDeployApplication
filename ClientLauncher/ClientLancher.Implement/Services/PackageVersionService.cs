@@ -62,9 +62,22 @@ namespace ClientLancher.Implement.Services
 
                 // 5. Determine storage path
                 //var fileName = $"{application.AppCode}_v{request.Version}.zip";
-                var fileName = $"{application.AppCode}_{request.Version}.zip";
-                var storagePath = Path.Combine(application.AppCode, request.Version, fileName);
-                var fullPath = Path.Combine(_packagesBasePath, storagePath);
+                string fileName;
+                string storagePath;
+                string fullPath;
+
+                if (request.PackageType == "Binary")
+                {
+                    fileName = $"{application.AppCode}_{request.Version}.zip";
+                    storagePath = Path.Combine(application.AppCode, request.Version, fileName);
+                    fullPath = Path.Combine(_packagesBasePath, storagePath);
+                }
+                else
+                {
+                    fileName = $"{application.AppCode}_config_{request.Version}.zip";
+                    storagePath = Path.Combine(application.AppCode, request.Version, fileName);
+                    fullPath = Path.Combine(_packagesBasePath, storagePath);
+                }
 
                 // 6. Save file to disk
                 Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
@@ -88,7 +101,7 @@ namespace ClientLancher.Implement.Services
                     StoragePath = storagePath,
                     ReleaseNotes = request.ReleaseNotes,
                     IsActive = true,
-                    IsStable = request.IsStable,
+                    IsStable = true, //request.IsStable,
                     MinimumClientVersion = request.MinimumClientVersion,
                     UploadedBy = request.UploadedBy,
                     UploadedAt = DateTime.UtcNow,

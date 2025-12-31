@@ -158,7 +158,7 @@ export default function AdminApplicationPage() {
         Version: false,
         PackageType: false,
         ReleaseNotes: false,
-        MinimumClientVersion: false,
+        MinimumClientVersion: true,
         file: false,
     });
 
@@ -248,7 +248,7 @@ export default function AdminApplicationPage() {
         setSelectedFile(null);
         setAppFormErrors({ appCode: false, name: false, categoryId: false });
         setManifestFormErrors({ Version: false, BinaryVersion: false, BinaryPackage: false/*, ConfigVersion: false, ConfigPackage: false*/ });
-        setPackageFormErrors({ Version: false, PackageType: false, ReleaseNotes: false, MinimumClientVersion: false, file: false });
+        setPackageFormErrors({ Version: false, PackageType: false, ReleaseNotes: false, MinimumClientVersion: true, file: false });
         setDialogOpen(true);
         loadCategories();
     };
@@ -378,6 +378,19 @@ export default function AdminApplicationPage() {
                 // Sync package version with manifest version
                 setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
             }
+
+            if (field === "ConfigVersion") {
+                newData.ConfigVersion = String(value);
+                if (value) {
+                    // Auto-fill ConfigPackage with appCode + ConfigVersion
+                    if (appFormData.appCode) {
+                        newData.ConfigPackage = `${appFormData.appCode}_config_${value}.zip`;
+                    }
+                } else {
+                    newData.ConfigPackage = "";
+                }
+            }
+
             return newData;
         });
         // Clear error for this field
@@ -539,11 +552,11 @@ export default function AdminApplicationPage() {
             setTabValue(2);
             return false;
         }
-        if (errors.MinimumClientVersion) {
-            showSnackbar("Minimum Client Version is required", "error");
-            setTabValue(2);
-            return false;
-        }
+        // if (errors.MinimumClientVersion) {
+        //     showSnackbar("Minimum Client Version is required", "error");
+        //     setTabValue(2);
+        //     return false;
+        // }
         if (errors.file) {
             showSnackbar("Please select a package file", "error");
             setTabValue(2);
@@ -611,10 +624,10 @@ export default function AdminApplicationPage() {
                         formData.append('Version', packageFormData.Version);
                         formData.append('PackageType', packageFormData.PackageType);
                         formData.append('PackageFile', selectedFile);
-                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes);
-                        formData.append('IsStable', packageFormData.IsStable.toString());
-                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion);
-                        formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
+                        formData.append('ReleaseNotes', packageFormData.ReleaseNotes || 'ReleaseNotes not provided');
+                        formData.append('IsStable', 'true'.toString());
+                        formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion || 'MinimumClientVersion not provided');
+                        formData.append('PublishImmediately', 'true'.toString());
 
                         // Get current user from localStorage
                         const user = 'admin'
@@ -649,6 +662,47 @@ export default function AdminApplicationPage() {
                 return;
             } if (!editingApplication) return;
 
+            // check if manifest version has changed and need to update new package for this new version
+            if (manifestFormData.Version !== editingApplication.manifestBinaryVersion && !selectedFile) {
+                // Version has changed, handle accordingly
+
+                setPackageFormData(prev => ({
+                    ...prev,
+                    Version: manifestFormData.Version
+                }));
+
+                setTabValue(2);
+                showSnackbar(`Manifest version has changed from ${editingApplication.manifestBinaryVersion} to ${manifestFormData.Version}. You must update the package`, "error");
+                return;
+            } else if (selectedFile) {
+                setPackageFormData(prev => ({
+                    ...prev,
+                    PackageFile: selectedFile
+                }));
+            }
+
+            // check if manifest version has changed and need to update new package for this new version
+            if (manifestFormData.ConfigVersion !== editingApplication.manifestConfigVersion && !selectedFile) {
+                // Version has changed, handle accordingly
+
+                setPackageFormData(prev => ({
+                    ...prev,
+                    Version: manifestFormData.ConfigVersion,
+                    PackageType: "Config"
+                }));
+
+                setTabValue(2);
+                showSnackbar(`Manifest config version has changed from ${editingApplication.manifestConfigVersion} to ${manifestFormData.ConfigVersion}. You must update the package`, "error");
+                return;
+            } else if (selectedFile) {
+                setPackageFormData(prev => ({
+                    ...prev,
+                    PackageFile: selectedFile,
+                    Version: manifestFormData.ConfigVersion,
+                    PackageType: "Config"
+                }));
+            }
+
             try {
                 setDialogLoading(true);
 
@@ -663,6 +717,7 @@ export default function AdminApplicationPage() {
                 showSnackbar(`Application "${result.name}" updated successfully!`, "success");
 
                 // Step 2: Update manifest if form is filled
+                debugger;
                 if (manifestFormData.Version.trim()) {
                     if (!validateManifestForm()) {
                         setTabValue(1); // Switch to manifest tab
@@ -688,6 +743,9 @@ export default function AdminApplicationPage() {
                     }
                 }
 
+
+
+
                 // Step 3: Upload package if file is selected
                 if (selectedFile) {
                     try {
@@ -697,9 +755,9 @@ export default function AdminApplicationPage() {
                         formData.append('PackageType', packageFormData.PackageType);
                         formData.append('PackageFile', selectedFile);
                         formData.append('ReleaseNotes', packageFormData.ReleaseNotes ?? 'ReleaseNotes not provided');
-                        formData.append('IsStable', packageFormData.IsStable.toString());
+                        formData.append('IsStable', 'true'.toString());
                         formData.append('MinimumClientVersion', packageFormData.MinimumClientVersion ?? 'MinimumClientVersion not provided');
-                        formData.append('PublishImmediately', packageFormData.PublishImmediately.toString());
+                        formData.append('PublishImmediately', 'true'.toString());
 
                         formData.append('UploadedBy', 'admin'); // Replace with actual user
 
@@ -1573,7 +1631,7 @@ export default function AdminApplicationPage() {
                                         disabled={dialogLoading}
                                     />
                                 </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                {/* <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Published At"
                                         type="datetime-local"
@@ -1583,7 +1641,7 @@ export default function AdminApplicationPage() {
                                         disabled={dialogLoading}
                                         InputLabelProps={{ shrink: true }}
                                     />
-                                </Grid>
+                                </Grid> */}
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
                                         <FormControlLabel
@@ -1758,7 +1816,7 @@ export default function AdminApplicationPage() {
                                         helperText={packageFormErrors.ReleaseNotes ? "Release Notes is required" : ""}
                                     />
                                 </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                {/* <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Minimum Client Version"
                                         fullWidth
@@ -1774,8 +1832,8 @@ export default function AdminApplicationPage() {
                                         disabled={dialogLoading}
                                         helperText={packageFormErrors.MinimumClientVersion ? "Minimum Client Version is required" : "Minimum version required to install"}
                                     />
-                                </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                </Grid> */}
+                                {/* <Grid size={{ xs: 12, sm: 6 }}>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
                                         <FormControlLabel
                                             control={
@@ -1798,7 +1856,7 @@ export default function AdminApplicationPage() {
                                             label="Publish Immediately"
                                         />
                                     </Box>
-                                </Grid>
+                                </Grid> */}
                             </Grid>
                         </Box>
                     </TabPanel>

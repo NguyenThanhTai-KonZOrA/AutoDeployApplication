@@ -245,7 +245,10 @@ namespace ClientLancher.Implement.Services
                 PackageUrl = latestPackage?.StoragePath,
                 IsStable = latestPackage?.IsStable,
                 ReleaseNotes = latestPackage?.ReleaseNotes,
-                MinimumClientVersion = latestPackage?.MinimumClientVersion
+                MinimumClientVersion = latestPackage?.MinimumClientVersion,
+                ManifestVersion = lastestManifest?.Version ?? string.Empty,
+                ManifestBinaryVersion = lastestManifest?.BinaryVersion ?? string.Empty,
+                ManifestConfigVersion = lastestManifest?.ConfigVersion ?? string.Empty
             };
         }
     }

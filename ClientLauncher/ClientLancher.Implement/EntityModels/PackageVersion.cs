@@ -20,19 +20,19 @@ namespace ClientLancher.Implement.EntityModels
         // Metadata
         public string ReleaseNotes { get; set; } = string.Empty;
         public bool IsStable { get; set; } = true; // Stable/Beta/Alpha
-        public string? MinimumClientVersion { get; set; } // Yêu cầu version ClientLauncher tối thiểu
+        public string? MinimumClientVersion { get; set; } // requires client version >= this
 
         // Upload Info
         public string UploadedBy { get; set; } = string.Empty;
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? PublishedAt { get; set; } // Khi nào được publish
+        public DateTime? PublishedAt { get; set; }
 
         // Download Stats
         public int DownloadCount { get; set; }
         public DateTime? LastDownloadedAt { get; set; }
 
         // Rollback Support
-        public int? ReplacesVersionId { get; set; } // Version mà nó thay thế
+        public int? ReplacesVersionId { get; set; } // Version replaced by this version
         public PackageVersion? ReplacesVersion { get; set; }
 
         // Navigation

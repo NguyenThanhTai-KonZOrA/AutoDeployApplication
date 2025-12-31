@@ -64,10 +64,31 @@ export default function AdminInstallationLogPage() {
         MachineName: "",
         Status: "",
         Action: "",
-        // from start of today
-        FromDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString().slice(0, 16),
-        // to end of today
-        ToDate: new Date(new Date().setHours(23, 59, 59, 999)).toISOString().slice(0, 16),
+        // from start of yesterday viet nam time UTC +7
+        FromDate: (() => {
+            // Set to 1 day ago in local time
+            const date = new Date();
+            date.setDate(date.getDate() - 1);
+            // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        })(),
+        // to end of today viet nam time UTC +7
+        ToDate: (() => {
+            // Set to current date/time in local time
+            const date = new Date();
+            // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        })(),
         Page: 1,
         PageSize: 10,
         Take: 10,

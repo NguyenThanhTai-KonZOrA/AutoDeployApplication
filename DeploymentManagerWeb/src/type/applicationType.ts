@@ -16,6 +16,9 @@ export interface UpdateApplicationRequest {
 export interface ApplicationResponse {
     id: number;
     manifestId: number;
+    manifestVersion: string;
+    manifestBinaryVersion: string;
+    manifestConfigVersion: string;
     appCode: string;
     name: string;
     description: string;

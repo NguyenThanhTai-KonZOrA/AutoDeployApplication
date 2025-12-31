@@ -15,7 +15,7 @@ namespace ClientLancher.Implement.EntityModels
         // Targeting
         public string? TargetMachines { get; set; } // JSON array của machine names/IDs
         public string? TargetUsers { get; set; } // JSON array của usernames
-        public bool IsGlobalDeployment { get; set; } // Deploy cho tất cả
+        public bool IsGlobalDeployment { get; set; } // Deploy for all machines/users
 
         // Progress
         public int TotalTargets { get; set; }
