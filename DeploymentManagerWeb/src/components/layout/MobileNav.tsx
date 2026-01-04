@@ -70,6 +70,13 @@ const navItems: NavItem[] = [
         icon: ManageHistoryIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
+    {
+        key: 'report-by-application',
+        title: 'Installation Report',
+        href: '/admin-report-by-application',
+        icon: AssessmentIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
 ];
 
 interface MobileNavProps {

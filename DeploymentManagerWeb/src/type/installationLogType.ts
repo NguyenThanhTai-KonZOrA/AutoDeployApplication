@@ -35,3 +35,35 @@ export interface InstallationLogPaginationResponse {
     Page: number;
     logs: InstallationLogResponse[];
 }
+
+export interface InstallationReportRequest {
+    ApplicationId?: number;
+    MachineName?: string;
+    Status?: string; // Dropdown list: Success, Failed, InProgress
+    FromDate?: string;
+    ToDate?: string;
+}
+
+export interface InstallationReportResponse {
+    applicationId: number;
+    applicationName: string;
+    appCode: string;
+    versionStats: VersionInstallationStats[];
+    totalPCs: number;
+}
+
+export interface VersionInstallationStats {
+    version: string;
+    pcCount: number;
+    pCs: PCInstallationDetail[];
+}
+
+export interface PCInstallationDetail {
+    machineName: string;
+    machineId: number;
+    userName: string;
+    status: string; // Success, Failed, InProgress
+    action: string; // Install, Update, Uninstall
+    installedAt: string;
+    lastUpdatedAt: string;
+}

@@ -27,7 +27,7 @@ import {
     Archive as ArchiveIcon,
     Apps as AppIcon,
     Category as CategoryIcon,
-    FileDownloadDone as FileDownloadDoneIcon
+    FileDownloadDone as FileDownloadDoneIcon,
 } from '@mui/icons-material';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -68,6 +68,13 @@ const navItems: NavItem[] = [
         title: 'Installation Logs',
         href: '/admin-installation',
         icon: ManageHistoryIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
+    {
+        key: 'report-by-application',
+        title: 'Installation Report',
+        href: '/admin-report-by-application',
+        icon: AssessmentIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
 ];

@@ -4,7 +4,7 @@ import axios from "axios";
 import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRequest } from "../type/applicationType";
 import type { ManifestCreateRequest, ManifestResponse, ManifestUpdateRequest } from "../type/manifestType";
 import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
-import type { InstallationLogRequest, InstallationLogPaginationResponse } from "../type/installationLogType";
+import type { InstallationLogRequest, InstallationLogPaginationResponse, InstallationReportResponse, InstallationReportRequest } from "../type/installationLogType";
 import type { ApplicationPackageHistoryResponse, ApplicationPackageResponse, PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
 import type { AnalyticDashboardResponse } from "../type/dashboardType";
 
@@ -155,6 +155,11 @@ export const categoryService = {
 export const installationService = {
     getInstallationLogs: async (request: InstallationLogRequest): Promise<InstallationLogPaginationResponse> => {
         const response = await api.post(`/api/InstallationLog/logs`, request);
+        return unwrapApiEnvelope(response);
+    },
+
+    getReportByApplication: async (request: InstallationReportRequest): Promise<InstallationReportResponse[]> => {
+        const response = await api.post(`/api/InstallationLog/report/by-version`, request);
         return unwrapApiEnvelope(response);
     }
 };

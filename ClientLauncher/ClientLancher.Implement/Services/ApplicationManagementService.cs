@@ -34,9 +34,10 @@ namespace ClientLancher.Implement.Services
                 }
 
                 // Validate category if provided
+                ApplicationCategory category = new();
                 if (request.CategoryId.HasValue)
                 {
-                    var category = await _unitOfWork.ApplicationCategories.GetByIdAsync(request.CategoryId.Value);
+                    category = await _unitOfWork.ApplicationCategories.GetByIdAsync(request.CategoryId.Value);
                     if (category == null)
                     {
                         throw new Exception($"Category with ID {request.CategoryId} not found");
@@ -50,6 +51,7 @@ namespace ClientLancher.Implement.Services
                     Description = request.Description,
                     IconUrl = request.IconUrl ?? string.Empty,
                     CategoryId = request.CategoryId,
+                    Category = category,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

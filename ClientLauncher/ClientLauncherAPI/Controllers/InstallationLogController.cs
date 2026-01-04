@@ -112,5 +112,29 @@ namespace ClientLauncherAPI.Controllers
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        /// <summary>
+        /// Get installation report grouped by version
+        /// Shows how many PCs have each version installed
+        /// </summary>
+        [HttpPost("report/by-version")]
+        public async Task<IActionResult> GetInstallationReportByVersion([FromBody] InstallationReportRequest request)
+        {
+            try
+            {
+                var report = await _installationLogService.GetInstallationReportByVersionAsync(request);
+                return Ok(report);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating installation report by version");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }

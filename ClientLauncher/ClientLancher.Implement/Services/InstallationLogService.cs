@@ -52,5 +52,57 @@ namespace ClientLancher.Implement.Services
                 UserName = log.UserName
             };
         }
+
+        public async Task<List<InstallationReportResponse>> GetInstallationReportByVersionAsync(InstallationReportRequest request)
+        {
+            var logs = await _installationLogRepository.GetInstallationReportDataAsync(request);
+
+            // Group by Application and Version
+            var groupedByApp = logs
+                .GroupBy(l => new { l.ApplicationId, l.Application.Name, l.Application.AppCode })
+                .Select(appGroup => new InstallationReportResponse
+                {
+                    ApplicationId = appGroup.Key.ApplicationId,
+                    ApplicationName = appGroup.Key.Name,
+                    AppCode = appGroup.Key.AppCode,
+                    VersionStats = appGroup
+                        .GroupBy(l => l.NewVersion)
+                        .Select(versionGroup =>
+                        {
+                            // Get latest log for each machine (by MachineId or MachineName)
+                            var latestByMachine = versionGroup
+                                .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
+                                .Select(machineGroup => machineGroup.OrderByDescending(l => l.CreatedAt).First())
+                                .ToList();
+
+                            return new VersionInstallationStats
+                            {
+                                Version = versionGroup.Key,
+                                PCCount = latestByMachine.Count,
+                                PCs = latestByMachine.Select(l => new PCInstallationDetail
+                                {
+                                    MachineName = l.MachineName,
+                                    MachineId = l.MachineId,
+                                    UserName = l.UserName,
+                                    Status = l.Status,
+                                    Action = l.Action,
+                                    InstalledAt = l.StartedAt,
+                                    LastUpdatedAt = l.CompletedAt
+                                })
+                                .OrderBy(p => p.MachineName)
+                                .ToList()
+                            };
+                        })
+                        .OrderByDescending(v => v.Version)
+                        .ToList(),
+                    TotalPCs = appGroup
+                        .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
+                        .Count()
+                })
+                .OrderBy(a => a.ApplicationName)
+                .ToList();
+
+            return groupedByApp;
+        }
     }
 }

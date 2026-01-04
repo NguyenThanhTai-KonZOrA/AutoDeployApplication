@@ -106,7 +106,7 @@ namespace ClientLancher.Implement.Repositories
             // Filter by Action
             if (!string.IsNullOrWhiteSpace(request.Action))
             {
-                query = query.Where(a => a.Action.Contains(request.Action));
+                query = query.Where(a => a.Action.Equals(request.Action));
             }
 
             // Filter by ApplicationId
@@ -140,6 +140,52 @@ namespace ClientLancher.Implement.Repositories
             }
 
             return query;
+        }
+
+        public async Task<List<InstallationLog>> GetInstallationReportDataAsync(InstallationReportRequest request)
+        {
+            var query = _dbSet
+                .Include(x => x.Application)
+                .AsNoTracking()
+                .AsQueryable();
+
+            // Filter by ApplicationId
+            if (request.ApplicationId.HasValue && request.ApplicationId != 0)
+            {
+                query = query.Where(a => a.ApplicationId == request.ApplicationId.Value);
+            }
+
+            // Filter by MachineName
+            if (!string.IsNullOrWhiteSpace(request.MachineName))
+            {
+                query = query.Where(a => a.MachineName.Contains(request.MachineName));
+            }
+
+            // Filter by Status
+            if (!string.IsNullOrWhiteSpace(request.Status))
+            {
+                query = query.Where(a => a.Status == request.Status);
+            }
+
+            // Filter by Date Range
+            if (request.FromDate.HasValue)
+            {
+                query = query.Where(a => a.CreatedAt >= request.FromDate.Value);
+            }
+
+            if (request.ToDate.HasValue)
+            {
+                // Include the entire end date (23:59:59)
+                var endDate = request.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+                query = query.Where(a => a.CreatedAt <= endDate);
+            }
+
+            // Get only successful installations and updates
+            query = query.Where(a => a.Action == "Install" || a.Action == "Update");
+
+            return await query
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
         }
     }
 }

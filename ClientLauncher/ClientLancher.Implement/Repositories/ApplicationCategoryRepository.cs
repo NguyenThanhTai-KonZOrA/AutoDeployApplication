@@ -21,6 +21,7 @@ namespace ClientLancher.Implement.Repositories
         public async Task<IEnumerable<ApplicationCategory>> GetActiveCategoriesAsync()
         {
             return await _dbSet
+                .Include(c => c.Applications)
                 .Where(c => c.IsActive)
                 .OrderBy(c => c.DisplayOrder)
                 .ThenBy(c => c.DisplayName)

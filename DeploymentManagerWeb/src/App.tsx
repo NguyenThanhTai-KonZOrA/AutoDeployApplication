@@ -22,6 +22,7 @@ import AdminApplicationPage from './pages/AdminApplicationPage'
 import AdminCategoryPage from './pages/AdminCategoryPage'
 import AdminInstallationLogPage from './pages/AdminInstallationLogPage'
 import AdminPackagesPage from './pages/AdminPackagesPage'
+import AdminReportByApplicationPage from './pages/AdminReportByApplicationPage'
 
 function AppContent() {
   const networkStatus = useNetworkStatus();
@@ -72,6 +73,12 @@ function AppContent() {
         <Route path="/admin-package" element={
           <ProtectedRoute>
             <AdminPackagesPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin-report-by-application" element={
+          <ProtectedRoute>
+            <AdminReportByApplicationPage />
           </ProtectedRoute>
         } />
 

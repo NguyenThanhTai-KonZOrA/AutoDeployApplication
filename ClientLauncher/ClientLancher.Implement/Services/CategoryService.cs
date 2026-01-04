@@ -1,4 +1,5 @@
 ﻿using ClientLancher.Implement.EntityModels;
+using ClientLancher.Implement.Repositories.Interface;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using ClientLancher.Implement.ViewModels.Request;
@@ -11,11 +12,13 @@ namespace ClientLancher.Implement.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<CategoryService> _logger;
+        private readonly IApplicationCategoryRepository _categoryRepository;
 
-        public CategoryService(IUnitOfWork unitOfWork, ILogger<CategoryService> logger)
+        public CategoryService(IUnitOfWork unitOfWork, ILogger<CategoryService> logger, IApplicationCategoryRepository categoryRepository)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _categoryRepository = categoryRepository;
         }
 
         public async Task<CategoryResponse> CreateCategoryAsync(CategoryCreateRequest request)
@@ -127,7 +130,7 @@ namespace ClientLancher.Implement.Services
 
         public async Task<IEnumerable<CategoryResponse>> GetAllCategoriesAsync()
         {
-            var categories = await _unitOfWork.ApplicationCategories.GetAllAsync();
+            var categories = await _categoryRepository.GetActiveCategoriesAsync();
             return categories.Select(MapToResponse);
         }
 
