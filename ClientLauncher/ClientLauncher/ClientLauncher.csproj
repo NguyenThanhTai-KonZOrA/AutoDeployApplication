@@ -7,13 +7,23 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\Icons\app_default.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Assets\Icons\EntryAutoImage.ico" />
+    <None Remove="Assets\Icons\HTCasinoEntrylogo.ico" />
+    <None Remove="Assets\Icons\LevyManualActiveticket.ico" />
+    <None Remove="Assets\Icons\LevyNotifyRemainingTimeLogo.ico" />
+    <None Remove="Assets\Icons\LEVYPOSlogo.ico" />
+    <None Remove="Assets\Icons\LEVYTICKETMONITORlogo.ico" />
+    <None Remove="Assets\Icons\QUEUDISPlogo.ico" />
+    <None Remove="Assets\Icons\QUEUEKiosklogo.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\Images\app.png" />
     <Resource Include="Assets\Images\NewLogo-01.png" />
-    <Resource Include="Assets\Icons\app_default.ico">
+    <Content Include="Assets\Icons\app_default.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -29,15 +39,42 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\Icons\app_cage.ico">
+    <Content Include="Assets\Icons\EntryAutoImage.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Assets\Icons\app_htr.ico">
+    </Content>
+    <Content Include="Assets\Icons\HTCasinoEntrylogo.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Assets\Icons\app_finance.ico">
+    </Content>
+    <Content Include="Assets\Icons\LevyManualActiveticket.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </Content>
+    <Content Include="Assets\Icons\LevyNotifyRemainingTimeLogo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\LEVYPOSlogo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\LEVYTICKETMONITORlogo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\QUEUDISPlogo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\QUEUEKiosklogo.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Icons\app_cage.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\app_htr.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Icons\app_finance.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -45,12 +82,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- ✅ FIX: Add missing NLog packages -->
     <PackageReference Include="NLog" Version="5.3.4" />
     <PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
   </ItemGroup>
 
-  <!-- ✅ FIX: Copy NLog.config to output -->
   <ItemGroup>
     <None Update="App.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

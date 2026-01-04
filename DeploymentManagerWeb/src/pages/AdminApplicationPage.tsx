@@ -56,7 +56,7 @@ import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
-import { AVAILABLE_ICONS } from "../type/commonType";
+import { AVAILABLE_ICONS, APPLICATION_ICONS } from "../type/commonType";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -1322,11 +1322,11 @@ export default function AdminApplicationPage() {
                                                 alt={selected}
                                                 style={{ width: 20, height: 20 }}
                                             />
-                                            <Typography>{AVAILABLE_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
+                                            <Typography>{APPLICATION_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
                                         </Box>
                                     )}
                                 >
-                                    {AVAILABLE_ICONS.map((icon) => (
+                                    {APPLICATION_ICONS.map((icon) => (
                                         <MenuItem key={icon.value} value={icon.value}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <img

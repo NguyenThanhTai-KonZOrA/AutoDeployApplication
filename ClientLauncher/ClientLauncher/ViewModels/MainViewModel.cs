@@ -21,6 +21,7 @@ namespace ClientLauncher.ViewModels
         private readonly IApiService _apiService;
         private readonly IShortcutService _shortcutService;
         private readonly IManifestService _manifestService;
+        private readonly IIconService _iconService; // ADD THIS
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         // Properties
@@ -186,6 +187,7 @@ namespace ClientLauncher.ViewModels
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
+            _iconService = new IconService(); // ADD THIS
             string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.0.0";
             CurrentVersion = $"Version: {currentVersion}";
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
@@ -510,7 +512,18 @@ namespace ClientLauncher.ViewModels
                         }
 
                         var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
-                        var iconPath = GetIconPathForCategory(app.Category);
+
+                        // UPDATED: Use IconService to get file path for shortcut
+                        var iconPath = _iconService.GetIconFilePath(app.IconUrl, app.Category);
+
+                        if (iconPath != null)
+                        {
+                            _logger.Info("Using icon: {IconPath} for {AppName}", iconPath, app.Name);
+                        }
+                        else
+                        {
+                            _logger.Warn("No icon found for {AppName}, shortcut will use default", app.Name);
+                        }
 
                         var shortcutCreated = _shortcutService.CreateDesktopShortcut(
                             app.AppCode,
@@ -583,6 +596,9 @@ namespace ClientLauncher.ViewModels
         /// <summary>
         /// Get icon path based on category
         /// </summary>
+        /// <summary>
+        /// Get icon path based on category (returns actual file path, not pack URI)
+        /// </summary>
         private string? GetIconPathForCategory(string category)
         {
             var basePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -597,7 +613,27 @@ namespace ClientLauncher.ViewModels
             if (iconMap.TryGetValue(category, out var iconPath))
             {
                 var fullPath = Path.Combine(basePath ?? string.Empty, iconPath);
-                return File.Exists(fullPath) ? fullPath : null;
+                if (File.Exists(fullPath))
+                {
+                    _logger.Debug("Found icon for category {Category}: {IconPath}", category, fullPath);
+                    return fullPath;
+                }
+                else
+                {
+                    _logger.Warn("Icon file not found: {IconPath}", fullPath);
+                }
+            }
+            else
+            {
+                _logger.Warn("No icon mapping for category: {Category}", category);
+            }
+
+            // Try default icon
+            var defaultIconPath = Path.Combine(basePath ?? string.Empty, "Assets\\Icons\\app_default.ico");
+            if (File.Exists(defaultIconPath))
+            {
+                _logger.Debug("Using default icon: {IconPath}", defaultIconPath);
+                return defaultIconPath;
             }
 
             return null;

@@ -126,4 +126,89 @@ public class IconService : IIconService
 
         return DefaultIcon;
     }
+
+    /// <summary>
+    /// Get actual file system path for icon (for creating shortcuts)
+    /// Converts pack URI to physical file path
+    /// </summary>
+    /// <summary>
+    /// Get actual file system path for icon (for creating shortcuts)
+    /// Converts pack URI to physical file path
+    /// </summary>
+    public string? GetIconFilePath(string iconUrl, string category)
+    {
+        try
+        {
+            var basePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string packUri = string.Empty;
+
+            // === SAME LOGIC AS GetAppIcon ===
+            // Priority 1: Use IconUrl if provided
+            if (!string.IsNullOrEmpty(iconUrl))
+            {
+                // Check if it's a web URL - we can't use web URLs for shortcuts
+                if (iconUrl.StartsWith("http://") || iconUrl.StartsWith("https://"))
+                {
+                    Logger.Warn("Web URL cannot be used for shortcut icon, using category fallback");
+                    // Fall through to category mapping
+                }
+                // Check if it's already a local file path
+                else if (File.Exists(iconUrl))
+                {
+                    Logger.Debug("IconUrl is valid file path: {IconUrl}", iconUrl);
+                    return iconUrl;
+                }
+                // Try as pack URI
+                else if (iconUrl.StartsWith("pack://"))
+                {
+                    packUri = iconUrl;
+                }
+                // Try to construct pack URI from relative path (e.g., "app_cage.png")
+                else
+                {
+                    packUri = $"pack://application:,,,/Assets/Icons/{iconUrl}";
+                }
+            }
+
+            // Priority 2: Use category mapping (if packUri not set yet)
+            if (string.IsNullOrEmpty(packUri))
+            {
+                if (!string.IsNullOrEmpty(category) && _categoryIcons.TryGetValue(category, out var categoryIcon))
+                {
+                    packUri = categoryIcon;
+                    Logger.Debug("Using category icon for {Category}: {Icon}", category, packUri);
+                }
+                else
+                {
+                    // Priority 3: Use default icon
+                    packUri = DefaultIcon;
+                    Logger.Debug("Using default icon");
+                }
+            }
+
+            // Convert pack URI to file path
+            // pack://application:,,,/Assets/Icons/app_cage.ico -> Assets\Icons\app_cage.ico
+            var relativePath = packUri
+                .Replace("pack://application:,,,/", "")
+                .Replace("/", "\\");
+
+            var fullPath = Path.Combine(basePath ?? string.Empty, relativePath);
+
+            if (File.Exists(fullPath))
+            {
+                Logger.Debug("Resolved icon file path: {FilePath}", fullPath);
+                return fullPath;
+            }
+            else
+            {
+                Logger.Warn("Icon file not found at: {FilePath}", fullPath);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Failed to get icon file path for category: {Category}", category);
+            return null;
+        }
+    }
 }

@@ -6,5 +6,6 @@ namespace ClientLauncher.Services.Interface
     {
         BitmapImage GetAppIcon(string iconUrl, string category);
         string GetIconPath(string iconUrl, string category);
+        string? GetIconFilePath(string iconUrl, string category); // ADD THIS
     }
 }
