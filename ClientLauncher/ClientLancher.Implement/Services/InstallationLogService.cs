@@ -104,5 +104,11 @@ namespace ClientLancher.Implement.Services
 
             return groupedByApp;
         }
+
+        public async Task<List<InstallationLog>> GetSuccessfulByApplicationIdAsync(int applicationId)
+        {
+            var logs = await _installationLogRepository.GetSuccessfulByApplicationIdAsync(applicationId);
+            return logs.ToList();
+        }
     }
 }

@@ -56,6 +56,7 @@ import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import { extractErrorMessage } from "../utils/errorHandler";
 import { AVAILABLE_ICONS, APPLICATION_ICONS } from "../type/commonType";
 
 interface TabPanelProps {
@@ -85,7 +86,7 @@ export default function AdminApplicationPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" });
+    const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" | "warning" });
 
     // Dialog states
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -144,6 +145,7 @@ export default function AdminApplicationPage() {
         appCode: false,
         name: false,
         categoryId: false,
+        iconUrl: false,
     });
 
     const [manifestFormErrors, setManifestFormErrors] = useState({
@@ -173,7 +175,7 @@ export default function AdminApplicationPage() {
     const [manifestLoading, setManifestLoading] = useState(false);
     const [editingManifest, setEditingManifest] = useState(false);
 
-    const showSnackbar = (message: string, severity: "success" | "error") => {
+    const showSnackbar = (message: string, severity: "success" | "error" | "warning") => {
         setSnackbar({ open: true, message, severity });
     };
 
@@ -189,12 +191,7 @@ export default function AdminApplicationPage() {
             setApplications(data);
         } catch (error: any) {
             console.error("Error loading applications:", error);
-            let errorMessage = "Failed to load applications data";
-            if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
+            const errorMessage = extractErrorMessage(error, "Failed to load applications data");
             setError(errorMessage);
         } finally {
             setLoading(false);
@@ -246,7 +243,7 @@ export default function AdminApplicationPage() {
             PublishImmediately: true,
         });
         setSelectedFile(null);
-        setAppFormErrors({ appCode: false, name: false, categoryId: false });
+        setAppFormErrors({ appCode: false, name: false, categoryId: false, iconUrl: false });
         setManifestFormErrors({ Version: false, BinaryVersion: false, BinaryPackage: false/*, ConfigVersion: false, ConfigPackage: false*/ });
         setPackageFormErrors({ Version: false, PackageType: false, ReleaseNotes: false, MinimumClientVersion: true, file: false });
         setDialogOpen(true);
@@ -342,13 +339,32 @@ export default function AdminApplicationPage() {
     const handleCloseDialog = () => {
         setDialogOpen(false);
         setEditingApplication(null);
-        setAppFormErrors({ appCode: false, name: false, categoryId: false });
+        setAppFormErrors({ appCode: false, name: false, categoryId: false, iconUrl: false });
         setManifestFormErrors({ BinaryPackage: false, BinaryVersion: false/*, ConfigPackage: false, ConfigVersion: false*/, Version: false });
         setPackageFormErrors({ file: false, MinimumClientVersion: false, PackageType: false, ReleaseNotes: false, Version: false });
         setTabValue(0);
     };
 
     const handleAppFormChange = (field: string, value: string | number) => {
+        // Validate Application Name: Only allow English letters, numbers, and spaces
+        if (field === "name" && typeof value === "string") {
+            // Check for Vietnamese characters
+            const vietnameseRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/;
+
+            // Check for special characters (anything other than English letters, numbers, and spaces)
+            const specialCharRegex = /[^a-zA-Z0-9\s]/;
+
+            if (vietnameseRegex.test(value)) {
+                showSnackbar('The application name cannot contain Vietnamese characters', 'warning');
+                return; // Don't update the field
+            }
+
+            if (specialCharRegex.test(value)) {
+                showSnackbar('The application name cannot contain special characters', 'warning');
+                return; // Don't update the field
+            }
+        }
+
         setAppFormData(prev => {
             const newData = { ...prev, [field]: value };
             // Auto-generate appCode from name (remove spaces) - only in create mode
@@ -468,6 +484,7 @@ export default function AdminApplicationPage() {
             appCode: !appFormData.appCode.trim(),
             name: !appFormData.name.trim(),
             categoryId: !appFormData.categoryId || appFormData.categoryId === 0,
+            iconUrl: !appFormData.iconUrl.trim(),
         };
         setAppFormErrors(errors);
 
@@ -483,6 +500,11 @@ export default function AdminApplicationPage() {
         }
         if (errors.categoryId) {
             showSnackbar("Category is required", "error");
+            setTabValue(0);
+            return false;
+        }
+        if (errors.iconUrl) {
+            showSnackbar("Application Icon is required", "error");
             setTabValue(0);
             return false;
         }
@@ -636,8 +658,10 @@ export default function AdminApplicationPage() {
                         await packageManagementService.uploadPackage(formData);
                         showSnackbar(`Package uploaded successfully!`, "success");
                     } catch (error: any) {
-                        console.error("Error uploading package:", error);
-                        showSnackbar(`Application created but failed to upload package: ${error?.response?.data?.message || error?.message}`, "error");
+                        // Handle HTTP error responses (400, 500, etc.)
+                        const errorMessage = extractErrorMessage(error, "Error uploading package");
+                        showSnackbar(errorMessage, "error");
+                        throw error;
                     }
                 }
 
@@ -645,14 +669,10 @@ export default function AdminApplicationPage() {
                 handleCloseDialog();
                 loadApplications(); // Reload to get updated data
             } catch (error: any) {
-                console.error("Error creating application:", error);
-                let errorMessage = "Error creating application";
-                if (error?.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error?.message) {
-                    errorMessage = error.message;
-                }
+                console.error("Error Creating application:", error);
+                const errorMessage = extractErrorMessage(error, "Error creating application");
                 showSnackbar(errorMessage, "error");
+                throw error;
             } finally {
                 setDialogLoading(false);
             }
@@ -717,7 +737,6 @@ export default function AdminApplicationPage() {
                 showSnackbar(`Application "${result.name}" updated successfully!`, "success");
 
                 // Step 2: Update manifest if form is filled
-                debugger;
                 if (manifestFormData.Version.trim()) {
                     if (!validateManifestForm()) {
                         setTabValue(1); // Switch to manifest tab
@@ -738,13 +757,12 @@ export default function AdminApplicationPage() {
                             await applicationService.createApplicationManifest(editingApplication.id, manifestFormData);
                             showSnackbar(`Manifest created successfully!`, "success");
                         } catch (createError: any) {
-                            showSnackbar(`Failed to save manifest: ${createError?.response?.data?.message || createError?.message}`, "error");
+                            const errorMessage = extractErrorMessage(createError, "Error creating application");
+                            showSnackbar(errorMessage, "error");
+                            throw error;
                         }
                     }
                 }
-
-
-
 
                 // Step 3: Upload package if file is selected
                 if (selectedFile) {
@@ -764,8 +782,9 @@ export default function AdminApplicationPage() {
                         await packageManagementService.uploadPackage(formData);
                         showSnackbar(`Package uploaded successfully!`, "success");
                     } catch (error: any) {
-                        console.error("Error uploading package:", error);
-                        showSnackbar(`Application updated but failed to upload package: ${error?.response?.data?.message || error?.message}`, "error");
+                        const errorMessage = extractErrorMessage(error, "Error uploading package");
+                        showSnackbar(errorMessage, "error");
+                        throw error;
                     }
                 }
 
@@ -775,14 +794,9 @@ export default function AdminApplicationPage() {
                 handleCloseDialog();
                 loadApplications(); // Reload to get updated data
             } catch (error: any) {
-                console.error("Error updating application:", error);
-                let errorMessage = "Error updating application";
-                if (error?.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error?.message) {
-                    errorMessage = error.message;
-                }
+                const errorMessage = extractErrorMessage(error, "Error when updating application");
                 showSnackbar(errorMessage, "error");
+                throw error;
             } finally {
                 setDialogLoading(false);
             }
@@ -810,13 +824,9 @@ export default function AdminApplicationPage() {
             handleCloseDeleteDialog();
         } catch (error: any) {
             console.error("Error deleting application:", error);
-            let errorMessage = "Error deleting application";
-            if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
+            const errorMessage = extractErrorMessage(error, "Error deleting application");
             showSnackbar(errorMessage, "error");
+            throw error;
         } finally {
             setDeleteLoading(false);
         }
@@ -1281,7 +1291,8 @@ export default function AdminApplicationPage() {
                                 }}
                                 error={appFormErrors.name}
                                 disabled={dialogLoading}
-                                helperText={appFormErrors.name ? "Application Name is required" : ""}
+                                helperText={appFormErrors.name ? "Application Name is required" : "Please insert only English letters, numbers, and spaces allowed (Max 50 characters)"}
+                                inputProps={{ maxLength: 50 }}
                             />
                             <TextField
                                 label="Application Code"
@@ -1294,8 +1305,10 @@ export default function AdminApplicationPage() {
                                         setAppFormErrors(prev => ({ ...prev, appCode: true }));
                                     }
                                 }}
+                                InputProps={{ readOnly: true }}
                                 error={appFormErrors.appCode}
                                 disabled={dialogLoading || dialogMode === "edit"}
+
                                 // autoFocus
                                 helperText={appFormErrors.appCode ? "Application Code is required" : "Unique identifier for the application (auto-generated from name)"}
                             />
@@ -1309,12 +1322,18 @@ export default function AdminApplicationPage() {
                                 disabled={dialogLoading}
                             />
 
-                            <FormControl fullWidth required disabled={dialogLoading}>
+                            <FormControl fullWidth required disabled={dialogLoading} error={appFormErrors.iconUrl}>
                                 <InputLabel>Icon</InputLabel>
                                 <Select
                                     value={appFormData.iconUrl}
                                     label="Icon"
                                     onChange={(e) => handleAppFormChange("iconUrl", e.target.value)}
+                                    error={appFormErrors.iconUrl}
+                                    onBlur={() => {
+                                        if (!appFormData.iconUrl.trim() || appFormData.iconUrl === "") {
+                                            setAppFormErrors(prev => ({ ...prev, iconUrl: true }));
+                                        }
+                                    }}
                                     renderValue={(selected) => (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <img
@@ -1326,6 +1345,9 @@ export default function AdminApplicationPage() {
                                         </Box>
                                     )}
                                 >
+                                    <MenuItem value="" disabled>
+                                        <em>Select an Icon</em>
+                                    </MenuItem>
                                     {APPLICATION_ICONS.map((icon) => (
                                         <MenuItem key={icon.value} value={icon.value}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1339,6 +1361,11 @@ export default function AdminApplicationPage() {
                                         </MenuItem>
                                     ))}
                                 </Select>
+                                {appFormErrors.iconUrl && (
+                                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                                        Icon is required
+                                    </Typography>
+                                )}
                             </FormControl>
 
                             <FormControl fullWidth required disabled={dialogLoading} error={appFormErrors.categoryId}>

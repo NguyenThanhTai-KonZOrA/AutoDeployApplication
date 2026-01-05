@@ -13,7 +13,7 @@ namespace ClientLancher.Implement.Services.Interface
         Task<ApplicationDetailResponse?> GetApplicationByCodeAsync(string appCode);
         Task<IEnumerable<ApplicationDetailResponse>> GetAllApplicationsAsync();
         Task<IEnumerable<ApplicationDetailResponse>> GetApplicationsByCategoryAsync(int categoryId);
-
+        Task<bool> ChangeApplicationStatusAsync(int applicationId);
         // Statistics
         Task<ApplicationDetailResponse> GetApplicationWithStatsAsync(int id);
     }

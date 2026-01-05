@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLancher.Implement.EntityModels;
+using ClientLancher.Implement.ViewModels.Request;
 using ClientLancher.Implement.ViewModels.Response;
 
 namespace ClientLancher.Implement.Services.Interface
@@ -7,5 +8,6 @@ namespace ClientLancher.Implement.Services.Interface
     {
         Task<InstallationLogPaginationResponse> GetInstallationLogByFilterAsync(InstallationLogFilterRequest request);
         Task<List<InstallationReportResponse>> GetInstallationReportByVersionAsync(InstallationReportRequest request);
+        Task<List<InstallationLog>> GetSuccessfulByApplicationIdAsync(int applicationId);
     }
 }

@@ -134,11 +134,22 @@ export default function AdminPackagesPage() {
             handleCloseDeleteDialog();
         } catch (error: any) {
             console.error("Error deleting package:", error);
-            setSnackbar({
-                open: true,
-                message: error?.response?.data?.message || "Failed to delete package",
-                severity: "error",
-            });
+
+            // Handle HTTP error responses (400, 500, etc.)
+            let errorMessage = "Error deleting package";
+
+            if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.response?.data?.data) {
+                errorMessage = typeof error.response.data.data === 'string'
+                    ? error.response.data.data
+                    : (error.response.data.data?.message || JSON.stringify(error.response.data.data));
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            setSnackbar({ open: true, message: errorMessage, severity: "error" });
+            throw error;
         } finally {
             setDeleteLoading(false);
             loadPackageHistory();

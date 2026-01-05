@@ -81,6 +81,25 @@ namespace ClientLauncherAPI.Controllers
             }
         }
 
+        [HttpPost("change-status/{id}")]
+        public async Task<IActionResult> ChangeApplicationStatus(int id)
+        {
+            try
+            {
+                var result = await _appService.ChangeApplicationStatusAsync(id);
+                if (!result)
+                {
+                    return NotFound(new { success = false, message = "Application not found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing status for application ID: {Id}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         /// <summary>
         /// Get application by ID
         /// </summary>

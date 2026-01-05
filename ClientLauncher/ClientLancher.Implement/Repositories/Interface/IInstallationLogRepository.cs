@@ -14,5 +14,6 @@ namespace ClientLancher.Implement.Repositories.Interface
         Task<List<InstallationLog>> GetPaginatedInstallationLogsAsync(InstallationLogFilterRequest request);
         Task<int> GetFilteredCountAsync(InstallationLogFilterRequest request);
         Task<List<InstallationLog>> GetInstallationReportDataAsync(InstallationReportRequest request);
+        Task<IEnumerable<InstallationLog>> GetSuccessfulByApplicationIdAsync(int applicationId);
     }
 }

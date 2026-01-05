@@ -190,6 +190,20 @@ namespace ClientLancher.Implement.Services
             return responses;
         }
 
+        public async Task<bool> ChangeApplicationStatusAsync(int applicationId)
+        {
+            var application = await _unitOfWork.Applications.GetByIdAsync(applicationId);
+            if (application == null)
+            {
+                throw new Exception($"Application with ID {applicationId} not found");
+            }
+            application.IsActive = !application.IsActive;
+            application.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Applications.Update(application);
+            await _unitOfWork.SaveChangesAsync();
+            return application.IsActive;
+        }
+
         public async Task<ApplicationDetailResponse> GetApplicationWithStatsAsync(int id)
         {
             var application = await _unitOfWork.Applications.GetByIdAsync(id);

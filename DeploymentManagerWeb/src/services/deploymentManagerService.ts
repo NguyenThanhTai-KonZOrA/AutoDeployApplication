@@ -94,6 +94,11 @@ export const applicationService = {
         return unwrapApiEnvelope(response);
     },
 
+    changeStatusApplication: async (id: number): Promise<boolean> => {
+        const response = await api.post(`/api/ApplicationManagement/change-status/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
     getApplicationById: async (id: number): Promise<ApplicationResponse> => {
         const response = await api.get(`/api/ApplicationManagement/${id}`);
         return unwrapApiEnvelope(response);

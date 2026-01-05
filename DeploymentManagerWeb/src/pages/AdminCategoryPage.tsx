@@ -150,7 +150,6 @@ export default function AdminCategoryPage() {
     };
 
     const handleSubmit = async () => {
-        debugger
         // Validation
         if (!formData.name.trim()) {
             showSnackbar("Category name is required", "error");

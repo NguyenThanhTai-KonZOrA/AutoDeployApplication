@@ -21,6 +21,16 @@ namespace ClientLancher.Implement.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<InstallationLog>> GetSuccessfulByApplicationIdAsync(int applicationId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(i => i.Application)
+                .Where(i => i.ApplicationId == applicationId && i.Status == "Success" && (i.Action == "Install" || i.Action == "Update"))
+                .OrderByDescending(i => i.StartedAt)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<InstallationLog>> GetByUserNameAsync(string userName)
         {
             return await _dbSet

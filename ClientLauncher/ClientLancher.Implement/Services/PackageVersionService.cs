@@ -14,16 +14,19 @@ namespace ClientLancher.Implement.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<PackageVersionService> _logger;
         private readonly string _packagesBasePath;
+        private readonly IInstallationLogService _installationLogService;
 
         public PackageVersionService(
             IUnitOfWork unitOfWork,
             ILogger<PackageVersionService> logger,
-            Microsoft.AspNetCore.Hosting.IHostingEnvironment environment)
+            Microsoft.AspNetCore.Hosting.IHostingEnvironment environment,
+            IInstallationLogService installationLogService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _packagesBasePath = Path.Combine(environment.ContentRootPath, "Packages");
             Directory.CreateDirectory(_packagesBasePath);
+            _installationLogService = installationLogService;
         }
 
         public async Task<PackageVersionResponse> UploadPackageAsync(PackageUploadRequest request)
@@ -172,6 +175,17 @@ namespace ClientLancher.Implement.Services
                 if (package == null)
                 {
                     return false;
+                }
+
+                var applicationLogs = await _installationLogService.GetSuccessfulByApplicationIdAsync(package.ApplicationId);
+
+                if (applicationLogs.Count > 0)
+                {
+                    var pcs = applicationLogs
+                        .Select(log => log.MachineName)
+                        .Distinct()
+                        .ToList();
+                    throw new Exception($"Cannot delete package version {package.Version} because it is still in use on the following machines: {string.Join(", ", pcs)}");
                 }
 
                 // Delete physical file
