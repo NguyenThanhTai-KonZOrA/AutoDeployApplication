@@ -45,6 +45,7 @@ import {
     Visibility as VisibilityIcon,
     Upload as UploadIcon,
     AttachFile as AttachFileIcon,
+    FilterListOff as FilterListOffIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -88,6 +89,9 @@ export default function AdminApplicationPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" as "success" | "error" | "warning" });
 
+    // filter search
+    const [filterStatus, setFilterStatus] = useState<string>("");
+    const [filterCategory, setFilterCategory] = useState<string>("");
     // Dialog states
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
@@ -905,19 +909,31 @@ export default function AdminApplicationPage() {
     // Auto load data on component mount
     useEffect(() => {
         loadApplications();
+        loadCategories();
     }, []);
 
     // Search and pagination logic
     const filteredApplications = useMemo(() => {
-        if (!searchTerm) return applications;
+        return applications.filter(app => {
+            // Search term filter
+            const searchMatch = !searchTerm ||
+                app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                app.appCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                app.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                app.categoryName.toLowerCase().includes(searchTerm.toLowerCase());
 
-        return applications.filter(app =>
-            app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            app.appCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            app.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            app.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [applications, searchTerm]);
+            // Status filter
+            const statusMatch = !filterStatus ||
+                (filterStatus === "active" && app.isActive) ||
+                (filterStatus === "inactive" && !app.isActive);
+
+            // Category filter
+            const categoryMatch = !filterCategory ||
+                app.categoryName.toString() === filterCategory;
+
+            return searchMatch && statusMatch && categoryMatch;
+        });
+    }, [applications, searchTerm, filterStatus, filterCategory]);
 
     // Pagination calculations
     const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
@@ -928,7 +944,7 @@ export default function AdminApplicationPage() {
     // Reset to first page when search term or items per page changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, itemsPerPage]);
+    }, [searchTerm, itemsPerPage, filterStatus, filterCategory]);
 
     const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
         setCurrentPage(value);
@@ -936,6 +952,13 @@ export default function AdminApplicationPage() {
 
     const handleItemsPerPageChange = (event: any) => {
         setItemsPerPage(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handleClearFilters = () => {
+        setSearchTerm("");
+        setFilterStatus("");
+        setFilterCategory("");
         setCurrentPage(1);
     };
 
@@ -959,6 +982,39 @@ export default function AdminApplicationPage() {
         }
     }
 
+    const handleToggleStatus = async (applicationId: number) => {
+        try {
+            setToggleLoading(applicationId);
+            const result = await applicationService.changeStatusApplication(applicationId);
+            debugger;
+            if (result) {
+                showSnackbar(`Change Status for Application ${applicationId} Success!`, "success");
+                await loadApplications(); // Don't reset pagination when toggling application
+            } else {
+                showSnackbar("Failed to change application status", "error");
+            }
+        } catch (error: any) {
+            console.error("Error updating application status:", error);
+
+            // Handle HTTP error responses (400, 500, etc.)
+            let errorMessage = "Error updating application status";
+
+            if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.response?.data?.data) {
+                errorMessage = typeof error.response.data.data === 'string'
+                    ? error.response.data.data
+                    : (error.response.data.data?.message || JSON.stringify(error.response.data.data));
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+            showSnackbar(errorMessage, "error");
+            throw error;
+        } finally {
+            setToggleLoading(null);
+        }
+    };
+
     return (
         <AdminLayout>
             <Box>
@@ -972,8 +1028,9 @@ export default function AdminApplicationPage() {
                 {/* Search and Actions */}
                 <Card sx={{ mb: 3 }}>
                     <CardContent>
-                        <Grid container spacing={3} alignItems="center">
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                        <Grid container spacing={2} alignItems="center">
+                            {/* Row 1: Search and Filters */}
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                                 <TextField
                                     fullWidth
                                     size="small"
@@ -986,6 +1043,59 @@ export default function AdminApplicationPage() {
                                 />
                             </Grid>
 
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Category</InputLabel>
+                                    <Select
+                                        value={filterCategory}
+                                        label="Category"
+                                        onChange={(e) => {
+                                            setFilterCategory(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <MenuItem value="">All Categories</MenuItem>
+                                        {categories.map((category) => (
+                                            <MenuItem key={category.id} value={category.displayName}>
+                                                {category.displayName}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>Status</InputLabel>
+                                    <Select
+                                        value={filterStatus}
+                                        label="Status"
+                                        onChange={(e) => {
+                                            setFilterStatus(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <MenuItem value="">All Status</MenuItem>
+                                        <MenuItem value="active">Active</MenuItem>
+                                        <MenuItem value="inactive">Inactive</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 1 }}>
+                                <Tooltip title="Clear all filters">
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleClearFilters}
+                                        disabled={!searchTerm && !filterStatus && !filterCategory}
+                                    >
+                                        <FilterListOffIcon />
+                                    </Button>
+                                </Tooltip>
+                            </Grid>
+
+
+                            {/* Row 2: Actions and Stats */}
                             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Items per page</InputLabel>
@@ -1002,10 +1112,33 @@ export default function AdminApplicationPage() {
                                 </FormControl>
                             </Grid>
 
-                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+
+                            <Grid size={{ xs: 12, md: 3 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                                    Total: {filteredApplications.length} applications
+                                    {(searchTerm || filterStatus || filterCategory) && ` (filtered from ${applications.length})`}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
+                                    <Chip
+                                        label={`Active: ${filteredApplications.filter(app => app.isActive).length}`}
+                                        color="success"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`Inactive: ${filteredApplications.filter(app => !app.isActive).length}`}
+                                        color="error"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                </Box>
+                            </Grid>
+
+
+
+                            <Grid size={{ xs: 12, sm: 6, md: 1 }}>
                                 <Button
                                     variant="contained"
-                                    fullWidth
                                     startIcon={<RefreshIcon />}
                                     onClick={loadApplications}
                                     disabled={loading}
@@ -1018,39 +1151,17 @@ export default function AdminApplicationPage() {
                                 <Button
                                     variant="contained"
                                     color="success"
-                                    fullWidth
                                     startIcon={<AddIcon />}
                                     onClick={handleOpenCreateDialog}
                                 >
                                     Create New
                                 </Button>
                             </Grid>
-
-                            <Grid size={{ xs: 12, md: 3 }}>
-                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                                    Total: {filteredApplications.length} applications
-                                    {searchTerm && ` (filtered from ${applications.length})`}
-                                </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
-                                    <Chip
-                                        label={`Active: ${applications.filter(app => app.isActive).length}`}
-                                        color="success"
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                    <Chip
-                                        label={`Inactive: ${applications.filter(app => !app.isActive).length}`}
-                                        color="error"
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                </Box>
-                            </Grid>
                         </Grid>
                     </CardContent>
                 </Card>
 
-                {loading && <LinearProgress sx={{ mb: 2 }} />}
+                {/* {loading && <LinearProgress sx={{ mb: 2 }} />} */}
 
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }} action={
@@ -1213,12 +1324,25 @@ export default function AdminApplicationPage() {
                                                         variant="outlined"
                                                     />
                                                 </TableCell>
-                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                {/* <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip
                                                         label={application.isActive ? "Active" : "Inactive"}
                                                         color={application.isActive ? "success" : "error"}
                                                         size="small"
                                                     />
+                                                </TableCell> */}
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                    <Tooltip title={`${application.isActive ? 'Deactivate' : 'Activate'} application`}>
+                                                        <span>
+                                                            <Switch
+                                                                checked={application.isActive}
+                                                                onChange={() => handleToggleStatus(application.id)}
+                                                                disabled={toggleLoading === application.id}
+                                                                color="success"
+                                                                size="small"
+                                                            />
+                                                        </span>
+                                                    </Tooltip>
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {FormatUtcTime.formatDateTime(application.updatedAt)}

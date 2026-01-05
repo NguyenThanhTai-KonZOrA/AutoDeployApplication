@@ -87,11 +87,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _appService.ChangeApplicationStatusAsync(id);
-                if (!result)
-                {
-                    return NotFound(new { success = false, message = "Application not found" });
-                }
-                return Ok(result);
+                return Ok(true);
             }
             catch (Exception ex)
             {

@@ -34,9 +34,9 @@ namespace ClientLancher.Implement.Repositories
             return await _dbSet
                 .Include(a => a.Category)
                 .Include(a => a.PackageVersions)
-                .Where(a => a.IsActive)
-                .OrderBy(a => a.Category)
-                .ThenBy(a => a.Name)
+                .Where(a => !a.IsDelete)
+                .OrderBy(a => a.Name)
+                .ThenBy(a => a.AppCode)
                 .ToListAsync();
         }
 

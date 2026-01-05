@@ -22,6 +22,14 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    TextField,
+    InputAdornment,
+    Pagination,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Stack,
 } from "@mui/material";
 import {
     Refresh as RefreshIcon,
@@ -29,18 +37,21 @@ import {
     ChevronRight as ChevronRightIcon,
     Download as DownloadIcon,
     Delete as DeleteIcon,
-    FileDownload as FileDownloadIcon
+    FileDownload as FileDownloadIcon,
+    Search as SearchIcon,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { packageManagementService } from "../services/deploymentManagerService";
 import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import { extractErrorMessage } from "../utils/errorHandler";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 
 interface ApplicationWithPackages {
     applicationName: string;
+    appCode: string;
     packages: ApplicationPackageResponse[];
     expanded: boolean;
 }
@@ -61,6 +72,37 @@ export default function AdminPackagesPage() {
         severity: "success" | "error" | "info";
     }>({ open: false, message: "", severity: "info" });
 
+    // Search and pagination states
+    const [searchTerm, setSearchTerm] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Filtered and paginated data
+    const filteredApplications = applications.filter((app) => {
+        const searchLower = searchTerm.toLowerCase();
+        const appNameMatch = app.applicationName.toLowerCase().includes(searchLower);
+        const appCodeMatch = app.appCode.toLowerCase().includes(searchLower);
+        return appNameMatch || appCodeMatch;
+    });
+
+    const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+    const paginatedApplications = filteredApplications.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset to page 1 when search term changes
+    const handleSearchChange = (value: string) => {
+        setSearchTerm(value);
+        setCurrentPage(1);
+    };
+
+    // Reset to page 1 when items per page changes
+    const handleItemsPerPageChange = (value: number) => {
+        setItemsPerPage(value);
+        setCurrentPage(1);
+    };
+
     // Load package history
     const loadPackageHistory = async () => {
         setLoading(true);
@@ -71,6 +113,7 @@ export default function AdminPackagesPage() {
             // The response is a dictionary with appCode as key: { [appCode: string]: ApplicationPackageResponse[] }
             const appsWithPackages: ApplicationWithPackages[] = Object.entries(response).map(
                 ([appCode, packages]) => ({
+                    appCode: appCode,
                     applicationName: packages.length > 0 ? packages[0].applicationName : appCode,
                     packages: packages,
                     expanded: false,
@@ -80,9 +123,10 @@ export default function AdminPackagesPage() {
             setApplications(appsWithPackages);
         } catch (error: any) {
             console.error("Error loading package history:", error);
+            const errorMessage = extractErrorMessage(error, "Failed to load package history");
             setSnackbar({
                 open: true,
-                message: error?.response?.data?.message || "Failed to load package history",
+                message: errorMessage,
                 severity: "error",
             });
         } finally {
@@ -108,9 +152,10 @@ export default function AdminPackagesPage() {
             });
         } catch (error: any) {
             console.error("Error downloading package:", error);
+            const errorMessage = extractErrorMessage(error, "Failed to download package");
             setSnackbar({
                 open: true,
-                message: error?.response?.data?.message || "Failed to download package",
+                message: errorMessage,
                 severity: "error",
             });
         }
@@ -134,20 +179,7 @@ export default function AdminPackagesPage() {
             handleCloseDeleteDialog();
         } catch (error: any) {
             console.error("Error deleting package:", error);
-
-            // Handle HTTP error responses (400, 500, etc.)
-            let errorMessage = "Error deleting package";
-
-            if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error?.response?.data?.data) {
-                errorMessage = typeof error.response.data.data === 'string'
-                    ? error.response.data.data
-                    : (error.response.data.data?.message || JSON.stringify(error.response.data.data));
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
-
+            const errorMessage = extractErrorMessage(error, "Error deleting package");
             setSnackbar({ open: true, message: errorMessage, severity: "error" });
             throw error;
         } finally {
@@ -157,10 +189,10 @@ export default function AdminPackagesPage() {
     }
 
     // Toggle application expansion
-    const toggleApplication = (index: number) => {
+    const toggleApplication = (appCode: string) => {
         setApplications((prev) =>
-            prev.map((app, i) =>
-                i === index ? { ...app, expanded: !app.expanded } : app
+            prev.map((app) =>
+                app.appCode === appCode ? { ...app, expanded: !app.expanded } : app
             )
         );
     };
@@ -184,13 +216,43 @@ export default function AdminPackagesPage() {
         <AdminLayout>
             <Box sx={{ p: 3 }}>
                 {/* Header */}
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                    {/* <Typography variant="h4" fontWeight={700}>
-                        Package Management
-                    </Typography> */}
-                    <Button variant="contained" color="primary" onClick={loadPackageHistory}>
-                        Refresh
-                    </Button>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3, gap: 2 }}>
+                    <Stack direction="row" spacing={2} sx={{ flexGrow: 1 }}>
+                        {/* Search Bar */}
+                        <TextField
+                            placeholder="Search by application name or code..."
+                            size="small"
+                            value={searchTerm}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                            sx={{ flexGrow: 1, maxWidth: 400 }}
+                        />
+
+                        <Button variant="contained" color="primary" onClick={loadPackageHistory} startIcon={<RefreshIcon />}>
+                            Refresh
+                        </Button>
+                    </Stack>
+
+                    {/* Items per page selector */}
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                        <InputLabel>Rows/Page</InputLabel>
+                        <Select
+                            value={itemsPerPage}
+                            label="Rows/Page"
+                            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                        >
+                            <MenuItem value={5}>5</MenuItem>
+                            <MenuItem value={10}>10</MenuItem>
+                            <MenuItem value={20}>20</MenuItem>
+                            <MenuItem value={50}>50</MenuItem>
+                        </Select>
+                    </FormControl>
                 </Box>
 
                 {/* Loading Bar */}
@@ -199,15 +261,25 @@ export default function AdminPackagesPage() {
                 {/* Package List */}
                 <Card>
                     <CardContent>
-                        {applications.length === 0 && !loading ? (
-                            <Alert severity="info">No packages found</Alert>
+                        {/* Result count */}
+                        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2" color="text.secondary">
+                                Showing {paginatedApplications.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredApplications.length)} of {filteredApplications.length} applications
+                                {searchTerm && ` (filtered from ${applications.length} total)`}
+                            </Typography>
+                        </Box>
+
+                        {filteredApplications.length === 0 && !loading ? (
+                            <Alert severity="info">
+                                {searchTerm ? `No applications found matching "${searchTerm}"` : "No packages found"}
+                            </Alert>
                         ) : (
                             <Box>
-                                {applications.map((app, index) => (
-                                    <Box key={app.applicationName} sx={{ mb: 1 }}>
+                                {paginatedApplications.map((app) => (
+                                    <Box key={app.appCode} sx={{ mb: 1 }}>
                                         {/* Application Header - Clickable */}
                                         <Box
-                                            onClick={() => toggleApplication(index)}
+                                            onClick={() => toggleApplication(app.appCode)}
                                             sx={{
                                                 display: "flex",
                                                 alignItems: "center",
@@ -224,9 +296,14 @@ export default function AdminPackagesPage() {
                                             <IconButton size="small" sx={{ mr: 1 }}>
                                                 {app.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
                                             </IconButton>
-                                            <Typography variant="body1" fontWeight={600} sx={{ flexGrow: 1 }}>
-                                                {app.applicationName}
-                                            </Typography>
+                                            <Box sx={{ flexGrow: 1 }}>
+                                                <Typography variant="body1" fontWeight={600}>
+                                                    {app.applicationName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Code: {app.appCode}
+                                                </Typography>
+                                            </Box>
                                             <Chip
                                                 label={`${app.packages.length} package${app.packages.length !== 1 ? "s" : ""}`}
                                                 size="small"
@@ -320,8 +397,26 @@ export default function AdminPackagesPage() {
                                 ))}
                             </Box>
                         )}
+
+
+
+                        {/* Pagination */}
+                        {filteredApplications.length > 0 && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                                <Pagination
+                                    count={totalPages}
+                                    page={currentPage}
+                                    onChange={(_, page) => setCurrentPage(page)}
+                                    color="primary"
+                                    showFirstButton
+                                    showLastButton
+                                />
+                            </Box>
+                        )}
                     </CardContent>
+
                 </Card>
+
 
                 {/* Delete Confirmation Dialog */}
                 <Dialog
