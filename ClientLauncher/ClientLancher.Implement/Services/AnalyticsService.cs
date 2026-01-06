@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLancher.Common.Helper;
+using ClientLancher.Implement.EntityModels;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using ClientLancher.Implement.ViewModels.Response;
@@ -29,13 +30,14 @@ namespace ClientLancher.Implement.Services
                 var allCategories = (await _unitOfWork.ApplicationCategories.GetAllAsync()).ToList();
 
                 var now = DateTime.UtcNow;
+                var week = now.StartOfWeek(DayOfWeek.Monday);
                 var todayDownloads = allDownloads.Count(d => d.DownloadedAt.Date == now.Date && d.Success);
                 var weekDownloads = allDownloads.Count(d => d.DownloadedAt >= now.AddDays(-7) && d.Success);
                 var monthDownloads = allDownloads.Count(d => d.DownloadedAt >= now.AddDays(-30) && d.Success);
 
                 var pendingDeployments = (await _unitOfWork.DeploymentHistories.GetPendingDeploymentsAsync()).Count();
                 var failedInstalls = allInstalls.Count(i => i.Status == "Failed");
-
+                var successInstalls = allInstalls.Count(i => i.Status == "Success" && i.Action == "Install");
                 var totalStorage = await _unitOfWork.PackageVersions.GetTotalStorageSizeAsync();
 
                 var topApps = await GetTopApplicationsAsync(10);
@@ -54,6 +56,7 @@ namespace ClientLancher.Implement.Services
                     WeekDownloads = weekDownloads,
                     MonthDownloads = monthDownloads,
                     PendingDeployments = pendingDeployments,
+                    SuccessfulInstallations = successInstalls,
                     FailedInstallations = failedInstalls,
                     TopApplications = topApps.ToList(),
                     RecentActivities = recentActivities.ToList(),

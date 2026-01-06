@@ -15,6 +15,7 @@
         public int MonthDownloads { get; set; }
 
         public int PendingDeployments { get; set; }
+        public int SuccessfulInstallations { get; set; }
         public int FailedInstallations { get; set; }
 
         public List<TopApplicationDownload> TopApplications { get; set; } = new();

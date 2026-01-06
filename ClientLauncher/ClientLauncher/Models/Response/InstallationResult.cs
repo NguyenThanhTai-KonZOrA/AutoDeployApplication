@@ -8,5 +8,6 @@
         public string? ErrorDetails { get; set; }
         public string? InstalledVersion { get; set; }
         public string? InstallationPath { get; set; }
+        public ManifestDto? UpdatedManifest { get; set; }
     }
 }

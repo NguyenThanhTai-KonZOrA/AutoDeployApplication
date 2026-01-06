@@ -35,7 +35,8 @@ import {
     Update as UpdateIcon,
     InstallMobile as InstallMobileIcon,
     Category as CategoryIcon,
-    InstallDesktop as InstallDesktopIcon
+    InstallDesktop as InstallDesktopIcon,
+    DoneAll as DoneAllIcon
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -230,7 +231,7 @@ export default function AdminDashboard() {
                                             <Typography variant="h6" fontWeight={600}>{dashboardData.todayDownloads}</Typography>
                                         </Box>
                                         <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                                            <Typography variant="body2" color="text.secondary">This Week</Typography>
+                                            <Typography variant="body2" color="text.secondary">Last Week</Typography>
                                             <Typography variant="h6" fontWeight={600}>{dashboardData.weekDownloads}</Typography>
                                         </Box>
                                         <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -244,13 +245,13 @@ export default function AdminDashboard() {
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                        <WarningIcon color="warning" sx={{ mr: 1 }} />
-                                        <Typography variant="h6" fontWeight={600}>Pending Deployments</Typography>
+                                        <DoneAllIcon color="success" sx={{ mr: 1 }} />
+                                        <Typography variant="h6" fontWeight={600}>Successful Installations</Typography>
                                     </Box>
-                                    <Typography variant="h3" fontWeight={700} color="warning.main">
-                                        {dashboardData.pendingDeployments}
+                                    <Typography variant="h3" fontWeight={700} color="success.main">
+                                        {dashboardData.successfulInstallations}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">Waiting to be deployed</Typography>
+                                    <Typography variant="caption" color="text.secondary">Count installed successfully</Typography>
                                 </CardContent>
                             </Card>
 

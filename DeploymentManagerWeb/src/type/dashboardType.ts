@@ -12,6 +12,7 @@ export interface AnalyticDashboardResponse {
     monthDownloads: number;
     pendingDeployments: number;
     failedInstallations: number;
+    successfulInstallations: number;
     topApplications: TopApplicationResponse[];
     recentActivities: RecentActivitiesResponse[];
     categories: CategoryResponse[];

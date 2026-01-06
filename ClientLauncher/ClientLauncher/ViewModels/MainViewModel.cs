@@ -164,7 +164,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to initialize clock timer");
+                ////_logger.Error(ex, "Failed to initialize clock timer");
             }
         }
 
@@ -217,7 +217,7 @@ namespace ClientLauncher.ViewModels
         {
             try
             {
-                _logger.Info("Loading applications list");
+                //_logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
@@ -225,7 +225,7 @@ namespace ClientLauncher.ViewModels
 
                 foreach (var app in apps)
                 {
-                    _logger.Debug("Checking status for application: {AppCode}", app.AppCode);
+                //    //_logger.Debug("Checking status for application: {AppCode}", app.AppCode);
 
                     // Check LOCAL installation (no API call)
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
@@ -249,8 +249,8 @@ namespace ClientLauncher.ViewModels
 
                                 if (app.HasUpdate)
                                 {
-                                    _logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
-                                        app.AppCode, app.InstalledVersion, app.ServerVersion);
+                              //     // _logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
+                              //          app.AppCode, app.InstalledVersion, app.ServerVersion);
                                 }
                             }
                         }
@@ -272,8 +272,8 @@ namespace ClientLauncher.ViewModels
                         }
                     }
 
-                    _logger.Debug("App {AppCode}: IsInstalled={IsInstalled}, Version={Version}, HasUpdate={HasUpdate}",
-                        app.AppCode, app.IsInstalled, app.InstalledVersion, app.HasUpdate);
+                    ////_logger.Debug("App {AppCode}: IsInstalled={IsInstalled}, Version={Version}, HasUpdate={HasUpdate}",
+                      //  app.AppCode, app.IsInstalled, app.InstalledVersion, app.HasUpdate);
                 }
 
                 _allApplications = new ObservableCollection<ApplicationDto>(apps);
@@ -300,14 +300,14 @@ namespace ClientLauncher.ViewModels
                 ApplySorting();
 
                 StatusMessage = $"Loaded {apps.Count} applications";
-                _logger.Info("Successfully loaded {Count} applications", apps.Count);
+               //// _logger.Info("Successfully loaded {Count} applications", apps.Count);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to load applications");
-                StatusMessage = $"Error: {ex.Message}";
-                MessageBox.Show($"Failed to load applications: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ////_logger.Error(ex, "Failed to load applications");
+                //StatusMessage = $"Error: {ex.Message}";
+                //MessageBox.Show($"Failed to load applications: {ex.Message}",
+                //    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -382,7 +382,7 @@ namespace ClientLauncher.ViewModels
             {
                 app.IsSelected = true;
             }
-            _logger.Info("Selected all applications");
+           //// _logger.Info("Selected all applications");
         }
 
         /// <summary>
@@ -394,7 +394,7 @@ namespace ClientLauncher.ViewModels
             {
                 app.IsSelected = false;
             }
-            _logger.Info("Deselected all applications");
+           //// _logger.Info("Deselected all applications");
         }
 
         /// <summary>
@@ -457,14 +457,14 @@ namespace ClientLauncher.ViewModels
                     if (binaryUpdate) updateParts.Add($"Binary: {serverVersionInfo.BinaryVersion}");
                     if (configUpdate) updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
 
-                    _logger.Info("Update available - {Updates}", string.Join(", ", updateParts));
+                   //// _logger.Info("Update available - {Updates}", string.Join(", ", updateParts));
                 }
 
                 return (binaryUpdate, configUpdate);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Error checking for updates");
+               // //_logger.Error(ex, "Error checking for updates");
                 return (false, false);
             }
         }
@@ -479,7 +479,7 @@ namespace ClientLauncher.ViewModels
 
             try
             {
-                _logger.Info($"Starting installation for {selectedApps.Count} application(s)");
+               //// _logger.Info($"Starting installation for {selectedApps.Count} application(s)");
 
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -518,7 +518,7 @@ namespace ClientLauncher.ViewModels
 
                         if (iconPath != null)
                         {
-                            _logger.Info("Using icon: {IconPath} for {AppName}", iconPath, app.Name);
+                           // _logger.Info("Using icon: {IconPath} for {AppName}", iconPath, app.Name);
                         }
                         else
                         {
@@ -535,7 +535,7 @@ namespace ClientLauncher.ViewModels
                         if (shortcutCreated)
                         {
                             successCount++;
-                            _logger.Info($"Successfully installed {app.Name}");
+                           // _logger.Info($"Successfully installed {app.Name}");
                         }
                         else
                         {
@@ -544,7 +544,7 @@ namespace ClientLauncher.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(ex, $"Failed to install {app.Name}");
+                        //_logger.Error(ex, $"Failed to install {app.Name}");
                         failedApps.Add(app.Name);
                     }
                 }
@@ -577,7 +577,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Batch installation failed");
+                //_logger.Error(ex, "Batch installation failed");
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -615,7 +615,7 @@ namespace ClientLauncher.ViewModels
                 var fullPath = Path.Combine(basePath ?? string.Empty, iconPath);
                 if (File.Exists(fullPath))
                 {
-                    _logger.Debug("Found icon for category {Category}: {IconPath}", category, fullPath);
+                    //_logger.Debug("Found icon for category {Category}: {IconPath}", category, fullPath);
                     return fullPath;
                 }
                 else
@@ -632,7 +632,7 @@ namespace ClientLauncher.ViewModels
             var defaultIconPath = Path.Combine(basePath ?? string.Empty, "Assets\\Icons\\app_default.ico");
             if (File.Exists(defaultIconPath))
             {
-                _logger.Debug("Using default icon: {IconPath}", defaultIconPath);
+                //_logger.Debug("Using default icon: {IconPath}", defaultIconPath);
                 return defaultIconPath;
             }
 
@@ -652,7 +652,7 @@ namespace ClientLauncher.ViewModels
 
             try
             {
-                _logger.Info("Checking if {AppCode} is currently running", SelectedApplication.AppCode);
+               // _logger.Info("Checking if {AppCode} is currently running", SelectedApplication.AppCode);
 
                 // Check if application is running
                 var runningProcesses = ProcessHelper.GetRunningProcessesForApp(SelectedApplication.AppCode);
@@ -676,7 +676,7 @@ namespace ClientLauncher.ViewModels
 
                     if (result == MessageBoxResult.Yes)
                     {
-                        _logger.Info("User chose to force close processes for {AppCode}", SelectedApplication.AppCode);
+                       // _logger.Info("User chose to force close processes for {AppCode}", SelectedApplication.AppCode);
 
                         StatusMessage = "Force closing application processes...";
 
@@ -709,11 +709,11 @@ namespace ClientLauncher.ViewModels
                             return;
                         }
 
-                        _logger.Info("Successfully closed all processes for {AppCode}", SelectedApplication.AppCode);
+                       // _logger.Info("Successfully closed all processes for {AppCode}", SelectedApplication.AppCode);
                     }
                     else
                     {
-                        _logger.Info("User cancelled uninstallation for {AppCode}", SelectedApplication.AppCode);
+                       // _logger.Info("User cancelled uninstallation for {AppCode}", SelectedApplication.AppCode);
                         return;
                     }
                 }
@@ -730,7 +730,7 @@ namespace ClientLauncher.ViewModels
                 if (confirmResult != MessageBoxResult.Yes)
                     return;
 
-                _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
+               // _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
 
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -761,7 +761,7 @@ namespace ClientLauncher.ViewModels
                     ProgressValue = 90;
                     await Task.Delay(300);
 
-                    _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
+                   // _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
                 }
                 else
                 {
@@ -804,7 +804,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (UnauthorizedAccessException uaEx)
             {
-                _logger.Error(uaEx, "Access denied during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+                //_logger.Error(uaEx, "Access denied during uninstallation for {AppCode}", SelectedApplication?.AppCode);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -833,7 +833,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (IOException ioEx)
             {
-                _logger.Error(ioEx, "IO error during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+                //_logger.Error(ioEx, "IO error during uninstallation for {AppCode}", SelectedApplication?.AppCode);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -859,7 +859,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication?.AppCode);
+                //_logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication?.AppCode);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));

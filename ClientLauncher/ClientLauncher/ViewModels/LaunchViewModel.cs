@@ -158,7 +158,7 @@ namespace ClientLauncher.ViewModels
                     return;
                 }
 
-                Logger.Info("Manifest retrieved: Binary v{BinaryVersion}, Config v{ConfigVersion}",
+                Logger.Info("Manifest retrieved: Binary {BinaryVersion}, Config {ConfigVersion}",
                     manifest.Binary?.Version, manifest.Config?.Version);
 
                 // Step 2: Checking installation status
@@ -321,15 +321,22 @@ namespace ClientLauncher.ViewModels
                 StatusEmoji = "✓";
                 await Task.Delay(300);
 
-                // Verify installation after update
+                // ✅ CRITICAL: Verify installation TRƯỚC KHI save version
+                UpdateStatus("🔍 Verifying installation...", 80);
+                StatusEmoji = "🔍";
+                await Task.Delay(200);
+
                 if (!await VerifyInstallationAsync())
                 {
                     Logger.Error("Verification failed after update - executable not found");
 
+                    // ❌ Trigger rollback
+                    await TriggerRollbackAsync(result.UpdatedManifest?.Binary?.Version ?? "unknown");
+
                     MessageBox.Show(
-                        "Version update failed (executable not found).\n" +
-                        "The system has automatically rolled back to the previous version.\n" +
-                        "Please contact IT support.",
+                        "Bản cập nhật có lỗi (không tìm thấy file thực thi).\n" +
+                        "Hệ thống đã tự động khôi phục về phiên bản cũ.\n" +
+                        "Vui lòng liên hệ IT support.",
                         "Update Verification Failed",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -337,8 +344,14 @@ namespace ClientLauncher.ViewModels
                     return false;
                 }
 
-                // Save updated manifest
-                await _manifestService.SaveManifestAsync(AppCode, manifest);
+                // ✅ Chỉ save version SAU KHI verify exe thành công
+                UpdateStatus("💾 Saving version info...", 85);
+                StatusEmoji = "💾";
+
+                await SaveVersionAndManifestAsync(result.UpdatedManifest ?? manifest);
+
+                Logger.Info("Version and manifest saved successfully");
+
                 return true;
             }
             catch (Exception ex)
@@ -353,6 +366,69 @@ namespace ClientLauncher.ViewModels
                     MessageBoxImage.Error);
 
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Save version info and manifest after successful verification
+        /// </summary>
+        private async Task SaveVersionAndManifestAsync(ManifestDto manifest)
+        {
+            try
+            {
+                // Save version.txt
+                var versionFile = Path.Combine(@"C:\CompanyApps", AppCode, "App", "version.txt");
+                var versionDir = Path.GetDirectoryName(versionFile);
+
+                if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
+                {
+                    Directory.CreateDirectory(versionDir);
+                }
+
+                await File.WriteAllTextAsync(versionFile, manifest.Binary?.Version ?? "0.0.0");
+                Logger.Info("Saved version {Version} to {Path}", manifest.Binary?.Version, versionFile);
+
+                // Save manifest.json
+                await _manifestService.SaveManifestAsync(AppCode, manifest);
+                Logger.Info("Saved manifest for {AppCode}", AppCode);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to save version and manifest");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Trigger rollback when verification fails
+        /// </summary>
+        private async Task TriggerRollbackAsync(string failedVersion)
+        {
+            try
+            {
+                Logger.Warn("Triggering rollback due to verification failure for version {Version}", failedVersion);
+
+                // Call installation service để rollback
+                var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
+
+                // Mark update as failed
+                var failureMarkerPath = Path.Combine(@"C:\CompanyApps", AppCode, ".update_failed");
+                var failureData = new
+                {
+                    FailedVersion = failedVersion,
+                    Timestamp = DateTime.UtcNow,
+                    MachineName = Environment.MachineName,
+                    ErrorType = "VerificationFailed_MissingExecutable"
+                };
+
+                await File.WriteAllTextAsync(failureMarkerPath,
+                    System.Text.Json.JsonSerializer.Serialize(failureData));
+
+                Logger.Info("Marked update as failed for version {Version}", failedVersion);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to trigger rollback");
             }
         }
 
