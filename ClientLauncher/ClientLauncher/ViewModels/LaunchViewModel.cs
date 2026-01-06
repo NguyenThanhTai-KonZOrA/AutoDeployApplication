@@ -471,10 +471,15 @@ namespace ClientLauncher.ViewModels
                     Logger.Error("Installation failed: {Message}", result.Message);
 
                     MessageBox.Show(
-                        result.Message ?? "Không thể cài đặt ứng dụng.",
-                        "Installation Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                       "Cannot find application executable.\n" +
+                       "Please check:\n" +
+                       $"1. Package on server contains .exe file\n" +
+                       $"2. Application Code: {AppCode}\n" +
+                       $"3. Please ensure you have proper access rights to the application directory.\n" +
+                       "4. Contact IT support if the issue persists.",
+                       "Launch Failed",
+                       MessageBoxButton.OK,
+                       MessageBoxImage.Error);
 
                     return false;
                 }
