@@ -44,7 +44,6 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _statusEmoji, value);
         }
 
-
         private bool _isIndeterminate = true;
         public bool IsIndeterminate
         {
@@ -82,9 +81,6 @@ namespace ClientLauncher.ViewModels
         }
 
         public RelayCommand CancelCommand { get; }
-        public AsyncRelayCommand UpdateAndLaunchCommand { get; }
-        public RelayCommand LaunchWithoutUpdateCommand { get; }
-
 
         public string StatusMessage
         {
@@ -129,7 +125,7 @@ namespace ClientLauncher.ViewModels
 
             CancelCommand = new RelayCommand(Cancel);
 
-            // FIX: Chỉ gọi 1 lần sau khi UI ready
+            // Initialize and launch after UI ready
             Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 await Task.Delay(100); // Give UI time to render
@@ -213,14 +209,19 @@ namespace ClientLauncher.ViewModels
                             StatusEmoji = "⚠️";
                             await Task.Delay(100);
 
-                            // FIX: Perform update and verify
-                            var updateResult = await PerformUpdateAsync(manifest);
+                            // ✅ Perform update with Verify-then-Commit flow
+                            var updateSuccess = await PerformUpdateAsync(manifest);
 
-                            if (!updateResult)
+                            if (!updateSuccess)
                             {
                                 Logger.Error("Update failed, aborting launch");
                                 UpdateStatus("❌ Update failed. Using current version.", 0);
                                 await Task.Delay(3000);
+
+                                UpdateStatus("ℹ️ We will open the previous version.", 100);
+                                await Task.Delay(1000);
+                                await LaunchApplicationAsync();
+                                // Uncommented this line to ensure shutdown after launching previous version
                                 Application.Current.Shutdown();
                                 return;
                             }
@@ -251,9 +252,9 @@ namespace ClientLauncher.ViewModels
                     StatusEmoji = "📦";
                     await Task.Delay(100);
 
-                    var installResult = await PerformInstallationAsync(manifest);
+                    var installSuccess = await PerformInstallationAsync(manifest);
 
-                    if (!installResult)
+                    if (!installSuccess)
                     {
                         Logger.Error("Installation failed, aborting launch");
                         UpdateStatus("❌ Installation failed", 0);
@@ -280,6 +281,9 @@ namespace ClientLauncher.ViewModels
             }
         }
 
+        /// <summary>
+        /// Perform update with TEMP folder flow
+        /// </summary>
         private async Task<bool> PerformUpdateAsync(ManifestDto manifest)
         {
             try
@@ -290,20 +294,17 @@ namespace ClientLauncher.ViewModels
                 StatusEmoji = "📥";
                 await Task.Delay(300);
 
-                var updateType = manifest.UpdatePolicy?.Type ?? "both";
-                Logger.Info("Update type: {UpdateType}", updateType);
-
-                var result = await _installationService.UpdateApplicationAsync(
+                // ✅ Step 1: Download to TEMP (DO NOT overwrite App)
+                var updateResult = await _installationService.UpdateApplicationAsync(
                     AppCode,
                     Environment.UserName);
 
-                if (!result.Success)
+                if (!updateResult.Success)
                 {
-                    Logger.Error("Update failed: {Message}", result.Message);
+                    Logger.Error("Update download failed: {Message}", updateResult.Message);
 
-                    // Show error message to user
                     MessageBox.Show(
-                        result.Message ?? "Cannot update application. Please try again later.",
+                        updateResult.Message ?? "Cannot download the update. Please try again later.",
                         "Update Failed",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -311,32 +312,52 @@ namespace ClientLauncher.ViewModels
                     return false;
                 }
 
-                Logger.Info("Update completed successfully");
+                Logger.Info("Update package downloaded to temp successfully");
 
                 UpdateStatus("📦 Extracting files...", 65);
                 StatusEmoji = "📦";
                 await Task.Delay(300);
 
-                UpdateStatus("✓ Update completed successfully", 75);
-                StatusEmoji = "✓";
-                await Task.Delay(300);
-
-                // ✅ CRITICAL: Verify installation TRƯỚC KHI save version
-                UpdateStatus("🔍 Verifying installation...", 80);
+                // ✅ Step 2: Verify exe trong TEMP folder
+                UpdateStatus("🔍 Verifying installation...", 75);
                 StatusEmoji = "🔍";
                 await Task.Delay(200);
 
-                if (!await VerifyInstallationAsync())
+                if (!await VerifyInstallationInTempAsync(updateResult.TempAppPath))
                 {
-                    Logger.Error("Verification failed after update - executable not found");
+                    Logger.Error("Verification failed - executable not found in temp folder");
 
-                    // ❌ Trigger rollback
-                    await TriggerRollbackAsync(result.UpdatedManifest?.Binary?.Version ?? "unknown");
+                    // Clean up temp folder
+                    if (!string.IsNullOrEmpty(updateResult.TempAppPath) && Directory.Exists(updateResult.TempAppPath))
+                    {
+                        try
+                        {
+                            Directory.Delete(updateResult.TempAppPath, true);
+                            Logger.Info("Deleted temp folder after verification failure");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warn(ex, "Failed to delete temp folder");
+                        }
+                    }
+
+                    // Delete backup (no rollback needed since the App wasn't overwritten)
+                    if (!string.IsNullOrEmpty(updateResult.BackupPath) && Directory.Exists(updateResult.BackupPath))
+                    {
+                        try
+                        {
+                            Directory.Delete(updateResult.BackupPath, true);
+                            Logger.Info("Deleted backup after verification failure");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warn(ex, "Failed to delete backup");
+                        }
+                    }
 
                     MessageBox.Show(
-                        "Bản cập nhật có lỗi (không tìm thấy file thực thi).\n" +
-                        "Hệ thống đã tự động khôi phục về phiên bản cũ.\n" +
-                        "Vui lòng liên hệ IT support.",
+                        "The update has errors (executable not found).\n" +
+                        "The current version will continue to operate normally.",
                         "Update Verification Failed",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -344,13 +365,42 @@ namespace ClientLauncher.ViewModels
                     return false;
                 }
 
-                // ✅ Chỉ save version SAU KHI verify exe thành công
-                UpdateStatus("💾 Saving version info...", 85);
+                // Step 3: Commit (move from TEMP to App + save version/manifest)
+                UpdateStatus("💾 Installing new version...", 85);
                 StatusEmoji = "💾";
+                await Task.Delay(200);
 
-                await SaveVersionAndManifestAsync(result.UpdatedManifest ?? manifest);
+                if (updateResult.UpdatedManifest != null &&
+                    !string.IsNullOrEmpty(updateResult.BackupPath) &&
+                    !string.IsNullOrEmpty(updateResult.TempAppPath))
+                {
+                    var commitSuccess = await _installationService.CommitUpdateAsync(
+                        AppCode,
+                        updateResult.UpdatedManifest,
+                        updateResult.BackupPath,
+                        updateResult.TempAppPath);
 
-                Logger.Info("Version and manifest saved successfully");
+                    if (!commitSuccess)
+                    {
+                        Logger.Error("Failed to commit update");
+
+                        MessageBox.Show(
+                            "Cannot install the new version.\n" +
+                            "Please try again later.",
+                            "Commit Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+
+                        return false;
+                    }
+
+                    Logger.Info("Update committed successfully - Version: {Version}",
+                        updateResult.UpdatedManifest.Binary?.Version);
+                }
+
+                UpdateStatus("✓ Update completed successfully", 90);
+                StatusEmoji = "✅";
+                await Task.Delay(300);
 
                 return true;
             }
@@ -359,8 +409,8 @@ namespace ClientLauncher.ViewModels
                 Logger.Error(ex, "Update failed for {AppCode}", AppCode);
 
                 MessageBox.Show(
-                    $"Lỗi khi cập nhật: {ex.Message}\n" +
-                    "Hệ thống đã tự động khôi phục về phiên bản cũ.",
+                    $"Update error: {ex.Message}\n" +
+                    "The current version will be used.",
                     "Update Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -370,68 +420,34 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// Save version info and manifest after successful verification
+        /// Verify exe trong TEMP folder
         /// </summary>
-        private async Task SaveVersionAndManifestAsync(ManifestDto manifest)
+        private async Task<bool> VerifyInstallationInTempAsync(string? tempAppPath)
         {
-            try
+            await Task.Delay(100);
+
+            if (string.IsNullOrEmpty(tempAppPath) || !Directory.Exists(tempAppPath))
             {
-                // Save version.txt
-                var versionFile = Path.Combine(@"C:\CompanyApps", AppCode, "App", "version.txt");
-                var versionDir = Path.GetDirectoryName(versionFile);
-
-                if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
-                {
-                    Directory.CreateDirectory(versionDir);
-                }
-
-                await File.WriteAllTextAsync(versionFile, manifest.Binary?.Version ?? "0.0.0");
-                Logger.Info("Saved version {Version} to {Path}", manifest.Binary?.Version, versionFile);
-
-                // Save manifest.json
-                await _manifestService.SaveManifestAsync(AppCode, manifest);
-                Logger.Info("Saved manifest for {AppCode}", AppCode);
+                Logger.Error("Temp folder not found: {Path}", tempAppPath ?? "NULL");
+                return false;
             }
-            catch (Exception ex)
+
+            // Find exe in temp folder
+            var exeFiles = Directory.GetFiles(tempAppPath, "*.exe", SearchOption.TopDirectoryOnly);
+
+            if (exeFiles.Length == 0)
             {
-                Logger.Error(ex, "Failed to save version and manifest");
-                throw;
+                Logger.Error("No exe file found in temp folder: {Path}", tempAppPath);
+                return false;
             }
+
+            Logger.Info("Found {Count} exe file(s) in temp: {Files}", exeFiles.Length, string.Join(", ", exeFiles));
+            return true;
         }
 
         /// <summary>
-        /// Trigger rollback when verification fails
+        /// Perform installation for new app
         /// </summary>
-        private async Task TriggerRollbackAsync(string failedVersion)
-        {
-            try
-            {
-                Logger.Warn("Triggering rollback due to verification failure for version {Version}", failedVersion);
-
-                // Call installation service để rollback
-                var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
-
-                // Mark update as failed
-                var failureMarkerPath = Path.Combine(@"C:\CompanyApps", AppCode, ".update_failed");
-                var failureData = new
-                {
-                    FailedVersion = failedVersion,
-                    Timestamp = DateTime.UtcNow,
-                    MachineName = Environment.MachineName,
-                    ErrorType = "VerificationFailed_MissingExecutable"
-                };
-
-                await File.WriteAllTextAsync(failureMarkerPath,
-                    System.Text.Json.JsonSerializer.Serialize(failureData));
-
-                Logger.Info("Marked update as failed for version {Version}", failedVersion);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Failed to trigger rollback");
-            }
-        }
-
         private async Task<bool> PerformInstallationAsync(ManifestDto manifest)
         {
             try
@@ -479,8 +495,7 @@ namespace ClientLauncher.ViewModels
                     Logger.Error("Verification failed after installation - executable not found");
 
                     MessageBox.Show(
-                        "Version update failed (executable not found).\n" +
-                        "The system has automatically rolled back to the previous version.\n" +
+                        "Installation failed (executable not found).\n" +
                         "Please contact IT support.",
                         "Installation Verification Failed",
                         MessageBoxButton.OK,
@@ -489,8 +504,6 @@ namespace ClientLauncher.ViewModels
                     return false;
                 }
 
-                // Save manifest
-                await _manifestService.SaveManifestAsync(AppCode, manifest);
                 return true;
             }
             catch (Exception ex)
@@ -522,6 +535,9 @@ namespace ClientLauncher.ViewModels
             return isValid;
         }
 
+        /// <summary>
+        /// Launch the application
+        /// </summary>
         private async Task LaunchApplicationAsync()
         {
             try
@@ -606,12 +622,18 @@ namespace ClientLauncher.ViewModels
             }
         }
 
+        /// <summary>
+        /// Cancel launch process
+        /// </summary>
         private void Cancel(object? parameter)
         {
             Logger.Info("User cancelled launch process");
             _window.Close();
         }
 
+        /// <summary>
+        /// Get application executable path
+        /// </summary>
         private string GetApplicationPath()
         {
             var appBasePath = Path.Combine(@"C:\CompanyApps", AppCode, "App");
@@ -648,7 +670,9 @@ namespace ClientLauncher.ViewModels
             return exePath ?? string.Empty;
         }
 
-        // Helper method to update status on UI thread
+        /// <summary>
+        /// Update status message and progress on UI thread
+        /// </summary>
         private void UpdateStatus(string message, double progress)
         {
             StatusMessage = message;

@@ -1,4 +1,5 @@
-﻿using ClientLauncher.Models.Response;
+﻿using ClientLauncher.Models;
+using ClientLauncher.Models.Response;
 using ClientLauncher.Services.Interface;
 using NLog;
 using System.Configuration;
@@ -24,8 +25,6 @@ namespace ClientLauncher.Services
         {
             _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
-
-            // Base path at C:\CompanyApps
             _appBasePath = @"C:\CompanyApps";
             _manifestService = new ManifestService();
             _selectiveUpdateService = new SelectiveUpdateService(_manifestService);
@@ -38,20 +37,21 @@ namespace ClientLauncher.Services
             Logger.Debug("InstallationService initialized with base path: {Path}", _appBasePath);
         }
 
+        #region Public Interface Methods
+
         public async Task<InstallationResult> InstallApplicationAsync(string appCode, string userName)
         {
             var stopwatch = Stopwatch.StartNew();
             try
             {
                 Logger.Info("Starting installation for {AppCode}", appCode);
-                // 1. Get manifest from server (database-generated)
+
                 var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
                 if (manifest == null)
                 {
                     throw new Exception("Failed to retrieve manifest from server");
                 }
 
-                // C:\CompanyApps\{appCode}\App
                 var appPath = Path.Combine(_appBasePath, appCode, "App");
                 var binaryPackage = manifest.Binary?.Package;
 
@@ -60,11 +60,9 @@ namespace ClientLauncher.Services
                     throw new Exception("Invalid manifest: binary package not specified");
                 }
 
-                // 2. Download and extract binary package
                 Logger.Info("Downloading binary package: {Package}", binaryPackage);
                 await DownloadAndExtractAsync(appCode, binaryPackage, appPath);
 
-                // 3. Download config if specified
                 if (!string.IsNullOrEmpty(manifest.Config?.Package) &&
                     manifest.UpdatePolicy?.Type != "binary")
                 {
@@ -73,29 +71,46 @@ namespace ClientLauncher.Services
                     await DownloadAndExtractAsync(appCode, manifest.Config.Package, configPath);
                 }
 
-                // 4. Save version info to C:\CompanyApps\{appCode}\version.txt
                 SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
-
-                // Save manifest to C:\CompanyApps\{appCode}\manifest.json
                 await _manifestService.SaveManifestAsync(appCode, manifest);
 
                 Logger.Info("Installation completed for {AppCode}", appCode);
                 stopwatch.Stop();
 
-                var result = new InstallationResult();
-                result.Success = true;
-                result.InstalledVersion = manifest.Binary?.Version;
-                result.Message = $"Installation completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s";
-                result.InstallationPath = appPath;
+                var result = new InstallationResult
+                {
+                    Success = true,
+                    InstalledVersion = manifest.Binary?.Version,
+                    Message = $"Installation completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s",
+                    InstallationPath = appPath
+                };
 
-                await NotifyInstallationAsync(appCode, result?.InstalledVersion ?? string.Empty, true, stopwatch.Elapsed);
+                await NotifyInstallationAsync(
+                    appCode,
+                    result.InstalledVersion ?? string.Empty,
+                    true,
+                    stopwatch.Elapsed,
+                    null,
+                    null,
+                    "Install");
+
                 return result;
             }
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                await NotifyInstallationAsync(appCode, "0.0.0", false, stopwatch.Elapsed, ex.Message);
+
+                await NotifyInstallationAsync(
+                    appCode,
+                    "0.0.0",
+                    false,
+                    stopwatch.Elapsed,
+                    ex.Message,
+                    null,
+                    "Install");
+
                 Logger.Error(ex, "Installation failed for {AppCode}", appCode);
+
                 return new InstallationResult
                 {
                     Success = false,
@@ -109,33 +124,29 @@ namespace ClientLauncher.Services
         {
             var stopwatch = Stopwatch.StartNew();
             string? currentBinaryVersion = null;
-            string? currentConfigVersion = null;
             string? newVersion = null;
+            string? backupPath = null;
+            string? tempAppPath = null;
 
             try
             {
                 Logger.Info("Starting update for {AppCode}", appCode);
 
-                // Get current version before update
                 currentBinaryVersion = GetCurrentVersion(appCode, "App");
-                currentConfigVersion = GetCurrentVersion(appCode, "Config");
-                Logger.Info("Current version - Binary: {BinaryVersion}, Config: {ConfigVersion}",
-                    currentBinaryVersion ?? "N/A", currentConfigVersion ?? "N/A");
+                Logger.Info("Current version: {Version}", currentBinaryVersion ?? "N/A");
 
-                // Check if this version has failed before
                 if (await HasUpdateFailedBeforeAsync(appCode))
                 {
                     Logger.Warn("Update was previously attempted and failed for {AppCode}", appCode);
                     return new InstallationResult
                     {
                         Success = false,
-                        Message = "Bản cập nhật mới đang có lỗi. Hệ thống đã tự động rollback về phiên bản cũ. Vui lòng thử lại sau.",
+                        Message = "The new version has errors. The system has automatically rolled back to the previous version. Please try again later.",
                         ErrorDetails = "Previous update attempt failed, automatic rollback applied",
                         InstalledVersion = currentBinaryVersion
                     };
                 }
 
-                // 1. Get latest manifest from server
                 var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
                 if (manifest == null)
                 {
@@ -146,131 +157,56 @@ namespace ClientLauncher.Services
                 var updateType = manifest.UpdatePolicy?.Type ?? "both";
                 Logger.Info("Update type: {UpdateType}, New version: {NewVersion}", updateType, newVersion);
 
-                var appPath = Path.Combine(_appBasePath, appCode, "App");
-                var configPath = Path.Combine(_appBasePath, appCode, "Config");
-                var backupPath = Path.Combine(_appBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
+                backupPath = Path.Combine(_appBasePath, appCode, $"Backup_{DateTime.Now:yyyyMMddHHmmss}");
 
-                // 2. Backup current installation (including version.txt and manifest.json)
-                if (Directory.Exists(appPath))
-                {
-                    CopyDirectory(appPath, Path.Combine(backupPath, "App"));
-                    Logger.Info("Created backup at {BackupPath}", backupPath);
-                }
-
-                // Backup manifest.json
-                var manifestPath = Path.Combine(_appBasePath, appCode, "manifest.json");
-                if (File.Exists(manifestPath))
-                {
-                    var backupManifestPath = Path.Combine(backupPath, "manifest.json");
-                    Directory.CreateDirectory(backupPath);
-                    File.Copy(manifestPath, backupManifestPath, true);
-                    Logger.Info("Backed up manifest.json");
-                }
+                // Backup current installation
+                await CreateBackupAsync(appCode, backupPath);
 
                 try
                 {
-                    // === UPDATE BINARY ===
-                    if (updateType == "binary" || updateType == "both")
-                    {
-                        Logger.Info("Updating binary package");
-                        await DownloadAndExtractAsync(appCode, manifest.Binary?.Package!, appPath);
-                    }
+                    // ✅ CRITICAL: Download to TEMP folder, don't replace App folder yet
+                    tempAppPath = await DownloadUpdatePackagesToTempAsync(appCode, manifest, updateType);
 
-                    // === UPDATE CONFIG (SELECTIVE) ===
-                    if ((updateType == "config" || updateType == "both") &&
-                        !string.IsNullOrEmpty(manifest.Config?.Package))
-                    {
-                        Logger.Info("Updating config with strategy: {Strategy}", manifest.Config.MergeStrategy);
-
-                        // Download config package to temp location
-                        var tempConfigZip = Path.Combine(Path.GetTempPath(), $"{appCode}_config_{Guid.NewGuid()}.zip");
-                        var configUrl = $"{_baseUrl}/api/apps/{appCode}/download/{manifest.Config.Package}";
-
-                        var response = await _httpClient.GetAsync(configUrl);
-                        if (response.IsSuccessStatusCode)
-                        {
-                            var configData = await response.Content.ReadAsByteArrayAsync();
-                            await File.WriteAllBytesAsync(tempConfigZip, configData);
-
-                            // Apply selective update
-                            await _selectiveUpdateService.ApplySelectiveConfigUpdateAsync(
-                                appCode,
-                                manifest,
-                                tempConfigZip
-                            );
-
-                            // Clean up temp file
-                            if (File.Exists(tempConfigZip))
-                            {
-                                File.Delete(tempConfigZip);
-                            }
-
-                            Logger.Info("Config update completed successfully");
-                        }
-                    }
-
-                    // ❌ REMOVED: KHÔNG save version ở đây nữa
-                    // SaveVersionInfo(...) - Sẽ được gọi từ LaunchViewModel sau khi verify exe
-
-                    // Clear failed update marker on success
-                    await ClearUpdateFailureMarkerAsync(appCode);
-
-                    // Delete backup on success
-                    if (Directory.Exists(backupPath))
-                    {
-                        Directory.Delete(backupPath, true);
-                        Logger.Info("Deleted backup after successful update");
-                    }
+                    Logger.Info("Package downloaded to temp: {TempPath}", tempAppPath);
 
                     stopwatch.Stop();
 
-                    // Log success with new version
-                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty,
-                        true, stopwatch.Elapsed, null, currentBinaryVersion, "Update");
-
-                    Logger.Info("Update completed successfully for {AppCode}", appCode);
-
-                    // ✅ Return manifest để LaunchViewModel verify và save version
+                    // ✅ Return temp path to ViewModel for verification
                     return new InstallationResult
                     {
                         Success = true,
-                        Message = $"Cập nhật thành công từ phiên bản {currentBinaryVersion} sang {newVersion}",
-                        InstalledVersion = manifest.Binary?.Version,
-                        // ✅ CRITICAL: Trả về manifest để ViewModel xử lý
-                        UpdatedManifest = manifest
+                        Message = $"Downloaded version {newVersion}. Checking stability...",
+                        InstalledVersion = currentBinaryVersion,
+                        UpdatedManifest = manifest,
+                        BackupPath = backupPath,
+                        TempAppPath = tempAppPath
                     };
                 }
                 catch (Exception updateEx)
                 {
-                    Logger.Error(updateEx, "Update failed, attempting rollback for {AppCode}", appCode);
+                    Logger.Error(updateEx, "Update failed during download for {AppCode}", appCode);
 
-                    // Rollback về version cũ
-                    await PerformRollbackAsync(appCode, backupPath);
-
-                    // Mark this update as failed
-                    await MarkUpdateAsFailedAsync(appCode, newVersion ?? "unknown");
+                    // Clean up temp folder
+                    DeleteTempFolderSafely(tempAppPath);
 
                     stopwatch.Stop();
 
-                    // Log FAIL với message rollback rõ ràng
                     await NotifyInstallationAsync(
                         appCode,
                         currentBinaryVersion ?? "unknown",
                         false,
                         stopwatch.Elapsed,
-                        $"Update to v{newVersion} failed: {updateEx.Message}. System rolled back to v{currentBinaryVersion}",
+                        $"Update to {newVersion} failed during download: {updateEx.Message}",
                         currentBinaryVersion,
                         "UpdateRollback");
 
-                    Logger.Warn("Rolled back to version {OldVersion} due to update failure", currentBinaryVersion);
+                    DeleteBackupSafely(backupPath);
 
                     return new InstallationResult
                     {
                         Success = false,
-                        Message = $"Bản cập nhật mới (v{newVersion}) có lỗi.\n" +
-                                  $"Hệ thống đã tự động khôi phục về phiên bản cũ (v{currentBinaryVersion}).\n" +
-                                  $"Vui lòng thử lại sau.",
-                        ErrorDetails = $"Update error: {updateEx.Message}. Rollback completed successfully.",
+                        Message = $"Cannot download the new update ({newVersion}).\nPlease try again later.",
+                        ErrorDetails = $"Download error: {updateEx.Message}",
                         InstalledVersion = currentBinaryVersion
                     };
                 }
@@ -279,13 +215,20 @@ namespace ClientLauncher.Services
             {
                 Logger.Error(ex, "Update failed for {AppCode}", appCode);
                 stopwatch.Stop();
-                await NotifyInstallationAsync(appCode, currentBinaryVersion ?? string.Empty, false, stopwatch.Elapsed,
-                    ex.Message, currentBinaryVersion, "Update");
+
+                await NotifyInstallationAsync(
+                    appCode,
+                    currentBinaryVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    ex.Message,
+                    currentBinaryVersion,
+                    "UpdateRollback");
 
                 return new InstallationResult
                 {
                     Success = false,
-                    Message = "Không thể cập nhật ứng dụng. Vui lòng thử lại sau.",
+                    Message = "Cannot update the application. Please try again later.",
                     ErrorDetails = ex.Message,
                     InstalledVersion = currentBinaryVersion
                 };
@@ -324,6 +267,150 @@ namespace ClientLauncher.Services
             }
         }
 
+        #endregion
+
+        #region Public Commit/Rollback Methods
+
+        /// <summary>
+        /// Commit update - Move from TEMP to App + Save version/manifest
+        /// </summary>
+        public async Task<bool> CommitUpdateAsync(string appCode, ManifestDto manifest, string backupPath, string tempAppPath)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            string? oldVersion = null;
+
+            try
+            {
+                oldVersion = GetVersionFromBackup(backupPath);
+
+                Logger.Info("Committing update for {AppCode} - Old: {OldVersion}, New: {NewVersion}",
+                    appCode, oldVersion ?? "N/A", manifest.Binary?.Version);
+
+                // 1. Move new version from TEMP to App folder
+                MoveNewVersionToAppFolder(appCode, tempAppPath);
+
+                // 2. Save version.txt
+                SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
+
+                // 3. Save manifest.json
+                await _manifestService.SaveManifestAsync(appCode, manifest);
+
+                // 4. Clear failed update marker
+                await ClearUpdateFailureMarkerAsync(appCode);
+
+                stopwatch.Stop();
+
+                // 5. Notify server
+                await NotifyInstallationAsync(
+                    appCode,
+                    manifest.Binary?.Version ?? "0.0.0",
+                    true,
+                    stopwatch.Elapsed,
+                    null,
+                    oldVersion,
+                    "Update"
+                );
+
+                // 6. Delete backup
+                DeleteBackupSafely(backupPath);
+
+                Logger.Info("Update committed successfully for {AppCode}", appCode);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to commit update for {AppCode}", appCode);
+
+                stopwatch.Stop();
+
+                await NotifyInstallationAsync(
+                    appCode,
+                    manifest.Binary?.Version ?? "0.0.0",
+                    false,
+                    stopwatch.Elapsed,
+                    $"Commit failed: {ex.Message}",
+                    oldVersion,
+                    "UpdateCommitFailed"
+                );
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Rollback update if verification failed
+        /// </summary>
+        public async Task<bool> RollbackUpdateAsync(string appCode, string backupPath, string failedVersion)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            string? restoredVersion = null;
+
+            try
+            {
+                Logger.Warn("Rolling back update for {AppCode} - Failed version: {Version}", appCode, failedVersion);
+
+                if (string.IsNullOrEmpty(backupPath) || !Directory.Exists(backupPath))
+                {
+                    Logger.Error("Backup not found at {BackupPath}, cannot rollback", backupPath);
+                    return false;
+                }
+
+                // 1. Perform rollback
+                await PerformRollbackAsync(appCode, backupPath);
+
+                // 2. Get restored version
+                restoredVersion = GetCurrentVersion(appCode, "App");
+                Logger.Info("Restored to version: {Version}", restoredVersion ?? "unknown");
+
+                // 3. Mark update as failed
+                await MarkUpdateAsFailedAsync(appCode, failedVersion);
+
+                stopwatch.Stop();
+
+                // 4. Notify server
+                await NotifyInstallationAsync(
+                    appCode,
+                    restoredVersion ?? "unknown",
+                    false,
+                    stopwatch.Elapsed,
+                    $"Update to {failedVersion} failed verification. Executable not found or corrupted. System rolled back to {restoredVersion}",
+                    restoredVersion,
+                    "UpdateRollback"
+                );
+
+                // 5. Delete backup
+                DeleteBackupSafely(backupPath);
+
+                Logger.Info("Rollback completed successfully for {AppCode}", appCode);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Rollback failed for {AppCode}", appCode);
+
+                stopwatch.Stop();
+
+                await NotifyInstallationAsync(
+                    appCode,
+                    restoredVersion ?? "unknown",
+                    false,
+                    stopwatch.Elapsed,
+                    $"Rollback failed: {ex.Message}",
+                    null,
+                    "RollbackFailed"
+                );
+
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Private Helper Methods
+
+        /// <summary>
+        /// Download and extract package from server
+        /// </summary>
         private async Task DownloadAndExtractAsync(string appCode, string packageName, string targetPath)
         {
             var packageUrl = $"/api/apps/{appCode}/download/{packageName}";
@@ -363,11 +450,102 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// Download update packages to TEMP folder
+        /// </summary>
+        private async Task<string> DownloadUpdatePackagesToTempAsync(string appCode, ManifestDto manifest, string updateType)
+        {
+            // Create TEMP folder
+            var tempAppPath = Path.Combine(Path.GetTempPath(), $"{appCode}_NewVersion_{Guid.NewGuid()}");
+
+            try
+            {
+                // Update BINARY to TEMP
+                if (updateType == "binary" || updateType == "both")
+                {
+                    Logger.Info("Downloading binary package to temp folder");
+                    await DownloadAndExtractAsync(appCode, manifest.Binary?.Package!, tempAppPath);
+                    Logger.Info("Binary extracted to temp: {TempPath}", tempAppPath);
+                }
+
+                // Update CONFIG (SELECTIVE)
+                if ((updateType == "config" || updateType == "both") &&
+                    !string.IsNullOrEmpty(manifest.Config?.Package))
+                {
+                    Logger.Info("Updating config with strategy: {Strategy}", manifest.Config.MergeStrategy);
+
+                    var tempConfigZip = Path.Combine(Path.GetTempPath(), $"{appCode}_config_{Guid.NewGuid()}.zip");
+                    var configUrl = $"{_baseUrl}/api/apps/{appCode}/download/{manifest.Config.Package}";
+
+                    var response = await _httpClient.GetAsync(configUrl);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var configData = await response.Content.ReadAsByteArrayAsync();
+                        await File.WriteAllBytesAsync(tempConfigZip, configData);
+
+                        await _selectiveUpdateService.ApplySelectiveConfigUpdateAsync(
+                            appCode,
+                            manifest,
+                            tempConfigZip
+                        );
+
+                        if (File.Exists(tempConfigZip))
+                        {
+                            File.Delete(tempConfigZip);
+                        }
+
+                        Logger.Info("Config update completed successfully");
+                    }
+                }
+
+                return tempAppPath;
+            }
+            catch (Exception ex)
+            {
+                // Clean up temp folder on error
+                DeleteTempFolderSafely(tempAppPath);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Move new version from TEMP to App folder
+        /// </summary>
+        private void MoveNewVersionToAppFolder(string appCode, string tempAppPath)
+        {
+            var appPath = Path.Combine(_appBasePath, appCode, "App");
+
+            try
+            {
+                Logger.Info("Moving new version from {TempPath} to {AppPath}", tempAppPath, appPath);
+
+                // Delete old App folder
+                if (Directory.Exists(appPath))
+                {
+                    Directory.Delete(appPath, true);
+                    Logger.Info("Deleted old App folder");
+                }
+
+                // Move temp folder to App
+                Directory.Move(tempAppPath, appPath);
+
+                Logger.Info("New version moved successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to move new version");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Save version information
+        /// </summary>
         private void SaveVersionInfo(string appCode, string binaryVersion, string configVersion)
         {
             if (!string.IsNullOrEmpty(binaryVersion))
             {
-                var versionFile = Path.Combine(_appBasePath, $"{appCode}/App", "version.txt");
+                var versionFile = Path.Combine(_appBasePath, appCode, "App", "version.txt");
                 var versionDir = Path.GetDirectoryName(versionFile);
 
                 if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
@@ -376,12 +554,12 @@ namespace ClientLauncher.Services
                 }
 
                 File.WriteAllText(versionFile, binaryVersion);
-                Logger.Info("Saved version {Version} to {Path}", binaryVersion, versionFile);
+                Logger.Info("Saved binary version {Version} to {Path}", binaryVersion, versionFile);
             }
 
             if (!string.IsNullOrEmpty(configVersion))
             {
-                var configVersionFile = Path.Combine(_appBasePath, $"{appCode}/Config", "version.txt");
+                var configVersionFile = Path.Combine(_appBasePath, appCode, "Config", "version.txt");
                 var versionDir = Path.GetDirectoryName(configVersionFile);
 
                 if (!string.IsNullOrEmpty(versionDir) && !Directory.Exists(versionDir))
@@ -390,12 +568,21 @@ namespace ClientLauncher.Services
                 }
 
                 File.WriteAllText(configVersionFile, configVersion);
-                Logger.Info("Saved version {Version} to {Path}", configVersion, configVersionFile);
+                Logger.Info("Saved config version {Version} to {Path}", configVersion, configVersionFile);
             }
-
         }
 
-        private async Task NotifyInstallationAsync(string appCode, string version, bool success, TimeSpan duration, string? error = null, string? oldVersion = null, string action = "Install")
+        /// <summary>
+        /// Notify server
+        /// </summary>
+        private async Task NotifyInstallationAsync(
+            string appCode,
+            string version,
+            bool success,
+            TimeSpan duration,
+            string? error = null,
+            string? oldVersion = null,
+            string action = "Install")
         {
             try
             {
@@ -428,7 +615,7 @@ namespace ClientLauncher.Services
                 }
                 else
                 {
-                    Logger.Warn($"Failed to log installation: {response.StatusCode}");
+                    Logger.Warn("Failed to log installation: {StatusCode}", response.StatusCode);
                 }
             }
             catch (Exception ex)
@@ -437,11 +624,6 @@ namespace ClientLauncher.Services
             }
         }
 
-        #region Rollback and Error Tracking Methods
-
-        /// <summary>
-        /// Gets the current installed version from version.txt
-        /// </summary>
         private string? GetCurrentVersion(string appCode, string folder)
         {
             try
@@ -459,10 +641,46 @@ namespace ClientLauncher.Services
             return null;
         }
 
-        /// <summary>
-        /// Performs rollback by restoring from backup
-        /// CRITICAL: Khôi phục TOÀN BỘ từ backup - bao gồm version.txt và manifest.json
-        /// </summary>
+        private string? GetVersionFromBackup(string backupPath)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(backupPath) && Directory.Exists(backupPath))
+                {
+                    var backupVersionFile = Path.Combine(backupPath, "App", "version.txt");
+                    if (File.Exists(backupVersionFile))
+                    {
+                        return File.ReadAllText(backupVersionFile).Trim();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to read version from backup");
+            }
+            return null;
+        }
+
+        private async Task CreateBackupAsync(string appCode, string backupPath)
+        {
+            var appPath = Path.Combine(_appBasePath, appCode, "App");
+            var manifestPath = Path.Combine(_appBasePath, appCode, "manifest.json");
+
+            if (Directory.Exists(appPath))
+            {
+                CopyDirectory(appPath, Path.Combine(backupPath, "App"));
+                Logger.Info("Created backup of App folder at {BackupPath}", backupPath);
+            }
+
+            if (File.Exists(manifestPath))
+            {
+                var backupManifestPath = Path.Combine(backupPath, "manifest.json");
+                Directory.CreateDirectory(backupPath);
+                File.Copy(manifestPath, backupManifestPath, true);
+                Logger.Info("Backed up manifest.json");
+            }
+        }
+
         private async Task PerformRollbackAsync(string appCode, string backupPath)
         {
             try
@@ -505,13 +723,6 @@ namespace ClientLauncher.Services
                 // 4. Verify rollback
                 var restoredVersion = GetCurrentVersion(appCode, "App");
                 Logger.Info("Rollback completed successfully to version {Version}", restoredVersion ?? "unknown");
-
-                // 5. Clean up backup after successful rollback
-                if (Directory.Exists(backupPath))
-                {
-                    Directory.Delete(backupPath, true);
-                    Logger.Info("Deleted backup after successful rollback");
-                }
             }
             catch (Exception ex)
             {
@@ -540,9 +751,41 @@ namespace ClientLauncher.Services
             }
         }
 
+        private void DeleteBackupSafely(string? backupPath)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(backupPath) && Directory.Exists(backupPath))
+                {
+                    Directory.Delete(backupPath, true);
+                    Logger.Info("Deleted backup: {BackupPath}", backupPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to delete backup (non-critical): {BackupPath}", backupPath);
+            }
+        }
+
         /// <summary>
-        /// Marks an update as failed to prevent retry loops
+        /// Delete temp folder safely
         /// </summary>
+        private void DeleteTempFolderSafely(string? tempPath)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(tempPath) && Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                    Logger.Info("Deleted temp folder: {TempPath}", tempPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to delete temp folder (non-critical): {TempPath}", tempPath);
+            }
+        }
+
         private async Task MarkUpdateAsFailedAsync(string appCode, string failedVersion)
         {
             try
@@ -576,8 +819,6 @@ namespace ClientLauncher.Services
                 if (File.Exists(failureMarkerPath))
                 {
                     var content = await File.ReadAllTextAsync(failureMarkerPath);
-                    var failureData = JsonSerializer.Deserialize<Dictionary<string, object>>(content);
-
                     Logger.Info("Found previous update failure marker: {Data}", content);
                     return true;
                 }
