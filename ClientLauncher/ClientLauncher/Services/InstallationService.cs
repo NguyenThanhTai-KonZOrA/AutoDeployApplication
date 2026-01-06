@@ -108,9 +108,32 @@ namespace ClientLauncher.Services
         public async Task<InstallationResult> UpdateApplicationAsync(string appCode, string userName)
         {
             var stopwatch = Stopwatch.StartNew();
+            string? currentBinaryVersion = null;
+            string? currentConfigVersion = null;
+            string? newVersion = null;
+
             try
             {
                 Logger.Info("Starting update for {AppCode}", appCode);
+
+                // Get current version before update
+                currentBinaryVersion = GetCurrentVersion(appCode, "App");
+                currentConfigVersion = GetCurrentVersion(appCode, "Config");
+                Logger.Info("Current version - Binary: {BinaryVersion}, Config: {ConfigVersion}",
+                    currentBinaryVersion ?? "N/A", currentConfigVersion ?? "N/A");
+
+                // Check if this version has failed before
+                if (await HasUpdateFailedBeforeAsync(appCode))
+                {
+                    Logger.Warn("Update was previously attempted and failed for {AppCode}", appCode);
+                    return new InstallationResult
+                    {
+                        Success = false,
+                        Message = "Bản cập nhật mới đang có lỗi. Hệ thống đã tự động rollback về phiên bản cũ. Vui lòng thử lại sau.",
+                        ErrorDetails = "Previous update attempt failed, automatic rollback applied",
+                        InstalledVersion = currentBinaryVersion
+                    };
+                }
 
                 // 1. Get latest manifest from server
                 var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
@@ -119,8 +142,9 @@ namespace ClientLauncher.Services
                     throw new Exception("Failed to retrieve manifest from server");
                 }
 
+                newVersion = manifest.Binary?.Version;
                 var updateType = manifest.UpdatePolicy?.Type ?? "both";
-                Logger.Info("Update type: {UpdateType}", updateType);
+                Logger.Info("Update type: {UpdateType}, New version: {NewVersion}", updateType, newVersion);
 
                 var appPath = Path.Combine(_appBasePath, appCode, "App");
                 var configPath = Path.Combine(_appBasePath, appCode, "Config");
@@ -129,7 +153,7 @@ namespace ClientLauncher.Services
                 // 2. Backup current installation
                 if (Directory.Exists(appPath))
                 {
-                    Directory.Move(appPath, backupPath);
+                    CopyDirectory(appPath, backupPath);
                     Logger.Info("Created backup at {BackupPath}", backupPath);
                 }
 
@@ -176,60 +200,71 @@ namespace ClientLauncher.Services
                         }
                     }
 
-                    stopwatch.Stop();
-                    await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty,
-                        true, stopwatch.Elapsed, null, null, "Update");
-
                     // Update version info
                     SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
 
                     // Update local manifest
                     await _manifestService.SaveManifestAsync(appCode, manifest);
 
+                    // Clear failed update marker on success
+                    await ClearUpdateFailureMarkerAsync(appCode);
+
                     // Delete backup on success
                     if (Directory.Exists(backupPath))
                     {
                         Directory.Delete(backupPath, true);
-                        Logger.Info("Deleted backup");
-                    }
-
-                    Logger.Info("Update completed for {AppCode}", appCode);
-                    return new InstallationResult
-                    {
-                        Success = true,
-                        Message = "Update completed successfully",
-                        InstalledVersion = manifest.Binary?.Version
-                    };
-                }
-                catch
-                {
-                    // Rollback on error
-                    if (Directory.Exists(appPath))
-                    {
-                        Directory.Delete(appPath, true);
-                    }
-                    if (Directory.Exists(backupPath))
-                    {
-                        Directory.Move(backupPath, appPath);
-                        Logger.Info("Rolled back to backup");
+                        Logger.Info("Deleted backup after successful update");
                     }
 
                     stopwatch.Stop();
                     await NotifyInstallationAsync(appCode, manifest.Binary?.Version ?? string.Empty,
-                        false, stopwatch.Elapsed, "Rolled back to backup", null, "Update");
-                    throw;
+                        true, stopwatch.Elapsed, null, currentBinaryVersion, "Update");
+
+                    Logger.Info("Update completed successfully for {AppCode}", appCode);
+                    return new InstallationResult
+                    {
+                        Success = true,
+                        Message = $"Update successful from version {currentBinaryVersion} to {newVersion}",
+                        InstalledVersion = manifest.Binary?.Version
+                    };
+                }
+                catch (Exception updateEx)
+                {
+                    Logger.Error(updateEx, "Update failed, attempting rollback for {AppCode}", appCode);
+
+                    // Rollback on error
+                    await PerformRollbackAsync(appCode, appPath, backupPath, currentBinaryVersion, currentConfigVersion);
+
+                    // Mark this update as failed
+                    await MarkUpdateAsFailedAsync(appCode, newVersion ?? "unknown");
+
+                    stopwatch.Stop();
+                    await NotifyInstallationAsync(appCode, newVersion ?? string.Empty,
+                        false, stopwatch.Elapsed, $"Update failed: {updateEx.Message}. Rolled back to version {currentBinaryVersion}",
+                        currentBinaryVersion, "Update");
+
+                    return new InstallationResult
+                    {
+                        Success = false,
+                        Message = $"New version is ({newVersion}) has an error. The system has automatically rolled back to the previous version ({currentBinaryVersion}). Please try again later.",
+                        ErrorDetails = updateEx.Message,
+                        InstalledVersion = currentBinaryVersion
+                    };
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "Update failed for {AppCode}", appCode);
                 stopwatch.Stop();
-                await NotifyInstallationAsync(appCode, string.Empty, false, stopwatch.Elapsed, ex.Message, null, "Update");
+                await NotifyInstallationAsync(appCode, newVersion ?? string.Empty, false, stopwatch.Elapsed,
+                    ex.Message, currentBinaryVersion, "Update");
+
                 return new InstallationResult
                 {
                     Success = false,
-                    Message = "Update failed",
-                    ErrorDetails = ex.Message
+                    Message = "Cannot update application. Please try again later.",
+                    ErrorDetails = ex.Message,
+                    InstalledVersion = currentBinaryVersion
                 };
             }
         }
@@ -378,5 +413,162 @@ namespace ClientLauncher.Services
                 Logger.Warn(ex, "Failed to notify server about installation (non-critical)");
             }
         }
+
+        #region Rollback and Error Tracking Methods
+
+        /// <summary>
+        /// Gets the current installed version from version.txt
+        /// </summary>
+        private string? GetCurrentVersion(string appCode, string folder)
+        {
+            try
+            {
+                var versionFile = Path.Combine(_appBasePath, appCode, folder, "version.txt");
+                if (File.Exists(versionFile))
+                {
+                    return File.ReadAllText(versionFile).Trim();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to read current version for {AppCode}/{Folder}", appCode, folder);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Performs rollback by restoring from backup
+        /// </summary>
+        private async Task PerformRollbackAsync(string appCode, string appPath, string backupPath,
+            string? binaryVersion, string? configVersion)
+        {
+            try
+            {
+                Logger.Info("Starting rollback for {AppCode}", appCode);
+
+                // Delete failed update
+                if (Directory.Exists(appPath))
+                {
+                    Directory.Delete(appPath, true);
+                    Logger.Info("Deleted failed update at {Path}", appPath);
+                }
+
+                // Restore from backup
+                if (Directory.Exists(backupPath))
+                {
+                    CopyDirectory(backupPath, appPath);
+                    Logger.Info("Restored from backup {BackupPath} to {AppPath}", backupPath, appPath);
+
+                    // Restore version info
+                    if (!string.IsNullOrEmpty(binaryVersion))
+                    {
+                        SaveVersionInfo(appCode, binaryVersion, configVersion ?? "0.0.0");
+                    }
+
+                    // Keep backup for safety (will be cleaned up later)
+                    Logger.Info("Rollback completed successfully");
+                }
+                else
+                {
+                    Logger.Error("Backup not found at {BackupPath}, cannot rollback", backupPath);
+                    throw new Exception("Backup not found, cannot perform rollback");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Rollback failed for {AppCode}", appCode);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Copies directory recursively
+        /// </summary>
+        private void CopyDirectory(string sourceDir, string destDir)
+        {
+            Directory.CreateDirectory(destDir);
+
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
+                CopyDirectory(dir, destSubDir);
+            }
+        }
+
+        /// <summary>
+        /// Marks an update as failed to prevent retry loops
+        /// </summary>
+        private async Task MarkUpdateAsFailedAsync(string appCode, string failedVersion)
+        {
+            try
+            {
+                var failureMarkerPath = Path.Combine(_appBasePath, appCode, ".update_failed");
+                var failureData = new
+                {
+                    FailedVersion = failedVersion,
+                    Timestamp = DateTime.UtcNow,
+                    MachineName = Environment.MachineName
+                };
+
+                await File.WriteAllTextAsync(failureMarkerPath, JsonSerializer.Serialize(failureData));
+                Logger.Info("Marked update as failed for version {Version}", failedVersion);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to mark update as failed (non-critical)");
+            }
+        }
+
+        /// <summary>
+        /// Checks if an update has previously failed
+        /// </summary>
+        private async Task<bool> HasUpdateFailedBeforeAsync(string appCode)
+        {
+            try
+            {
+                var failureMarkerPath = Path.Combine(_appBasePath, appCode, ".update_failed");
+                if (File.Exists(failureMarkerPath))
+                {
+                    var content = await File.ReadAllTextAsync(failureMarkerPath);
+                    var failureData = JsonSerializer.Deserialize<Dictionary<string, object>>(content);
+
+                    Logger.Info("Found previous update failure marker: {Data}", content);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to check update failure marker (non-critical)");
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Clears the update failure marker after successful update
+        /// </summary>
+        private async Task ClearUpdateFailureMarkerAsync(string appCode)
+        {
+            try
+            {
+                var failureMarkerPath = Path.Combine(_appBasePath, appCode, ".update_failed");
+                if (File.Exists(failureMarkerPath))
+                {
+                    File.Delete(failureMarkerPath);
+                    Logger.Info("Cleared update failure marker");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to clear update failure marker (non-critical)");
+            }
+        }
+
+        #endregion
     }
 }

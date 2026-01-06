@@ -15,7 +15,7 @@ namespace ClientLauncher
 
             try
             {
-                // ✅ FIX: Ensure NLog is configured
+                // Ensure NLog is configured
                 var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "NLog.config");
                 if (File.Exists(configPath))
                 {
