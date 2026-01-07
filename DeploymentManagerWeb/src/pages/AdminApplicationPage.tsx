@@ -46,6 +46,7 @@ import {
     Upload as UploadIcon,
     AttachFile as AttachFileIcon,
     FilterListOff as FilterListOffIcon,
+    FilterList as FilterListIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -116,7 +117,7 @@ export default function AdminApplicationPage() {
         ConfigVersion: "",
         ConfigPackage: "",
         ConfigMergeStrategy: "Replace",
-        UpdateType: "Optional",
+        UpdateType: "Binary",
         ForceUpdate: false,
         ReleaseNotes: "",
         IsStable: true,
@@ -189,7 +190,7 @@ export default function AdminApplicationPage() {
 
     const loadApplications = async () => {
         try {
-            setLoading(true);
+            //setLoading(true);
             setError(null);
             const data = await applicationService.getAllApplications();
             setApplications(data);
@@ -230,7 +231,7 @@ export default function AdminApplicationPage() {
             ConfigVersion: "",
             ConfigPackage: "",
             ConfigMergeStrategy: "Replace",
-            UpdateType: "Optional",
+            UpdateType: "Binary",
             ForceUpdate: false,
             ReleaseNotes: "",
             IsStable: true,
@@ -287,7 +288,7 @@ export default function AdminApplicationPage() {
                     ConfigVersion: manifest.configVersion || "",
                     ConfigPackage: manifest.configPackage || "",
                     ConfigMergeStrategy: manifest.configMergeStrategy || "Replace",
-                    UpdateType: manifest.updateType || "Optional",
+                    UpdateType: manifest.updateType || "Binary",
                     ForceUpdate: manifest.forceUpdate || false,
                     ReleaseNotes: manifest.releaseNotes || "",
                     IsStable: manifest.isStable !== undefined ? manifest.isStable : true,
@@ -305,7 +306,7 @@ export default function AdminApplicationPage() {
                 ConfigVersion: "",
                 ConfigPackage: "",
                 ConfigMergeStrategy: "Replace",
-                UpdateType: "Optional",
+                UpdateType: "Binary",
                 ForceUpdate: false,
                 ReleaseNotes: "",
                 IsStable: true,
@@ -1028,6 +1029,9 @@ export default function AdminApplicationPage() {
                 {/* Search and Actions */}
                 <Card sx={{ mb: 3 }}>
                     <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                            <FilterListIcon sx={{ mr: 1 }} /> Filters
+                        </Typography>
                         <Grid container spacing={2} alignItems="center">
                             {/* Row 1: Search and Filters */}
                             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
@@ -1581,7 +1585,7 @@ export default function AdminApplicationPage() {
                                         helperText={manifestFormErrors.BinaryPackage ? "Binary Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                {/* <Grid size={{ xs: 12, sm: 6 }}>
                                     <TextField
                                         label="Config Version"
                                         fullWidth
@@ -1614,8 +1618,8 @@ export default function AdminApplicationPage() {
                                         disabled={dialogLoading}
                                     //helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
                                     />
-                                </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
+                                </Grid> */}
+                                {/* <Grid size={{ xs: 12, sm: 6 }}>
                                     <FormControl fullWidth disabled={dialogLoading}>
                                         <InputLabel>Config Merge Strategy</InputLabel>
                                         <Select
@@ -1628,7 +1632,7 @@ export default function AdminApplicationPage() {
                                             <MenuItem value="PreserveLocal">Preserve Local</MenuItem>
                                         </Select>
                                     </FormControl>
-                                </Grid>
+                                </Grid> */}
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <FormControl fullWidth disabled={dialogLoading}>
                                         <InputLabel>Update Type</InputLabel>
@@ -1638,14 +1642,39 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config">Config</MenuItem>
-                                            <MenuItem value="Both">Both</MenuItem>
+                                            <MenuItem value="Config" disabled>Config</MenuItem>
+                                            <MenuItem value="Both" disabled>Both</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>
 
+                                <Grid size={{ xs: 12, sm: 6 }}>
+                                    <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={manifestFormData.ForceUpdate}
+                                                    onChange={(e) => handleManifestFormChange("ForceUpdate", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Force Update"
+                                        />
+                                        {/* <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={manifestFormData.IsStable}
+                                                    onChange={(e) => handleManifestFormChange("IsStable", e.target.checked)}
+                                                    disabled={dialogLoading}
+                                                />
+                                            }
+                                            label="Is Stable"
+                                        /> */}
+                                    </Box>
+                                </Grid>
+
                                 {/* Config Files Management Section */}
-                                <Grid size={{ xs: 12 }}>
+                                {/* <Grid size={{ xs: 12 }}>
                                     <Box sx={{ mt: 2, mb: 1 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                             Config Files
@@ -1654,10 +1683,10 @@ export default function AdminApplicationPage() {
                                             Manage configuration file update policies and priorities
                                         </Typography>
                                     </Box>
-                                </Grid>
+                                </Grid> */}
 
                                 {/* Add Config File Form */}
-                                <Grid size={{ xs: 12 }}>
+                                {/* <Grid size={{ xs: 12 }}>
                                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
                                         <Typography variant="body2" fontWeight={600} sx={{ mb: 2 }}>
                                             Add Config File
@@ -1715,10 +1744,10 @@ export default function AdminApplicationPage() {
                                             </Grid>
                                         </Grid>
                                     </Paper>
-                                </Grid>
+                                </Grid> */}
 
                                 {/* Config Files List */}
-                                {manifestFormData.ConfigFiles.length > 0 && (
+                                {/* {manifestFormData.ConfigFiles.length > 0 && (
                                     <Grid size={{ xs: 12 }}>
                                         <TableContainer component={Paper} variant="outlined">
                                             <Table size="small">
@@ -1769,7 +1798,7 @@ export default function AdminApplicationPage() {
                                             </Table>
                                         </TableContainer>
                                     </Grid>
-                                )}
+                                )} */}
 
                                 <Grid size={{ xs: 12 }}>
                                     <TextField
@@ -1793,30 +1822,7 @@ export default function AdminApplicationPage() {
                                         InputLabelProps={{ shrink: true }}
                                     />
                                 </Grid> */}
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={manifestFormData.ForceUpdate}
-                                                    onChange={(e) => handleManifestFormChange("ForceUpdate", e.target.checked)}
-                                                    disabled={dialogLoading}
-                                                />
-                                            }
-                                            label="Force Update"
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={manifestFormData.IsStable}
-                                                    onChange={(e) => handleManifestFormChange("IsStable", e.target.checked)}
-                                                    disabled={dialogLoading}
-                                                />
-                                            }
-                                            label="Is Stable"
-                                        />
-                                    </Box>
-                                </Grid>
+
                             </Grid>
                         </Box>
                     </TabPanel>
@@ -1907,8 +1913,8 @@ export default function AdminApplicationPage() {
                                             }}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config">Config</MenuItem>
-                                            <MenuItem value="Full">Full Package</MenuItem>
+                                            <MenuItem value="Config" disabled>Config</MenuItem>
+                                            {/* <MenuItem value="Full">Full Package</MenuItem> */}
                                         </Select>
                                         {packageFormErrors.PackageType && (
                                             <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>

@@ -28,6 +28,7 @@ import {
     Apps as AppIcon,
     Category as CategoryIcon,
     FileDownloadDone as FileDownloadDoneIcon,
+    Filter9Plus as Filter9PlusIcon,
 } from '@mui/icons-material';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { usePermission } from '../../hooks/usePermission';
@@ -61,6 +62,13 @@ const navItems: NavItem[] = [
         title: 'Packages Management',
         href: '/admin-package',
         icon: FileDownloadDoneIcon,
+        //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
+    },
+    {
+        key: 'icons',
+        title: 'Icons Management',
+        href: '/admin-icons',
+        icon: Filter9PlusIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
     {

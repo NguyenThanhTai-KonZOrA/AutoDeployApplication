@@ -16,6 +16,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
         public DbSet<ApplicationCategory> ApplicationCategories { get; set; }
         public DbSet<DownloadStatistic> DownloadStatistics { get; set; }
         public DbSet<ApplicationManifest> ApplicationManifests { get; set; }
+        public DbSet<Icons> Icons { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -150,6 +151,20 @@ namespace ClientLancher.Implement.ApplicationDbContext
                     .WithMany()
                     .HasForeignKey(e => e.ApplicationId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Icons Configuration
+            modelBuilder.Entity<Icons>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => new { e.Type, e.ReferenceId });
+                entity.HasIndex(e => e.Type);
+
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.FilePath).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.FileUrl).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.FileExtension).IsRequired().HasMaxLength(10);
+                entity.Property(e => e.Type).IsRequired();
             });
         }
     }

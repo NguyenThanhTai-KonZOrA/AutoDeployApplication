@@ -83,6 +83,7 @@ try
     builder.Services.AddScoped<IDeploymentHistoryRepository, DeploymentHistoryRepository>();
     builder.Services.AddScoped<IApplicationCategoryRepository, ApplicationCategoryRepository>();
     builder.Services.AddScoped<IDownloadStatisticRepository, DownloadStatisticRepository>();
+    builder.Services.AddScoped<IIconsRepository, IconsRepository>();
 
     // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -102,6 +103,7 @@ try
     builder.Services.AddScoped<IApplicationManifestRepository, ApplicationManifestRepository>();
     builder.Services.AddScoped<IManifestManagementService, ManifestManagementService>();
     builder.Services.AddScoped<IInstallationLogService, InstallationLogService>();
+    builder.Services.AddScoped<IIconsService, IconsService>();
 
     // Add CORS if needed
     builder.Services.AddCors(options =>

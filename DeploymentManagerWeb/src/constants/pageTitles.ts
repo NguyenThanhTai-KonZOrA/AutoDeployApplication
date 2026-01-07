@@ -18,6 +18,7 @@ export const PAGE_TITLES = {
     TICKET_ARCHIVED: "Ticket Archived",
     APPLICATIONS: "Application Management",
     CATEGORIES: "Category Management",
+    ICONS: "Icon Management",
     INSTALLATION_LOGS: "Installation Logs",
     PACKAGES: "Package Management",
     REPORT_BY_APPLICATION: "Installation Report by Application",

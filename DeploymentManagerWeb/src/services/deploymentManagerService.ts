@@ -7,6 +7,7 @@ import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/ca
 import type { InstallationLogRequest, InstallationLogPaginationResponse, InstallationReportResponse, InstallationReportRequest } from "../type/installationLogType";
 import type { ApplicationPackageHistoryResponse, ApplicationPackageResponse, PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
 import type { AnalyticDashboardResponse } from "../type/dashboardType";
+import type { CreateIconRequest, IconResponse, UpdateIconRequest } from "../type/iconType";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
@@ -220,6 +221,46 @@ export const packageManagementService = {
 export const dashboardService = {
     getDashboardData: async (): Promise<AnalyticDashboardResponse> => {
         const response = await api.get(`/api/Analytics/Dashboard`);
+        return unwrapApiEnvelope(response);
+    }
+};
+
+export const iconService = {
+    createIcon: async (formData: FormData): Promise<IconResponse> => {
+        const response = await api.post(`/api/Icons/create`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return unwrapApiEnvelope(response);
+    },
+
+    updateIcon: async (id: number, formData: FormData): Promise<IconResponse> => {
+        const response = await api.post(`/api/Icons/update/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return unwrapApiEnvelope(response);
+    },
+
+    deleteIcon: async (id: number): Promise<void> => {
+        const response = await api.post(`/api/Icons/delete/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getIconDetail: async (id: number): Promise<IconResponse> => {
+        const response = await api.get(`/api/Icons/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getIconByType: async (type: number): Promise<IconResponse[]> => {
+        const response = await api.get(`/api/Icons/type/${type}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getAllIcons: async (): Promise<IconResponse[]> => {
+        const response = await api.get(`/api/Icons/all`);
         return unwrapApiEnvelope(response);
     }
 };
