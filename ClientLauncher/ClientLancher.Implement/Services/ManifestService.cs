@@ -1,7 +1,6 @@
 ﻿using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.ViewModels;
 using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -9,6 +8,7 @@ namespace ClientLancher.Implement.Services
 {
     public class ManifestService : IManifestService
     {
+        #region Init Constructor
         private readonly string _appsBasePath;
         private readonly ILogger<ManifestService> _logger;
         private readonly HttpClient _httpClient;
@@ -22,7 +22,15 @@ namespace ClientLancher.Implement.Services
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
             _deploymentSettings = deploymentSettings;
         }
+        #endregion
 
+        #region Main Methods
+
+        /// <summary>
+        /// GetManifestAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
         public async Task<AppManifest?> GetManifestAsync(string appCode)
         {
             var appFolder = Path.Combine(_appsBasePath, appCode);
@@ -190,6 +198,12 @@ namespace ClientLancher.Implement.Services
             }
         }
 
+        /// <summary>
+        /// UpdateManifestAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="manifest"></param>
+        /// <returns></returns>
         public async Task UpdateManifestAsync(string appCode, AppManifest manifest)
         {
             var appFolder = Path.Combine(_appsBasePath, appCode);
@@ -318,6 +332,11 @@ namespace ClientLancher.Implement.Services
             }
         }
 
+        /// <summary>
+        /// CreateDefaultManifest
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
         private AppManifest CreateDefaultManifest(string appCode)
         {
             _logger.LogInformation("Creating default manifest for {AppCode}", appCode);
@@ -343,5 +362,6 @@ namespace ClientLancher.Implement.Services
                 }
             };
         }
+        #endregion
     }
 }

@@ -1,6 +1,4 @@
-﻿using ClientLauncher.Models;
-
-namespace ClientLauncher.Services.Interface
+﻿namespace ClientLauncher.Services.Interface
 {
     public interface IVersionCheckService
     {

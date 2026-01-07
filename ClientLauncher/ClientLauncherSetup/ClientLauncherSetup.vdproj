@@ -21,7 +21,7 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_D4B7BE7026344976B3696C9E997A94D7"
+        "MsmKey" = "8:_260911A0F950455DBB582144CD47532F"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
@@ -76,16 +76,26 @@
         {
             "LaunchCondition"
             {
+                "{A06ECF26-33A3-4562-8140-9B0E340D4F24}:_22217ADE26DF4283B672560466CB64F5"
+                {
+                "Name" = "8:.NET Core"
+                "Message" = "8:[VSDNETCOREMSG]"
+                "AllowLaterVersions" = "11:FALSE"
+                "InstallUrl" = "8:https://dotnet.microsoft.com/download/dotnet-core/[NetCoreVerMajorDotMinor]"
+                "IsNETCore" = "11:TRUE"
+                "Architecture" = "2:0"
+                "Runtime" = "2:0"
+                }
             }
         }
         "File"
         {
-            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_D4B7BE7026344976B3696C9E997A94D7"
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_260911A0F950455DBB582144CD47532F"
             {
             "SourcePath" = "8:..\\ClientLauncher\\Assets\\Icons\\ClientLauncherApplogo.ico"
             "TargetName" = "8:ClientLauncherApplogo.ico"
             "Tag" = "8:"
-            "Folder" = "8:_99C3019CDBFC403B8DF680FC96403154"
+            "Folder" = "8:_67296F2ADB5C4F1B946550C5C35BE2E4"
             "Condition" = "8:"
             "Transitive" = "11:FALSE"
             "Vital" = "11:TRUE"
@@ -157,7 +167,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:ClientLauncherSetup"
         "ProductCode" = "8:{E11B0794-D16F-4933-981D-2600DF05DC4E}"
-        "PackageCode" = "8:{9C732D9C-B534-4994-A210-B4F2884D1CBF}"
+        "PackageCode" = "8:{D0B38CEE-9CBE-48CC-98DE-B701B84708E0}"
         "UpgradeCode" = "8:{8FE154EF-166F-4BA7-9F3E-179D5CE44295}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
@@ -288,7 +298,7 @@
             "Target" = "8:_136F5DC9305F431C8D019AE3F539DDF2"
             "Folder" = "8:_99C3019CDBFC403B8DF680FC96403154"
             "WorkingFolder" = "8:_67296F2ADB5C4F1B946550C5C35BE2E4"
-            "Icon" = "8:_D4B7BE7026344976B3696C9E997A94D7"
+            "Icon" = "8:_260911A0F950455DBB582144CD47532F"
             "Feature" = "8:"
             }
         }

@@ -24,7 +24,7 @@ namespace ClientLauncher.Models
         public bool HasConfigUpdate { get; set; }
         public string StatusText { get; set; } = "Not Installed";
 
-        // NEW: For multi-selection with property changed notification
+        //  For multi-selection with property changed notification
         private bool _isSelected;
         public bool IsSelected
         {

@@ -3,6 +3,7 @@ using ClientLauncher.Models;
 using ClientLauncher.Services;
 using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -12,12 +13,13 @@ namespace ClientLauncher.ViewModels
 {
     public class LaunchViewModel : ViewModelBase
     {
+        #region Init Contructor and Services
         private readonly IManifestService _manifestService;
         private readonly IVersionCheckService _versionCheckService;
         private readonly IInstallationService _installationService;
         private readonly IInstallationChecker _installationChecker;
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
+        private readonly string _appBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
         private string _appCode = string.Empty;
         private string _statusMessage = "Initializing...";
         private double _progressValue;
@@ -29,35 +31,30 @@ namespace ClientLauncher.ViewModels
             get => _appCode;
             set => SetProperty(ref _appCode, value);
         }
-
         private string _appName = "Loading...";
         public string AppName
         {
             get => _appName;
             set => SetProperty(ref _appName, value);
         }
-
         private string _statusEmoji = "🚀";
         public string StatusEmoji
         {
             get => _statusEmoji;
             set => SetProperty(ref _statusEmoji, value);
         }
-
         private bool _isIndeterminate = true;
         public bool IsIndeterminate
         {
             get => _isIndeterminate;
             set => SetProperty(ref _isIndeterminate, value);
         }
-
         private bool _canCancel = true;
         public bool CanCancel
         {
             get => _canCancel;
             set => SetProperty(ref _canCancel, value);
         }
-
         // Properties for update prompt
         private bool _showUpdatePrompt;
         public bool ShowUpdatePrompt
@@ -65,23 +62,19 @@ namespace ClientLauncher.ViewModels
             get => _showUpdatePrompt;
             set => SetProperty(ref _showUpdatePrompt, value);
         }
-
         private string _updateMessage = string.Empty;
         public string UpdateMessage
         {
             get => _updateMessage;
             set => SetProperty(ref _updateMessage, value);
         }
-
         private bool _forceUpdate;
         public bool ForceUpdate
         {
             get => _forceUpdate;
             set => SetProperty(ref _forceUpdate, value);
         }
-
         public RelayCommand CancelCommand { get; }
-
         public string StatusMessage
         {
             get => _statusMessage;
@@ -94,7 +87,6 @@ namespace ClientLauncher.ViewModels
                 }, DispatcherPriority.Normal);
             }
         }
-
         public double ProgressValue
         {
             get => _progressValue;
@@ -107,13 +99,11 @@ namespace ClientLauncher.ViewModels
                 }, DispatcherPriority.Normal);
             }
         }
-
         public bool IsProcessing
         {
             get => _isProcessing;
             set => SetProperty(ref _isProcessing, value);
         }
-
         public LaunchViewModel(string appCode, Window window)
         {
             _appCode = appCode;
@@ -132,7 +122,14 @@ namespace ClientLauncher.ViewModels
                 await InitializeAndLaunchAsync();
             }, DispatcherPriority.Background);
         }
+        #endregion
 
+        #region Main Launch Logic
+
+        /// <summary>
+        /// InitializeAndLaunchAsync
+        /// </summary>
+        /// <returns></returns>
         private async Task InitializeAndLaunchAsync()
         {
             try
@@ -432,7 +429,7 @@ namespace ClientLauncher.ViewModels
                                 StatusEmoji = "❌";
                                 await Task.Delay(1000);
 
-                                var appPath = Path.Combine(@"C:\CompanyApps", AppCode, "App");
+                                var appPath = Path.Combine(_appBasePath, AppCode, "App");
                                 var backupLocation = updateResult.BackupPath;
 
                                 MessageBox.Show(
@@ -738,7 +735,7 @@ namespace ClientLauncher.ViewModels
                     Logger.Error("Application executable not found at: {Path}", appPath ?? "NULL");
 
                     // Log all files in App directory for debugging
-                    var appDir = Path.Combine(@"C:\CompanyApps", AppCode, "App");
+                    var appDir = Path.Combine(_appBasePath, AppCode, "App");
                     if (Directory.Exists(appDir))
                     {
                         var files = Directory.GetFiles(appDir, "*.*", SearchOption.AllDirectories);
@@ -821,7 +818,7 @@ namespace ClientLauncher.ViewModels
         /// </summary>
         private string GetApplicationPath()
         {
-            var appBasePath = Path.Combine(@"C:\CompanyApps", AppCode, "App");
+            var appBasePath = Path.Combine(_appBasePath, AppCode, "App");
 
             if (!Directory.Exists(appBasePath))
             {
@@ -880,7 +877,7 @@ namespace ClientLauncher.ViewModels
                 Logger.Error("Expected .exe at: {Path}", appPath ?? "NULL");
 
                 // Log all files for debugging
-                var appDir = Path.Combine(@"C:\CompanyApps", AppCode, "App");
+                var appDir = Path.Combine(_appBasePath, AppCode, "App");
                 if (Directory.Exists(appDir))
                 {
                     var files = Directory.GetFiles(appDir, "*.*", SearchOption.AllDirectories);
@@ -895,5 +892,6 @@ namespace ClientLauncher.ViewModels
             Logger.Info("✅ Verification PASSED - Executable found at: {Path}", appPath);
             return true;
         }
+        #endregion
     }
 }

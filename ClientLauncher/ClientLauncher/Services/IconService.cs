@@ -5,6 +5,7 @@ using System.Windows.Media.Imaging;
 
 public class IconService : IIconService
 {
+    #region Init Constructor
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
     private readonly Dictionary<string, string> _categoryIcons;
     private const string DefaultIcon = "pack://application:,,,/Assets/Icons/app_default.ico";
@@ -21,7 +22,16 @@ public class IconService : IIconService
 
         Logger.Debug("IconService initialized with {Count} category mappings", _categoryIcons.Count);
     }
+    #endregion
 
+    #region Main Methods
+
+    /// <summary>
+    /// GetAppIcon
+    /// </summary>
+    /// <param name="iconUrl"></param>
+    /// <param name="category"></param>
+    /// <returns></returns>
     public BitmapImage GetAppIcon(string iconUrl, string category)
     {
         try
@@ -112,6 +122,12 @@ public class IconService : IIconService
         }
     }
 
+    /// <summary>
+    /// GetIconPath
+    /// </summary>
+    /// <param name="iconUrl"></param>
+    /// <param name="category"></param>
+    /// <returns></returns>
     public string GetIconPath(string iconUrl, string category)
     {
         if (!string.IsNullOrEmpty(iconUrl))
@@ -211,4 +227,5 @@ public class IconService : IIconService
             return null;
         }
     }
+    #endregion
 }

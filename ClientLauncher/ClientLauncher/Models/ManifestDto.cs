@@ -11,7 +11,7 @@
         {
             public string Version { get; set; } = string.Empty;
             public string Package { get; set; } = string.Empty;
-            public List<string> Files { get; set; } = new(); // NEW: Specific files to update
+            public List<string> Files { get; set; } = new(); //  Specific files to update
         }
 
         public class ConfigInfo
@@ -24,7 +24,7 @@
             /// </summary>
             public string MergeStrategy { get; set; } = "preserveLocal";
 
-            // NEW: Selective file update configuration
+            //  Selective file update configuration
             public List<ConfigFilePolicy> Files { get; set; } = new();
         }
 
@@ -52,7 +52,7 @@
 
             public bool Force { get; set; }
 
-            // NEW: Additional flags
+            //  Additional flags
             public bool NotifyUser { get; set; } = true;
             public bool AllowSkip { get; set; } = true;
             public string Description { get; set; } = string.Empty;

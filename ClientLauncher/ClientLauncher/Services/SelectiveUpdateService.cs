@@ -1,6 +1,7 @@
 ﻿using ClientLauncher.Models;
 using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
@@ -10,7 +11,7 @@ namespace ClientLauncher.Services
     public class SelectiveUpdateService : ISelectiveUpdateService
     {
         private readonly IManifestService _manifestService;
-        private readonly string _appBasePath = @"C:\CompanyApps";
+        private readonly string _appBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public SelectiveUpdateService(IManifestService manifestService)

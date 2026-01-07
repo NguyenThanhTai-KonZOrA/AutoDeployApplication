@@ -14,6 +14,7 @@ namespace ClientLauncher.Services
 {
     public class InstallationService : IInstallationService
     {
+        #region Contructor
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
         private readonly string _appBasePath;
@@ -25,7 +26,7 @@ namespace ClientLauncher.Services
         {
             _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
-            _appBasePath = @"C:\CompanyApps";
+            _appBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
             _manifestService = new ManifestService();
             _selectiveUpdateService = new SelectiveUpdateService(_manifestService);
 
@@ -36,9 +37,15 @@ namespace ClientLauncher.Services
 
             Logger.Debug("InstallationService initialized with base path: {Path}", _appBasePath);
         }
+        #endregion
 
         #region Public Interface Methods
-
+        /// <summary>
+        /// Install Application
+        /// /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
         public async Task<InstallationResult> InstallApplicationAsync(string appCode, string userName)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -120,6 +127,12 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// Update Application
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
         public async Task<InstallationResult> UpdateApplicationAsync(string appCode, string userName)
         {
             var stopwatch = Stopwatch.StartNew();
@@ -160,7 +173,7 @@ namespace ClientLauncher.Services
                 var updateType = manifest.UpdatePolicy?.Type ?? "both";
                 Logger.Info("Update type: {UpdateType}, New version: {NewVersion}", updateType, newVersion);
 
-                // ✅ Use app-specific folder instead of system temp
+                // Use app-specific folder instead of system temp
                 var updateBasePath = Path.Combine(_appBasePath, appCode, "Updates");
                 Directory.CreateDirectory(updateBasePath);
 
@@ -172,14 +185,14 @@ namespace ClientLauncher.Services
 
                 try
                 {
-                    // ✅ Download to dedicated NewVersion folder
+                    // Download to dedicated NewVersion folder
                     await DownloadNewVersionAsync(appCode, manifest, updateType, newVersionPath);
 
                     Logger.Info("Package downloaded to: {Path}", newVersionPath);
 
                     stopwatch.Stop();
 
-                    // ✅ Return new version path for verification
+                    // Return new version path for verification
                     return new InstallationResult
                     {
                         Success = true,
@@ -243,6 +256,12 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// Uninstall Application
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="userName"></param>
+        /// <returns></returns>
         public async Task<InstallationResult> UninstallApplicationAsync(string appCode, string userName)
         {
             try
@@ -292,17 +311,17 @@ namespace ClientLauncher.Services
             {
                 oldVersion = GetVersionFromBackup(backupPath);
 
-                Logger.Info("Committing update for {AppCode} - Old: {OldVersion}, New: {NewVersion}",
+                Logger.Info("Committing update for {AppCode} - Old: {OldVersion},  {NewVersion}",
                     appCode, oldVersion ?? "N/A", manifest.Binary?.Version);
 
-                // ✅ Validate inputs BEFORE doing anything destructive
+                // Validate inputs BEFORE doing anything destructive
                 if (string.IsNullOrEmpty(newVersionPath) || !Directory.Exists(newVersionPath))
                 {
                     Logger.Error("Cannot commit update: NewVersion path invalid - Path: {Path}", newVersionPath ?? "NULL");
                     throw new Exception($"Cannot commit update: NewVersion folder not found at {newVersionPath}");
                 }
 
-                // ✅ Verify NewVersion folder has content
+                // Verify NewVersion folder has content
                 var newVersionFiles = Directory.GetFiles(newVersionPath, "*.*", SearchOption.AllDirectories);
                 if (newVersionFiles.Length == 0)
                 {
@@ -312,7 +331,7 @@ namespace ClientLauncher.Services
 
                 Logger.Info("NewVersion folder verified - contains {Count} files", newVersionFiles.Length);
 
-                // ✅ Verify backup exists (critical for rollback)
+                // Verify backup exists (critical for rollback)
                 if (string.IsNullOrEmpty(backupPath) || !Directory.Exists(backupPath))
                 {
                     Logger.Error("Backup not found - cannot safely commit without rollback capability");
@@ -331,16 +350,16 @@ namespace ClientLauncher.Services
                 if (Directory.Exists(appPath))
                 {
                     Directory.Delete(appPath, true);
-                    Logger.Info("✅ Deleted old App folder");
+                    Logger.Info("Deleted old App folder");
                 }
 
                 // Move new version folder to App
                 Directory.Move(newVersionPath, appPath);
-                Logger.Info("✅ Moved NewVersion to App folder");
+                Logger.Info("Moved NewVersion to App folder");
 
-                // ✅ Verify move was successful
+                // Verify move was successful
                 var movedFiles = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories);
-                Logger.Info("✅ Binary moved - App folder now contains {Count} files", movedFiles.Length);
+                Logger.Info("Binary moved - App folder now contains {Count} files", movedFiles.Length);
 
                 // 2. Save version.txt (both binary and config)
                 SaveVersionInfo(appCode, manifest.Binary?.Version ?? "0.0.0", manifest.Config?.Version ?? "0.0.0");
@@ -366,7 +385,7 @@ namespace ClientLauncher.Services
 
                 // ⚠️ IMPORTANT: DO NOT delete backup here!
                 // Backup will be deleted AFTER verification in ViewModel
-                Logger.Info("✅ Commit completed - backup preserved for post-commit verification");
+                Logger.Info("Commit completed - backup preserved for post-commit verification");
                 Logger.Info("Backup location: {BackupPath}", backupPath);
 
                 return true;
@@ -387,7 +406,7 @@ namespace ClientLauncher.Services
                     "UpdateCommitFailed"
                 );
 
-                // 🔥 CRITICAL: DON'T delete backup - needed for rollback!
+                // DON'T delete backup - needed for rollback!
                 Logger.Warn("⚠️ Keeping backup for rollback. Backup: {Backup}", backupPath);
 
                 return false; // Rollback will be triggered in ViewModel
@@ -410,7 +429,7 @@ namespace ClientLauncher.Services
                 Logger.Warn("⚠️ ===== STARTING ROLLBACK for {AppCode} =====", appCode);
                 Logger.Warn("Failed version: {Version}, Backup: {Backup}", failedVersion, backupPath);
 
-                // ✅ Validate backup exists
+                // Validate backup exists
                 if (string.IsNullOrEmpty(backupPath) || !Directory.Exists(backupPath))
                 {
                     Logger.Error("❌ CRITICAL: Backup not found at {BackupPath}", backupPath ?? "NULL");
@@ -432,7 +451,7 @@ namespace ClientLauncher.Services
 
                 // 2. Get restored version
                 restoredVersion = GetCurrentVersion(appCode, "App");
-                Logger.Info("✅ Restored to version: {Version}", restoredVersion ?? "unknown");
+                Logger.Info("Restored to version: {Version}", restoredVersion ?? "unknown");
 
                 // 3. Verify restore was successful
                 var appPath = Path.Combine(_appBasePath, appCode, "App");
@@ -460,11 +479,11 @@ namespace ClientLauncher.Services
                     "UpdateRollback"
                 );
 
-                // 6. ✅ ONLY delete backup and cleanup after successful rollback
+                // 6. ONLY delete backup and cleanup after successful rollback
                 DeleteBackupSafely(backupPath);
                 CleanupUpdateFolders(appCode);
 
-                Logger.Info("✅ ===== ROLLBACK COMPLETED for {AppCode} to version {Version} =====",
+                Logger.Info("===== ROLLBACK COMPLETED for {AppCode} to version {Version} =====",
                     appCode, restoredVersion);
 
                 return true;
@@ -544,11 +563,11 @@ namespace ClientLauncher.Services
         {
             try
             {
-                // ✅ Create and verify target directory
+                // Create and verify target directory
                 Directory.CreateDirectory(targetPath);
                 Logger.Info("Created new version directory: {Path}", targetPath);
 
-                // ✅ ALWAYS download binary for version updates
+                // ALWAYS download binary for version updates
                 if (string.IsNullOrEmpty(manifest.Binary?.Package))
                 {
                     throw new Exception("Binary package not specified in manifest");
@@ -557,7 +576,7 @@ namespace ClientLauncher.Services
                 Logger.Info("Downloading binary package to: {Path}", targetPath);
                 await DownloadAndExtractAsync(appCode, manifest.Binary.Package, targetPath);
 
-                // ✅ Verify extraction
+                // Verify extraction
                 var files = Directory.GetFiles(targetPath, "*.*", SearchOption.AllDirectories);
                 Logger.Info("Extracted {Count} files. Sample: {Sample}",
                     files.Length,
@@ -601,7 +620,7 @@ namespace ClientLauncher.Services
                     }
                 }
 
-                // ✅ Final verification
+                // Final verification
                 if (!Directory.Exists(targetPath))
                 {
                     throw new Exception($"Target folder disappeared: {targetPath}");
@@ -613,7 +632,7 @@ namespace ClientLauncher.Services
                     throw new Exception("Target folder is empty after download");
                 }
 
-                Logger.Info("✅ Download completed successfully to: {Path}", targetPath);
+                Logger.Info("Download completed successfully to: {Path}", targetPath);
             }
             catch (Exception ex)
             {
@@ -634,7 +653,7 @@ namespace ClientLauncher.Services
             {
                 Logger.Info("Moving new version from {NewVersionPath} to {AppPath}", newVersionPath, appPath);
 
-                // ✅ Verify source folder exists and has content
+                // Verify source folder exists and has content
                 if (!Directory.Exists(newVersionPath))
                 {
                     throw new Exception($"New version folder not found: {newVersionPath}");
@@ -658,7 +677,7 @@ namespace ClientLauncher.Services
                 // Move new version folder to App
                 Directory.Move(newVersionPath, appPath);
 
-                // ✅ Verify move was successful
+                // Verify move was successful
                 var movedFiles = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories);
                 Logger.Info("New version moved successfully - App folder now contains {Count} files", movedFiles.Length);
             }
@@ -755,6 +774,12 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// GetCurrentVersion
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="folder"></param>
+        /// <returns></returns>
         private string? GetCurrentVersion(string appCode, string folder)
         {
             try
@@ -772,6 +797,11 @@ namespace ClientLauncher.Services
             return null;
         }
 
+        /// <summary>
+        /// GetVersionFromBackup
+        /// </summary>
+        /// <param name="backupPath"></param>
+        /// <returns></returns>
         private string? GetVersionFromBackup(string backupPath)
         {
             try
@@ -792,6 +822,12 @@ namespace ClientLauncher.Services
             return null;
         }
 
+        /// <summary>
+        /// CreateBackupAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="backupPath"></param>
+        /// <returns></returns>
         private async Task CreateBackupAsync(string appCode, string backupPath)
         {
             var appPath = Path.Combine(_appBasePath, appCode, "App");
@@ -812,6 +848,12 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// PerformRollbackAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="backupPath"></param>
+        /// <returns></returns>
         private async Task PerformRollbackAsync(string appCode, string backupPath)
         {
             try
@@ -849,7 +891,7 @@ namespace ClientLauncher.Services
 
                 // 2. Restore App folder from backup (includes version.txt)
                 CopyDirectory(backupAppPath, appPath);
-                Logger.Info("✅ Restored App folder from backup");
+                Logger.Info("Restored App folder from backup");
 
                 // Verify restore
                 var restoredFiles = Directory.GetFiles(appPath, "*.*", SearchOption.AllDirectories);
@@ -870,7 +912,7 @@ namespace ClientLauncher.Services
 
                 // 4. Verify rollback
                 var restoredVersion = GetCurrentVersion(appCode, "App");
-                Logger.Info("✅ Rollback verification passed - version: {Version}", restoredVersion ?? "unknown");
+                Logger.Info("Rollback verification passed - version: {Version}", restoredVersion ?? "unknown");
             }
             catch (Exception ex)
             {
@@ -898,6 +940,10 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// DeleteBackupSafely
+        /// </summary>
+        /// <param name="backupPath"></param>
         private void DeleteBackupSafely(string? backupPath)
         {
             try
@@ -977,6 +1023,12 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// MarkUpdateAsFailedAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="failedVersion"></param>
+        /// <returns></returns>
         private async Task MarkUpdateAsFailedAsync(string appCode, string failedVersion)
         {
             try
@@ -1056,7 +1108,7 @@ namespace ClientLauncher.Services
                 // Cleanup old update folders
                 CleanupUpdateFolders(appCode);
 
-                Logger.Info("✅ Update finalized successfully for {AppCode}", appCode);
+                Logger.Info("Update finalized successfully for {AppCode}", appCode);
                 return true;
             }
             catch (Exception ex)

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 
 namespace ClientLauncher.Helpers
@@ -13,7 +14,7 @@ namespace ClientLauncher.Helpers
         public static List<string> GetRunningProcessesForApp(string appCode)
         {
             var runningProcesses = new List<string>();
-            var appPath = Path.Combine(@"C:\CompanyApps", appCode, "App");
+            var appPath = Path.Combine(ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps", appCode, "App");
 
             if (!Directory.Exists(appPath))
             {
@@ -79,7 +80,7 @@ namespace ClientLauncher.Helpers
         public static bool TryKillApplicationProcesses(string appCode, out List<string> failedProcesses)
         {
             failedProcesses = new List<string>();
-            var appPath = Path.Combine(@"C:\CompanyApps", appCode, "App");
+            var appPath = Path.Combine(ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps", appCode, "App");
 
             if (!Directory.Exists(appPath))
             {

@@ -1,5 +1,6 @@
 ﻿using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.IO;
 
 namespace ClientLauncher.Services
@@ -11,7 +12,7 @@ namespace ClientLauncher.Services
 
         public InstallationChecker()
         {
-            _appBasePath = @"C:\CompanyApps";
+            _appBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
             Logger.Debug("InstallationChecker initialized with base path: {Path}", _appBasePath);
         }
 

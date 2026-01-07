@@ -7,7 +7,7 @@
         // Binary Package
         public string BinaryVersion { get; set; } = string.Empty;
         public string BinaryPackage { get; set; } = string.Empty;
-        public List<string> BinaryFiles { get; set; } = new(); // NEW: Specific binary files
+        public List<string> BinaryFiles { get; set; } = new(); //  Specific binary files
 
         // Config Package (optional)
         public string? ConfigVersion { get; set; }
@@ -18,7 +18,7 @@
         /// </summary>
         public string ConfigMergeStrategy { get; set; } = "preserveLocal";
 
-        // NEW: Config file policies for selective update
+        //  Config file policies for selective update
         public List<ConfigFilePolicyRequest> ConfigFiles { get; set; } = new();
 
         // Update Policy

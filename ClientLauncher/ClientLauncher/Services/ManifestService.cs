@@ -23,7 +23,7 @@ namespace ClientLauncher.Services
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
 
             // Local manifest storage at C:\CompanyApps
-            _manifestBasePath = @"C:\CompanyApps";
+            _manifestBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
 
             if (!Directory.Exists(_manifestBasePath))
             {

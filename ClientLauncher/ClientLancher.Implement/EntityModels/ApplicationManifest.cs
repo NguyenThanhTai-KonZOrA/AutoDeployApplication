@@ -11,13 +11,13 @@ namespace ClientLancher.Implement.EntityModels
         // Binary Information
         public string BinaryVersion { get; set; } = string.Empty;
         public string BinaryPackage { get; set; } = string.Empty;
-        public string? BinaryFilesJson { get; set; } // NEW: JSON array of specific files
+        public string? BinaryFilesJson { get; set; } //  JSON array of specific files
 
         // Config Information
         public string? ConfigVersion { get; set; }
         public string? ConfigPackage { get; set; }
         public string ConfigMergeStrategy { get; set; } = "preserveLocal";
-        public string? ConfigFilesJson { get; set; } // NEW: JSON array of config file policies
+        public string? ConfigFilesJson { get; set; } //  JSON array of config file policies
 
         // Update Policy
         public string UpdateType { get; set; } = "both";
