@@ -38,14 +38,13 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Info("Fetching manifest from server for {AppCode}", appCode);
+                // Logger.Info("Fetching manifest from server for {AppCode}", appCode);
 
                 var response = await _httpClient.GetAsync($"/api/apps/{appCode}/manifest");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Logger.Warn("Failed to get manifest for {AppCode}: {StatusCode}",
-                        appCode, response.StatusCode);
+                    // Logger.Warn("Failed to get manifest for {AppCode}: {StatusCode}", appCode, response.StatusCode);
                     return null;
                 }
 
@@ -53,11 +52,11 @@ namespace ClientLauncher.Services
 
                 if (apiResponse?.Success == true && apiResponse.Data != null)
                 {
-                    Logger.Info("Successfully fetched manifest for {AppCode}", appCode);
+                    // Logger.Info("Successfully fetched manifest for {AppCode}", appCode);
                     return apiResponse.Data;
                 }
 
-                Logger.Warn("API returned unsuccessful response for {AppCode}", appCode);
+                // Logger.Warn("API returned unsuccessful response for {AppCode}", appCode);
                 return null;
             }
             catch (Exception ex)
@@ -71,14 +70,13 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Info("Downloading manifest file from server for {AppCode}", appCode);
+                // Logger.Info("Downloading manifest file from server for {AppCode}", appCode);
 
                 var response = await _httpClient.GetAsync($"/api/apps/{appCode}/manifest/download");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Logger.Warn("Failed to download manifest for {AppCode}: {StatusCode}",
-                        appCode, response.StatusCode);
+                    // Logger.Warn("Failed to download manifest for {AppCode}: {StatusCode}",appCode, response.StatusCode);
                     return null;
                 }
 
@@ -90,7 +88,7 @@ namespace ClientLauncher.Services
                 {
                     // Save to C:\CompanyApps\{appCode}\manifest.json
                     await SaveManifestAsync(appCode, manifest.Data);
-                    Logger.Info("Successfully downloaded and saved manifest for {AppCode}", appCode);
+                    // Logger.Info("Successfully downloaded and saved manifest for {AppCode}", appCode);
                 }
 
                 return manifest.Data;
@@ -147,7 +145,7 @@ namespace ClientLauncher.Services
                 });
 
                 await File.WriteAllTextAsync(manifestPath, json);
-                Logger.Info("Saved manifest for {AppCode} to {Path}", appCode, manifestPath);
+                // Logger.Info("Saved manifest for {AppCode} to {Path}", appCode, manifestPath);
             }
             catch (Exception ex)
             {
@@ -163,15 +161,14 @@ namespace ClientLauncher.Services
                 var serverManifest = await GetManifestFromServerAsync(appCode);
                 if (serverManifest == null)
                 {
-                    Logger.Warn("Cannot check update: server manifest not available for {AppCode}", appCode);
+                    // Logger.Warn("Cannot check update: server manifest not available for {AppCode}", appCode);
                     return false;
                 }
 
                 var serverVersion = serverManifest.Binary?.Version ?? "0.0.0";
                 var isNewer = IsNewerVersion(serverVersion, currentVersion);
 
-                Logger.Info("Update check for {AppCode}: Current={Current}, Server={Server}, UpdateAvailable={Available}",
-                    appCode, currentVersion, serverVersion, isNewer);
+                //Logger.Info("Update check for {AppCode}: Current={Current}, Server={Server}, UpdateAvailable={Available}", appCode, currentVersion, serverVersion, isNewer);
 
                 return isNewer;
             }

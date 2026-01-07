@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClientLancher.Implement.Migrations
 {
     [DbContext(typeof(ClientLancherDbContext))]
-    [Migration("20251230162924_InitDB")]
-    partial class InitDB
+    [Migration("20260107052328_Init_Database")]
+    partial class Init_Database
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

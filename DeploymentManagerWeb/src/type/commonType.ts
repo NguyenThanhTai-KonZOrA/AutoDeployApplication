@@ -27,12 +27,13 @@ export const AVAILABLE_ICONS = [
 ];
 
 export const APPLICATION_ICONS = [
+    { value: "ClientLauncherApplogo.ico", label: "Client Launcher App" },
     { value: "EntryAutoImage.ico", label: "Entry Auto Image" },
     { value: "HTCasinoEntrylogo.ico", label: "HT Casino Entry" },
     { value: "LevyManualActiveticket.ico", label: "Levy Manual Active Ticket" },
     { value: "LevyNotifyRemainingTimeLogo.ico", label: "Levy Notify Remaining Time" },
     { value: "LEVYPOSlogo.ico", label: "LEVY POS" },
     { value: "LEVYTICKETMONITORlogo.ico", label: "LEVY ticket monitor" },
-    { value: "QUEUDISPlogo.ico", label: "Queue Display" },
-    { value: "QUEUEKiosklogo.ico", label: "Queue Kiosk" },
+    { value: "QUEUEDISP.ico", label: "Queue Display" },
+    { value: "QUEUkiosklogo.ico", label: "Queue Kiosk" },
 ]

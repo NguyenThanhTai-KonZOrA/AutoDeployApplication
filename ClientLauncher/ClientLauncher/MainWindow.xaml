@@ -28,7 +28,7 @@
         <local:SuccessToTitleConverter x:Key="SuccessToTitleConverter"/>
         <!-- Success to Icon Converter -->
         <local:IconConverter x:Key="IconConverter"/>
-        
+
         <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,0">
             <GradientStop Color="#1A2D30" Offset="0"/>
             <GradientStop Color="#274549" Offset="0.5"/>
@@ -415,7 +415,7 @@
                          BorderBrush="#BDC3C7"
                          BorderThickness="1"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    
+
                     <ListBox.GroupStyle>
                         <StaticResource ResourceKey="CategoryGroupStyle"/>
                     </ListBox.GroupStyle>
@@ -697,8 +697,8 @@
                         Command="{Binding BackToListCommand}"
                         HorizontalAlignment="Left"
                         Padding="18,10"
-                        Background="#95A5A6"
-                        Foreground="White"
+                        Background="#274549"
+                        Foreground="#E1B7A7"
                         BorderThickness="0"
                         Cursor="Hand"
                         FontSize="13"

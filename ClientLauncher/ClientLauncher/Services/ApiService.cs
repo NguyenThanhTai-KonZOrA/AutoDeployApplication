@@ -25,12 +25,12 @@ namespace ClientLauncher.Services
             _installationChecker = new InstallationChecker();
             _manifestService = new ManifestService();
 
-            Logger.Debug("ApiService initialized with base URL: {BaseUrl}", _baseUrl);
+            //  Logger.Debug("ApiService initialized with base URL: {BaseUrl}", _baseUrl);
         }
 
         private async Task<T?> GetApiDataAsync<T>(string endpoint)
         {
-            Logger.Debug("Calling API endpoint: {Endpoint}", endpoint);
+            //Logger.Debug("Calling API endpoint: {Endpoint}", endpoint);
 
             var response = await _httpClient.GetAsync(endpoint);
             response.EnsureSuccessStatusCode();
@@ -39,11 +39,11 @@ namespace ClientLauncher.Services
 
             if (apiResponse?.Success == true)
             {
-                Logger.Debug("API call successful for endpoint: {Endpoint}", endpoint);
+                //Logger.Debug("API call successful for endpoint: {Endpoint}", endpoint);
                 return apiResponse.Data;
             }
 
-            Logger.Warn("API call returned unsuccessful response for endpoint: {Endpoint}", endpoint);
+            // Logger.Warn("API call returned unsuccessful response for endpoint: {Endpoint}", endpoint);
             return default;
         }
 
@@ -51,9 +51,9 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Info("Fetching all applications from API");
+                // Logger.Info("Fetching all applications from API");
                 var apps = await GetApiDataAsync<List<ApplicationDto>>("/api/AppCatalog/applications");
-                Logger.Info("Successfully fetched {Count} applications", apps?.Count ?? 0);
+                // Logger.Info("Successfully fetched {Count} applications", apps?.Count ?? 0);
                 return apps ?? new List<ApplicationDto>();
             }
             catch (Exception ex)
@@ -67,7 +67,7 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Info("Installing application {AppCode} for user {UserName}", appCode, userName);
+                // Logger.Info("Installing application {AppCode} for user {UserName}", appCode, userName);
 
                 var request = new InstallationRequestDto
                 {
@@ -85,11 +85,11 @@ namespace ClientLauncher.Services
 
                 if (apiResponse?.Success == true && apiResponse.Data != null)
                 {
-                    Logger.Info("Successfully installed application {AppCode}", appCode);
+                    // Logger.Info("Successfully installed application {AppCode}", appCode);
                     return apiResponse.Data;
                 }
 
-                Logger.Warn("Installation API returned unsuccessful response for {AppCode}", appCode);
+                // Logger.Warn("Installation API returned unsuccessful response for {AppCode}", appCode);
                 return new InstallationResultDto { Success = false, Message = "Unknown error" };
             }
             catch (Exception ex)
@@ -108,7 +108,7 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Info("Uninstalling application {AppCode} for user {UserName}", appCode, userName);
+                // Logger.Info("Uninstalling application {AppCode} for user {UserName}", appCode, userName);
 
                 var request = new InstallationRequestDto
                 {
@@ -126,11 +126,11 @@ namespace ClientLauncher.Services
 
                 if (apiResponse?.Success == true && apiResponse.Data != null)
                 {
-                    Logger.Info("Successfully uninstalled application {AppCode}", appCode);
+                    // Logger.Info("Successfully uninstalled application {AppCode}", appCode);
                     return apiResponse.Data;
                 }
 
-                Logger.Warn("Uninstallation API returned unsuccessful response for {AppCode}", appCode);
+                // Logger.Warn("Uninstallation API returned unsuccessful response for {AppCode}", appCode);
                 return new InstallationResultDto { Success = false, Message = "Unknown error" };
             }
             catch (Exception ex)
@@ -149,9 +149,9 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Debug("Checking if application {AppCode} is installed locally", appCode);
+                //  Logger.Debug("Checking if application {AppCode} is installed locally", appCode);
                 var isInstalled = _installationChecker.IsApplicationInstalled(appCode);
-                Logger.Info("Application {AppCode} installation status: {IsInstalled}", appCode, isInstalled);
+                // Logger.Info("Application {AppCode} installation status: {IsInstalled}", appCode, isInstalled);
                 return isInstalled;
             }
             catch (Exception ex)
@@ -165,16 +165,16 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+                //  Logger.Debug("Getting installed version for application {AppCode}", appCode);
                 var version = _installationChecker.GetInstalledVersion(appCode);
 
                 if (version != null)
                 {
-                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                    //  Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
                 }
                 else
                 {
-                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                    //  Logger.Debug("No installed version found for {AppCode}", appCode);
                 }
 
                 return version;
@@ -190,16 +190,16 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+                //  Logger.Debug("Getting installed version for application {AppCode}", appCode);
                 var version = _installationChecker.GetInstalledBinaryVersion(appCode);
 
                 if (version != null)
                 {
-                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                    //  Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
                 }
                 else
                 {
-                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                    //  Logger.Debug("No installed version found for {AppCode}", appCode);
                 }
 
                 return version;
@@ -215,16 +215,16 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Debug("Getting installed version for application {AppCode}", appCode);
+                //  Logger.Debug("Getting installed version for application {AppCode}", appCode);
                 var version = _installationChecker.GetInstalledConfigVersion(appCode);
 
                 if (version != null)
                 {
-                    Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
+                    //  Logger.Debug("Installed version for {AppCode}: {Version}", appCode, version);
                 }
                 else
                 {
-                    Logger.Debug("No installed version found for {AppCode}", appCode);
+                    //  Logger.Debug("No installed version found for {AppCode}", appCode);
                 }
 
                 return version;
@@ -240,14 +240,14 @@ namespace ClientLauncher.Services
         {
             try
             {
-                Logger.Debug("Getting server version for application {AppCode}", appCode);
+                //  Logger.Debug("Getting server version for application {AppCode}", appCode);
 
                 // Use manifest service to get version from database-generated manifest
                 var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
 
                 if (manifest == null)
                 {
-                    Logger.Warn("No manifest found for {AppCode}", appCode);
+                    // Logger.Warn("No manifest found for {AppCode}", appCode);
                     return null;
                 }
 
@@ -259,8 +259,7 @@ namespace ClientLauncher.Services
                     ForceUpdate = manifest.UpdatePolicy?.Force ?? false
                 };
 
-                Logger.Debug("Server version for {AppCode}: Binary={BinaryVersion}, Config={ConfigVersion}",
-                    appCode, versionInfo.BinaryVersion, versionInfo.ConfigVersion);
+                //Logger.Debug("Server version for {AppCode}: Binary={BinaryVersion}, Config={ConfigVersion}", appCode, versionInfo.BinaryVersion, versionInfo.ConfigVersion);
 
                 return versionInfo;
             }
@@ -300,16 +299,16 @@ namespace ClientLauncher.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Logger.Info("Installation logged to server successfully");
+                    // Logger.Info("Installation logged to server successfully");
                 }
                 else
                 {
-                    Logger.Warn($"Failed to log installation: {response.StatusCode}");
+                    // Logger.Warn($"Failed to log installation: {response.StatusCode}");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Warn(ex, "Failed to notify server about installation (non-critical)");
+                // Logger.Warn(ex, "Failed to notify server about installation (non-critical)");
             }
         }
     }
