@@ -38,19 +38,21 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     Save as SaveIcon,
+    FilterList as FilterListIcon
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
-import { categoryService } from "../services/deploymentManagerService";
+import { categoryService, iconService } from "../services/deploymentManagerService";
 import type { CategoryCreateOrUpdateRequest, CategoryResponse } from "../type/categoryType";
+import type { IconResponse } from "../type/iconType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
-import { AVAILABLE_ICONS } from "../type/commonType";
 
 export default function AdminCategoryPage() {
     useSetPageTitle(PAGE_TITLES.CATEGORIES);
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
+    const [icons, setIcons] = useState<IconResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -95,6 +97,7 @@ export default function AdminCategoryPage() {
             setError(null);
             const data = await categoryService.getAllCategories();
             setCategories(data);
+            await loadIcons();
         } catch (error: any) {
             console.error("Error loading categories:", error);
             let errorMessage = "Failed to load categories data";
@@ -109,6 +112,16 @@ export default function AdminCategoryPage() {
         }
     };
 
+    const loadIcons = async () => {
+        try {
+            const data = await iconService.getIconByType(2); // Type 2 for Category icons
+            setIcons(data.filter(icon => icon.isActive)); // Only show active icons
+        } catch (error: any) {
+            console.error("Error loading icons:", error);
+            showSnackbar("Failed to load icons", "error");
+        }
+    };
+
     const handleOpenCreateDialog = () => {
         setDialogMode("create");
         setEditingCategory(null);
@@ -116,9 +129,9 @@ export default function AdminCategoryPage() {
             name: "",
             displayName: "",
             description: "",
-            icon: AVAILABLE_ICONS[0].value,
+            icon: icons.length > 0 ? icons[0].filePath : "",
             displayOrder: categories.length + 1,
-            iconUrl: AVAILABLE_ICONS[0].value,
+            iconUrl: icons.length > 0 ? icons[0].filePath : "",
         });
         setDialogOpen(true);
     };
@@ -301,6 +314,9 @@ export default function AdminCategoryPage() {
                 {/* Search and Actions */}
                 <Card sx={{ mb: 3 }}>
                     <CardContent>
+                        <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                            <FilterListIcon sx={{ mr: 1 }} /> Filters
+                        </Typography>
                         <Grid container spacing={3} alignItems="center">
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <TextField
@@ -501,9 +517,12 @@ export default function AdminCategoryPage() {
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <img
-                                                            src={`/images/icons/${category.iconUrl}`}
+                                                            src={`${(window as any)._env_?.API_BASE}${category.iconUrl}`}
                                                             alt={category.name}
                                                             style={{ width: 30, height: 30 }}
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                            }}
                                                         />
                                                     </Box>
                                                 </TableCell>
@@ -624,29 +643,42 @@ export default function AdminCategoryPage() {
                                 value={formData.iconUrl}
                                 label="Icon"
                                 onChange={(e) => handleFormChange("iconUrl", e.target.value)}
-                                renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <img
-                                            src={`/images/icons/${selected}`}
-                                            alt={selected}
-                                            style={{ width: 20, height: 20 }}
-                                        />
-                                        <Typography>{AVAILABLE_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
-                                    </Box>
-                                )}
-                            >
-                                {AVAILABLE_ICONS.map((icon) => (
-                                    <MenuItem key={icon.value} value={icon.value}>
+                                renderValue={(selected) => {
+                                    const API_BASE = (window as any)._env_?.API_BASE;
+                                    const selectedIcon = icons.find(icon => icon.fileUrl === selected);
+                                    return (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <img
-                                                src={`/images/icons/${icon.value}`}
-                                                alt={icon.label}
+                                                src={`${API_BASE}${selected}`}
+                                                alt={selectedIcon?.name || selected}
                                                 style={{ width: 20, height: 20 }}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
                                             />
-                                            <Typography>{icon.label}</Typography>
+                                            <Typography>{selectedIcon?.name || selected}</Typography>
                                         </Box>
-                                    </MenuItem>
-                                ))}
+                                    );
+                                }}
+                            >
+                                {icons.map((icon) => {
+                                    const API_BASE = (window as any)._env_?.API_BASE;
+                                    return (
+                                        <MenuItem key={icon.id} value={icon.fileUrl}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <img
+                                                    src={`${API_BASE}${icon.fileUrl}`}
+                                                    alt={icon.name}
+                                                    style={{ width: 20, height: 20 }}
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                                <Typography>{icon.name}</Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    );
+                                })}
                             </Select>
                         </FormControl>
                         <TextField

@@ -50,16 +50,16 @@ import {
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
-import { applicationService, categoryService, packageManagementService } from "../services/deploymentManagerService";
+import { applicationService, categoryService, packageManagementService, iconService } from "../services/deploymentManagerService";
 import type { ApplicationResponse, CreateApplicationRequest, UpdateApplicationRequest } from "../type/applicationType";
 import type { CategoryResponse } from "../type/categoryType";
+import type { IconResponse } from "../type/iconType";
 import type { ManifestCreateRequest, ManifestResponse } from "../type/manifestType";
 import type { ApplicationPackageResponse } from "../type/packageManagementType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
 import { extractErrorMessage } from "../utils/errorHandler";
-import { AVAILABLE_ICONS, APPLICATION_ICONS } from "../type/commonType";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -80,6 +80,7 @@ export default function AdminApplicationPage() {
     useSetPageTitle(PAGE_TITLES.APPLICATIONS);
     const [applications, setApplications] = useState<ApplicationResponse[]>([]);
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
+    const [icons, setIcons] = useState<IconResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [toggleLoading, setToggleLoading] = useState<number | null>(null);
@@ -194,6 +195,7 @@ export default function AdminApplicationPage() {
             setError(null);
             const data = await applicationService.getAllApplications();
             setApplications(data);
+            await loadIcons();
         } catch (error: any) {
             console.error("Error loading applications:", error);
             const errorMessage = extractErrorMessage(error, "Failed to load applications data");
@@ -210,6 +212,17 @@ export default function AdminApplicationPage() {
         } catch (error: any) {
             console.error("Error loading categories:", error);
             showSnackbar("Failed to load categories", "error");
+        }
+    };
+
+    const loadIcons = async () => {
+        try {
+            const data = await iconService.getIconByType(1); // Type 1 for Application icons
+            setIcons(data.filter(icon => icon.isActive)); // Only show active icons
+        } catch (error: any) {
+            console.error("Error loading icons:", error);
+            const errorMessage = extractErrorMessage(error, "Failed to load icons");
+            showSnackbar(errorMessage, "error");
         }
     };
 
@@ -1462,32 +1475,45 @@ export default function AdminApplicationPage() {
                                             setAppFormErrors(prev => ({ ...prev, iconUrl: true }));
                                         }
                                     }}
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <img
-                                                src={`/images/icons/${selected}`}
-                                                alt={selected}
-                                                style={{ width: 20, height: 20 }}
-                                            />
-                                            <Typography>{APPLICATION_ICONS.find(icon => icon.value === selected)?.label || selected}</Typography>
-                                        </Box>
-                                    )}
+                                    renderValue={(selected) => {
+                                        const API_BASE = (window as any)._env_?.API_BASE;
+                                        const selectedIcon = icons.find(icon => icon.fileUrl === selected);
+                                        return (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <img
+                                                    src={`${API_BASE}${selected}`}
+                                                    alt={selectedIcon?.name || selected}
+                                                    style={{ width: 20, height: 20 }}
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                                <Typography>{selectedIcon?.name || selected}</Typography>
+                                            </Box>
+                                        );
+                                    }}
                                 >
                                     <MenuItem value="" disabled>
                                         <em>Select an Icon</em>
                                     </MenuItem>
-                                    {APPLICATION_ICONS.map((icon) => (
-                                        <MenuItem key={icon.value} value={icon.value}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <img
-                                                    src={`/images/icons/${icon.value}`}
-                                                    alt={icon.label}
-                                                    style={{ width: 20, height: 20 }}
-                                                />
-                                                <Typography>{icon.label}</Typography>
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
+                                    {icons.map((icon) => {
+                                        const API_BASE = (window as any)._env_?.API_BASE;
+                                        return (
+                                            <MenuItem key={icon.id} value={icon.fileUrl}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <img
+                                                        src={`${API_BASE}${icon.fileUrl}`}
+                                                        alt={icon.name}
+                                                        style={{ width: 20, height: 20 }}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                    <Typography>{icon.name}</Typography>
+                                                </Box>
+                                            </MenuItem>
+                                        );
+                                    })}
                                 </Select>
                                 {appFormErrors.iconUrl && (
                                     <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>

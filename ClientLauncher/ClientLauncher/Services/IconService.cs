@@ -1,231 +1,237 @@
 ﻿using ClientLauncher.Services.Interface;
 using NLog;
+using System.Configuration;
 using System.IO;
+using System.Net.Http;
 using System.Windows.Media.Imaging;
 
 public class IconService : IIconService
 {
     #region Init Constructor
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-    private readonly Dictionary<string, string> _categoryIcons;
+    private readonly HttpClient _httpClient;
+    private readonly string _baseUrl;
+    private readonly string _iconCachePath;
     private const string DefaultIcon = "pack://application:,,,/Assets/Icons/app_default.ico";
 
     public IconService()
     {
-        // Map category to icon file
-        _categoryIcons = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                { "Cage", "pack://application:,,,/Assets/Icons/app_cage.ico" },
-                { "HTR", "pack://application:,,,/Assets/Icons/app_htr.ico" },
-                { "Finance", "pack://application:,,,/Assets/Icons/app_finance.ico" }
-            };
+        // Get base URL from config
+        _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
+        _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
 
-        Logger.Debug("IconService initialized with {Count} category mappings", _categoryIcons.Count);
+        // Setup local cache folder for icons
+        var appDataPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "ClientLauncher",
+            "IconCache"
+        );
+        _iconCachePath = appDataPath;
+
+        // Create cache directory if not exists
+        if (!Directory.Exists(_iconCachePath))
+        {
+            Directory.CreateDirectory(_iconCachePath);
+            Logger.Info("Created icon cache directory: {CachePath}", _iconCachePath);
+        }
+
+        Logger.Debug("IconService initialized with base URL: {BaseUrl}", _baseUrl);
     }
     #endregion
 
     #region Main Methods
 
     /// <summary>
-    /// GetAppIcon
+    /// GetAppIcon - Load icon from server or cache
     /// </summary>
-    /// <param name="iconUrl"></param>
-    /// <param name="category"></param>
-    /// <returns></returns>
+    /// <param name="iconUrl">Relative URL path from server (e.g., "/uploads/icons/app_cage.ico")</param>
+    /// <param name="category">Category fallback if iconUrl fails</param>
+    /// <returns>BitmapImage for WPF display</returns>
     public BitmapImage GetAppIcon(string iconUrl, string category)
     {
         try
         {
-            string iconPath = "";
-
-            // Priority 1: Use IconUrl if provided and exists
+            // Priority 1: Try to load from server using iconUrl
             if (!string.IsNullOrEmpty(iconUrl))
             {
-                // Check if it's a web URL
-                if (iconUrl.StartsWith("http://") || iconUrl.StartsWith("https://"))
-                {
-                    try
-                    {
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.UriSource = new Uri(iconUrl, UriKind.Absolute);
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.EndInit();
-                        bitmap.Freeze();
+                Logger.Debug("Attempting to load icon from URL: {IconUrl}", iconUrl);
 
-                        Logger.Debug("Loaded icon from URL: {IconUrl}", iconUrl);
-                        return bitmap;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warn(ex, "Failed to load icon from URL: {IconUrl}", iconUrl);
-                    }
-                }
-                // Check if it's a local file
-                else if (File.Exists(iconUrl))
+                // Download icon from server (or get from cache)
+                var iconFilePath = DownloadIconFromServer(iconUrl);
+
+                if (!string.IsNullOrEmpty(iconFilePath) && File.Exists(iconFilePath))
                 {
-                    iconPath = iconUrl;
-                }
-                // Try as pack URI
-                else if (iconUrl.StartsWith("pack://"))
-                {
-                    iconPath = iconUrl;
-                }
-                else
-                {
-                    // Try to construct pack URI from relative path
-                    iconPath = $"pack://application:,,,/Assets/Icons/{iconUrl}";
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(iconFilePath, UriKind.Absolute);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+
+                    Logger.Debug("Successfully loaded icon from cache: {FilePath}", iconFilePath);
+                    return bitmap;
                 }
             }
-            // Priority 2: Use category icon
-            else if (!string.IsNullOrEmpty(category) && _categoryIcons.ContainsKey(category))
-            {
-                iconPath = _categoryIcons[category];
-                Logger.Debug("Using category icon for: {Category}", category);
-            }
-            // Priority 3: Use default icon
-            else
-            {
-                iconPath = DefaultIcon;
-                Logger.Debug("Using default icon");
-            }
 
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.UriSource = new Uri(uriString: iconPath, UriKind.Absolute);
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.EndInit();
-            image.Freeze();
-
-            return image;
+            // Priority 2: Fallback to default icon
+            Logger.Debug("Using default icon");
+            return LoadDefaultIcon();
         }
         catch (Exception ex)
         {
             Logger.Error(ex, "Failed to load icon, using default");
-
-            // Return default icon on error
-            try
-            {
-                var defaultImage = new BitmapImage();
-                defaultImage.BeginInit();
-                defaultImage.UriSource = new Uri(DefaultIcon, UriKind.Absolute);
-                defaultImage.CacheOption = BitmapCacheOption.OnLoad;
-                defaultImage.EndInit();
-                defaultImage.Freeze();
-                return defaultImage;
-            }
-            catch
-            {
-                // Return null if even default fails
-                return null!;
-            }
+            return LoadDefaultIcon();
         }
     }
 
     /// <summary>
-    /// GetIconPath
+    /// GetIconPath - Returns URI path for binding
     /// </summary>
-    /// <param name="iconUrl"></param>
-    /// <param name="category"></param>
-    /// <returns></returns>
+    /// <param name="iconUrl">Server icon URL</param>
+    /// <param name="category">Category fallback</param>
+    /// <returns>URI string</returns>
     public string GetIconPath(string iconUrl, string category)
     {
-        if (!string.IsNullOrEmpty(iconUrl))
+        try
         {
-            return iconUrl;
-        }
+            if (!string.IsNullOrEmpty(iconUrl))
+            {
+                var iconFilePath = DownloadIconFromServer(iconUrl);
+                if (!string.IsNullOrEmpty(iconFilePath) && File.Exists(iconFilePath))
+                {
+                    return iconFilePath;
+                }
+            }
 
-        if (!string.IsNullOrEmpty(category) && _categoryIcons.ContainsKey(category))
+            return DefaultIcon;
+        }
+        catch (Exception ex)
         {
-            return _categoryIcons[category];
+            Logger.Error(ex, "Failed to get icon path");
+            return DefaultIcon;
         }
-
-        return DefaultIcon;
     }
 
     /// <summary>
-    /// Get actual file system path for icon (for creating shortcuts)
-    /// Converts pack URI to physical file path
+    /// GetIconFilePath - Get physical file path for creating shortcuts
     /// </summary>
-    /// <summary>
-    /// Get actual file system path for icon (for creating shortcuts)
-    /// Converts pack URI to physical file path
-    /// </summary>
+    /// <param name="iconUrl">Server icon URL</param>
+    /// <param name="category">Category fallback</param>
+    /// <returns>Physical file path or null</returns>
     public string? GetIconFilePath(string iconUrl, string category)
     {
         try
         {
-            var basePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            string packUri = string.Empty;
-
-            // === SAME LOGIC AS GetAppIcon ===
-            // Priority 1: Use IconUrl if provided
             if (!string.IsNullOrEmpty(iconUrl))
             {
-                // Check if it's a web URL - we can't use web URLs for shortcuts
-                if (iconUrl.StartsWith("http://") || iconUrl.StartsWith("https://"))
+                Logger.Debug("Getting icon file path for: {IconUrl}", iconUrl);
+
+                // Download from server (or get from cache)
+                var iconFilePath = DownloadIconFromServer(iconUrl);
+
+                if (!string.IsNullOrEmpty(iconFilePath) && File.Exists(iconFilePath))
                 {
-                    Logger.Warn("Web URL cannot be used for shortcut icon, using category fallback");
-                    // Fall through to category mapping
-                }
-                // Check if it's already a local file path
-                else if (File.Exists(iconUrl))
-                {
-                    Logger.Debug("IconUrl is valid file path: {IconUrl}", iconUrl);
-                    return iconUrl;
-                }
-                // Try as pack URI
-                else if (iconUrl.StartsWith("pack://"))
-                {
-                    packUri = iconUrl;
-                }
-                // Try to construct pack URI from relative path (e.g., "app_cage.png")
-                else
-                {
-                    packUri = $"pack://application:,,,/Assets/Icons/{iconUrl}";
+                    Logger.Debug("Resolved icon file path: {FilePath}", iconFilePath);
+                    return iconFilePath;
                 }
             }
 
-            // Priority 2: Use category mapping (if packUri not set yet)
-            if (string.IsNullOrEmpty(packUri))
+            // Fallback to default icon from Assets
+            var basePath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var defaultIconPath = Path.Combine(basePath ?? string.Empty, "Assets", "Icons", "app_default.ico");
+
+            if (File.Exists(defaultIconPath))
             {
-                if (!string.IsNullOrEmpty(category) && _categoryIcons.TryGetValue(category, out var categoryIcon))
-                {
-                    packUri = categoryIcon;
-                    Logger.Debug("Using category icon for {Category}: {Icon}", category, packUri);
-                }
-                else
-                {
-                    // Priority 3: Use default icon
-                    packUri = DefaultIcon;
-                    Logger.Debug("Using default icon");
-                }
+                Logger.Debug("Using default icon file: {FilePath}", defaultIconPath);
+                return defaultIconPath;
             }
 
-            // Convert pack URI to file path
-            // pack://application:,,,/Assets/Icons/app_cage.ico -> Assets\Icons\app_cage.ico
-            var relativePath = packUri
-                .Replace("pack://application:,,,/", "")
-                .Replace("/", "\\");
-
-            var fullPath = Path.Combine(basePath ?? string.Empty, relativePath);
-
-            if (File.Exists(fullPath))
-            {
-                Logger.Debug("Resolved icon file path: {FilePath}", fullPath);
-                return fullPath;
-            }
-            else
-            {
-                Logger.Warn("Icon file not found at: {FilePath}", fullPath);
-                return null;
-            }
+            Logger.Warn("No icon file found");
+            return null;
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, "Failed to get icon file path for category: {Category}", category);
+            Logger.Error(ex, "Failed to get icon file path");
             return null;
         }
     }
+
+    #endregion
+
+    #region Private Helper Methods
+
+    /// <summary>
+    /// Download icon from server or return cached version
+    /// </summary>
+    /// <param name="iconUrl">Relative URL from server (e.g., "/uploads/icons/app.ico")</param>
+    /// <returns>Local file path or null if failed</returns>
+    private string? DownloadIconFromServer(string iconUrl)
+    {
+        try
+        {
+            // Generate cache file name from URL
+            var fileName = Path.GetFileName(iconUrl);
+            var cacheFilePath = Path.Combine(_iconCachePath, fileName);
+
+            // Check if already cached
+            if (File.Exists(cacheFilePath))
+            {
+                Logger.Debug("Icon found in cache: {CacheFile}", cacheFilePath);
+                return cacheFilePath;
+            }
+
+            // Construct full URL: BaseUrl + iconUrl
+            var fullUrl = iconUrl.StartsWith("http")
+                ? iconUrl
+                : $"{_baseUrl.TrimEnd('/')}/{iconUrl.TrimStart('/')}";
+
+            Logger.Info("Downloading icon from: {FullUrl}", fullUrl);
+
+            // Download icon synchronously (since we need it immediately for UI)
+            var response = _httpClient.GetAsync(fullUrl).GetAwaiter().GetResult();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.Warn("Failed to download icon: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            var iconBytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+
+            // Save to cache
+            File.WriteAllBytes(cacheFilePath, iconBytes);
+            Logger.Info("Icon downloaded and cached: {CacheFile}", cacheFilePath);
+
+            return cacheFilePath;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Failed to download icon from server: {IconUrl}", iconUrl);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Load default icon from Assets
+    /// </summary>
+    private BitmapImage LoadDefaultIcon()
+    {
+        try
+        {
+            var defaultImage = new BitmapImage();
+            defaultImage.BeginInit();
+            defaultImage.UriSource = new Uri(DefaultIcon, UriKind.Absolute);
+            defaultImage.CacheOption = BitmapCacheOption.OnLoad;
+            defaultImage.EndInit();
+            defaultImage.Freeze();
+            return defaultImage;
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Failed to load default icon");
+            return null!;
+        }
+    }
+
     #endregion
 }

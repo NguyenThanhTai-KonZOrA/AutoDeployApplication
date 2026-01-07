@@ -131,6 +131,14 @@ try
             Path.Combine(builder.Environment.ContentRootPath, "Packages")),
         RequestPath = "/packages"
     });
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Icons")),
+        RequestPath = "/Icons"
+    });
+
     // Enable CORS
     app.UseCors("AllowAll");
 

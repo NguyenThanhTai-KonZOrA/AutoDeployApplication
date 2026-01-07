@@ -59,7 +59,7 @@ export default function AdminIconsPage() {
 
     // Search and pagination states
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterType, setFilterType] = useState<string>("");
+    const [filterType, setFilterType] = useState<number | "">("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [snackbar, setSnackbar] = useState({
@@ -82,7 +82,7 @@ export default function AdminIconsPage() {
     // Form states
     const [formData, setFormData] = useState({
         name: "",
-        type: "",
+        type: 1,
         description: "",
         isActive: true,
     });
@@ -95,7 +95,10 @@ export default function AdminIconsPage() {
     const [previewUrl, setPreviewUrl] = useState<string>("");
 
     // Icon types
-    const iconTypes = ["Application", "Category", "System", "Other"];
+    const iconTypes = [
+        { value: 1, label: "Application" },
+        { value: 2, label: "Category" },
+    ];
 
     // Load icons
     const loadIcons = async () => {
@@ -122,7 +125,7 @@ export default function AdminIconsPage() {
         return icons.filter(icon => {
             const searchMatch = !searchTerm ||
                 icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                icon.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                icon.type.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
                 icon.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
             const typeMatch = !filterType || icon.type === filterType;
@@ -171,7 +174,7 @@ export default function AdminIconsPage() {
         setEditingIcon(null);
         setFormData({
             name: "",
-            type: "",
+            type: 1,
             description: "",
             isActive: true,
         });
@@ -191,7 +194,7 @@ export default function AdminIconsPage() {
             isActive: icon.isActive,
         });
         setSelectedFile(null);
-        setPreviewUrl(icon.filePath);
+        setPreviewUrl(icon.fileUrl);
         setFormErrors({ name: false, type: false, file: false });
         setDialogOpen(true);
     };
@@ -253,7 +256,7 @@ export default function AdminIconsPage() {
         try {
             const formDataToSend = new FormData();
             formDataToSend.append("Name", formData.name);
-            formDataToSend.append("Type", formData.type);
+            formDataToSend.append("Type", formData.type.toString());
             formDataToSend.append("Description", formData.description);
             formDataToSend.append("IsActive", formData.isActive.toString());
 
@@ -311,7 +314,13 @@ export default function AdminIconsPage() {
 
     return (
         <AdminLayout>
-            <Box sx={{ p: 3 }}>
+            <Box>
+                {/* Header */}
+                <Box sx={{ mb: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                        Manage application icons, create new icons, and organize icon types
+                    </Typography>
+                </Box>
                 {/* Filters and Actions */}
                 <Card sx={{ mb: 3 }}>
                     <CardContent>
@@ -328,7 +337,7 @@ export default function AdminIconsPage() {
                                 InputProps={{
                                     startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
                                 }}
-                                sx={{ flexGrow: 1, minWidth: 250 }}
+                                sx={{ width: 250 }}
                             />
 
                             {/* Type Filter */}
@@ -341,8 +350,8 @@ export default function AdminIconsPage() {
                                 >
                                     <MenuItem value="">All Types</MenuItem>
                                     {iconTypes.map((type) => (
-                                        <MenuItem key={type} value={type}>
-                                            {type}
+                                        <MenuItem key={type.value} value={type.value}>
+                                            {type.label}
                                         </MenuItem>
                                     ))}
                                 </Select>
@@ -392,7 +401,7 @@ export default function AdminIconsPage() {
                                 startIcon={<AddIcon />}
                                 onClick={handleOpenCreateDialog}
                             >
-                                Create
+                                Create new
                             </Button>
                         </Box>
 
@@ -435,63 +444,21 @@ export default function AdminIconsPage() {
                             <Table>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell width="80px">Preview</TableCell>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell>Type</TableCell>
+                                        <TableCell align="center" width="150px">Actions</TableCell>
+                                        <TableCell width="100px">Preview</TableCell>
+                                        <TableCell>Icon Name</TableCell>
+                                        <TableCell>Icon Type</TableCell>
                                         <TableCell>File Name</TableCell>
                                         <TableCell>Size</TableCell>
-                                        <TableCell>Description</TableCell>
+                                        <TableCell>Icon Url</TableCell>
                                         <TableCell align="center">Status</TableCell>
                                         <TableCell>Updated At</TableCell>
-                                        <TableCell align="center" width="150px">Actions</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {currentPageData.length > 0 ? (
                                         currentPageData.map((icon) => (
                                             <TableRow key={icon.id} hover>
-                                                <TableCell>
-                                                    <Box
-                                                        component="img"
-                                                        src={`${API_BASE}${icon.fileUrl}`}
-                                                        alt={icon.name}
-                                                        sx={{
-                                                            width: 40,
-                                                            height: 40,
-                                                            objectFit: 'contain',
-                                                            border: '1px solid #e0e0e0',
-                                                            borderRadius: 1,
-                                                            p: 0.5,
-                                                        }}
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" fontWeight={600}>
-                                                        {icon.name}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Chip label={icon.type} size="small" color="primary" variant="outlined" />
-                                                </TableCell>
-                                                <TableCell>{icon.name}</TableCell>
-                                                <TableCell>
-                                                    {(icon.fileSize / 1024).toFixed(2)} KB
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
-                                                        {icon.description || "-"}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                    <Chip
-                                                        label={icon.isActive ? "Active" : "Inactive"}
-                                                        color={icon.isActive ? "success" : "error"}
-                                                        size="small"
-                                                    />
-                                                </TableCell>
-                                                <TableCell>
-                                                    {FormatUtcTime.formatDateTime(icon.updatedAt)}
-                                                </TableCell>
                                                 <TableCell align="center">
                                                     <Tooltip title="Edit">
                                                         <IconButton
@@ -513,6 +480,52 @@ export default function AdminIconsPage() {
                                                         </IconButton>
                                                     </Tooltip>
                                                 </TableCell>
+                                                <TableCell>
+                                                    <Box
+                                                        component="img"
+                                                        src={`${API_BASE}${icon.fileUrl}`}
+                                                        alt={icon.name}
+                                                        sx={{
+                                                            width: 40,
+                                                            height: 40,
+                                                            objectFit: 'contain',
+                                                            border: '1px solid #e0e0e0',
+                                                            borderRadius: 1,
+                                                            p: 0.5,
+                                                        }}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {icon.name}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Chip label={icon.type === 1 ? "Application" : "Category"} size="small" color={icon.type === 1 ? "success" : "secondary"} variant="outlined" />
+                                                </TableCell>
+                                                <TableCell>{icon.name}</TableCell>
+                                                <TableCell>
+                                                    {(icon.fileSize / 1024).toFixed(2)} KB
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
+                                                        {icon.fileUrl || "-"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    <Chip
+                                                        label={icon.isActive ? "Active" : "Inactive"}
+                                                        color={icon.isActive ? "success" : "error"}
+                                                        size="small"
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    {FormatUtcTime.formatDateTime(icon.updatedAt)}
+                                                </TableCell>
+
                                             </TableRow>
                                         ))
                                     ) : (
@@ -578,14 +591,14 @@ export default function AdminIconsPage() {
                                     disabled={dialogLoading}
                                 >
                                     {iconTypes.map((type) => (
-                                        <MenuItem key={type} value={type}>
-                                            {type}
+                                        <MenuItem key={type.value} value={type.value}>
+                                            {type.label}
                                         </MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
 
-                            <TextField
+                            {/* <TextField
                                 label="Description"
                                 fullWidth
                                 multiline
@@ -593,7 +606,7 @@ export default function AdminIconsPage() {
                                 value={formData.description}
                                 onChange={(e) => handleFormChange("description", e.target.value)}
                                 disabled={dialogLoading}
-                            />
+                            /> */}
 
                             <FormControlLabel
                                 control={
@@ -618,7 +631,7 @@ export default function AdminIconsPage() {
                                     <input
                                         type="file"
                                         hidden
-                                        accept="image/*,.ico"
+                                        accept=".ico"
                                         onChange={handleFileChange}
                                     />
                                 </Button>
@@ -636,7 +649,7 @@ export default function AdminIconsPage() {
                                     </Typography>
                                     <Box
                                         component="img"
-                                        src={`${API_BASE}/${previewUrl}`}
+                                        src={selectedFile ? previewUrl : `${API_BASE}${previewUrl}`}
                                         alt="Preview"
                                         sx={{
                                             maxWidth: 200,
@@ -645,6 +658,9 @@ export default function AdminIconsPage() {
                                             border: '2px solid #e0e0e0',
                                             borderRadius: 2,
                                             p: 2,
+                                        }}
+                                        onError={(e) => {
+                                            console.error('Failed to load image:', previewUrl);
                                         }}
                                     />
                                 </Box>

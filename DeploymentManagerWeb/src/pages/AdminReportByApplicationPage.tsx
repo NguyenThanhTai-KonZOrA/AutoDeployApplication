@@ -39,6 +39,7 @@ import {
     ExpandMore as ExpandMoreIcon,
     Computer as ComputerIcon,
     PersonOutline as PersonIcon,
+    FilterList as FilterListIcon
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -181,18 +182,18 @@ export default function AdminReportByApplicationPage() {
     return (
         <AdminLayout>
             <Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                    {/* <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        Report by Application
-                    </Typography> */}
-
+                {/* Header */}
+                <Box sx={{ mb: 3 }}>
+                    <Typography variant="body1" color="text.secondary">
+                        Reports by application, filter and search reports, and view detailed information
+                    </Typography>
                 </Box>
 
                 {/* Filters */}
                 <Card sx={{ mb: 3 }}>
                     <CardContent>
-                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                            Filters
+                        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                            <FilterListIcon sx={{ mr: 1 }} /> Filters
                         </Typography>
                         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
                             <FormControl fullWidth size="small">

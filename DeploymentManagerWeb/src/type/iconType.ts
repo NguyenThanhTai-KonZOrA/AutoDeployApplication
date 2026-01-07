@@ -1,7 +1,7 @@
 export interface IconResponse {
     id: number;
     name: string;
-    type: string;
+    type: number;
     fileName: string;
     filePath: string;
     fileSize: number;

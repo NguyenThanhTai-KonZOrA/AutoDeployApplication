@@ -197,11 +197,14 @@ namespace ClientLancher.Implement.Services
                 Id = icon.Id,
                 Name = icon.Name,
                 FileUrl = icon.FileUrl,
+                FilePath = icon.FilePath,
                 FileExtension = icon.FileExtension,
                 FileSize = icon.FileSize,
                 Type = icon.Type,
                 ReferenceId = icon.ReferenceId,
-                CreatedAt = icon.CreatedAt
+                CreatedAt = icon.CreatedAt,
+                UpdatedAt = icon.UpdatedAt,
+                IsActive = icon.IsActive
             };
         }
     }
