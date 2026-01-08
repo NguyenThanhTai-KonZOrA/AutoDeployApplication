@@ -13,6 +13,8 @@
     {
         public string Version { get; set; } = string.Empty;
         public int PCCount { get; set; }
+        public int UpdatedPCCount { get; set; }
+        public int NotUpdatedPCCount { get; set; }
         public List<PCInstallationDetail> PCs { get; set; } = new();
     }
 

@@ -60,44 +60,74 @@ namespace ClientLancher.Implement.Services
             // Group by Application and Version
             var groupedByApp = logs
                 .GroupBy(l => new { l.ApplicationId, l.Application.Name, l.Application.AppCode })
-                .Select(appGroup => new InstallationReportResponse
+                .Select(appGroup =>
                 {
-                    ApplicationId = appGroup.Key.ApplicationId,
-                    ApplicationName = appGroup.Key.Name,
-                    AppCode = appGroup.Key.AppCode,
-                    VersionStats = appGroup
-                        .GroupBy(l => l.NewVersion)
-                        .Select(versionGroup =>
-                        {
-                            // Get latest log for each machine (by MachineId or MachineName)
-                            var latestByMachine = versionGroup
-                                .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
-                                .Select(machineGroup => machineGroup.OrderByDescending(l => l.CreatedAt).First())
-                                .ToList();
+                    // Get latest version of this application
+                    var latestVersion = appGroup
+                        .Select(l => l.NewVersion)
+                        .Distinct()
+                        .OrderByDescending(v => v)
+                        .FirstOrDefault();
 
-                            return new VersionInstallationStats
-                            {
-                                Version = versionGroup.Key,
-                                PCCount = latestByMachine.Count,
-                                PCs = latestByMachine.Select(l => new PCInstallationDetail
-                                {
-                                    MachineName = l.MachineName,
-                                    MachineId = l.MachineId,
-                                    UserName = l.UserName,
-                                    Status = l.Status,
-                                    Action = l.Action,
-                                    InstalledAt = l.StartedAt,
-                                    LastUpdatedAt = l.CompletedAt
-                                })
-                                .OrderBy(p => p.MachineName)
-                                .ToList()
-                            };
-                        })
-                        .OrderByDescending(v => v.Version)
-                        .ToList(),
-                    TotalPCs = appGroup
+                    // Get latest log for each machine (all versions)
+                    var allLatestByMachine = appGroup
                         .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
-                        .Count()
+                        .Select(machineGroup => machineGroup.OrderByDescending(l => l.CreatedAt).First())
+                        .ToList();
+
+                    return new InstallationReportResponse
+                    {
+                        ApplicationId = appGroup.Key.ApplicationId,
+                        ApplicationName = appGroup.Key.Name,
+                        AppCode = appGroup.Key.AppCode,
+                        VersionStats = appGroup
+                            .GroupBy(l => l.NewVersion)
+                            .Select(versionGroup =>
+                            {
+                                // Get latest log for each machine (by MachineId or MachineName)
+                                var latestByMachine = versionGroup
+                                    .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
+                                    .Select(machineGroup => machineGroup.OrderByDescending(l => l.CreatedAt).First())
+                                    .ToList();
+
+                                // Count devices that have been updated and not updated
+                                var currentVersion = versionGroup.Key;
+
+                                // Number of machines updated: machines with Action = "Update" or "Install" for this version
+                                var updatedPCCount = latestByMachine
+                                    .Count(l => l.Action.Equals("Update", StringComparison.OrdinalIgnoreCase) ||
+                                               l.Action.Equals("Install", StringComparison.OrdinalIgnoreCase));
+
+                                // Number of machines not updated: total machines in app - machines at this version
+                                var notUpdatedPCCount = allLatestByMachine
+                                    .Count(l => !l.NewVersion.Equals(currentVersion, StringComparison.OrdinalIgnoreCase));
+
+                                return new VersionInstallationStats
+                                {
+                                    Version = versionGroup.Key,
+                                    PCCount = latestByMachine.Count,
+                                    UpdatedPCCount = updatedPCCount,
+                                    NotUpdatedPCCount = notUpdatedPCCount,
+                                    PCs = latestByMachine.Select(l => new PCInstallationDetail
+                                    {
+                                        MachineName = l.MachineName,
+                                        MachineId = l.MachineId,
+                                        UserName = l.UserName,
+                                        Status = l.Status,
+                                        Action = l.Action,
+                                        InstalledAt = l.StartedAt,
+                                        LastUpdatedAt = l.CompletedAt
+                                    })
+                                    .OrderBy(p => p.MachineName)
+                                    .ToList()
+                                };
+                            })
+                            .OrderByDescending(v => v.Version)
+                            .ToList(),
+                        TotalPCs = appGroup
+                            .GroupBy(l => string.IsNullOrEmpty(l.MachineId) ? l.MachineName : l.MachineId)
+                            .Count()
+                    };
                 })
                 .OrderBy(a => a.ApplicationName)
                 .ToList();

@@ -55,6 +55,8 @@ export interface InstallationReportResponse {
 export interface VersionInstallationStats {
     version: string;
     pcCount: number;
+    notUpdatedPCCount: number;
+    updatedPCCount: number;
     pCs: PCInstallationDetail[];
 }
 

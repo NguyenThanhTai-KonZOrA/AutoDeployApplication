@@ -487,10 +487,26 @@ export default function AdminReportByApplicationPage() {
                                                     Version: {versionStat.version}
                                                 </Typography>
                                                 <Chip
-                                                    label={`${versionStat.pcCount} PC${versionStat.pcCount > 1 ? 's' : ''}`}
+                                                    label={`Machines installed: ${versionStat.pcCount} PC${versionStat.pcCount > 1 ? 's' : ''}`}
                                                     size="small"
                                                     color="primary"
+                                                    variant="outlined"
                                                 />
+                                                <Chip
+                                                    label={`Machines updated: ${versionStat.updatedPCCount} PC${versionStat.updatedPCCount > 1 ? 's' : ''}`}
+                                                    size="small"
+                                                    color="success"
+                                                    variant="outlined"
+                                                />
+                                                {selectedReport.versionStats.length !== 1 && index < 1 &&
+
+                                                    <Chip
+                                                        label={`Machines out of date: ${versionStat.notUpdatedPCCount} PC${versionStat.notUpdatedPCCount > 1 ? 's' : ''}`}
+                                                        size="small"
+                                                        color="warning"
+                                                        variant="outlined"
+                                                    />
+                                                }
                                             </Box>
                                         </AccordionSummary>
                                         <AccordionDetails>
