@@ -23,6 +23,7 @@ export interface TopApplicationResponse {
     applicationName: string;
     downloadCount: number;
     latestVersion: string;
+    iconUrl: string;
 }
 
 export interface RecentActivitiesResponse {

@@ -533,7 +533,7 @@ export default function AdminCategoryPage() {
                                                     {category.displayName}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {category.description || 'N/A'}
+                                                    {category.description || '-'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip

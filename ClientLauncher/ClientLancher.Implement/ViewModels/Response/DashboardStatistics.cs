@@ -30,6 +30,7 @@
         public string ApplicationName { get; set; } = string.Empty;
         public int DownloadCount { get; set; }
         public string LatestVersion { get; set; } = string.Empty;
+        public string IconUrl { get; set; }
     }
 
     public class RecentActivity

@@ -342,13 +342,14 @@ export default function AdminIconsPage() {
 
                             {/* Type Filter */}
                             <FormControl size="small" sx={{ minWidth: 150 }}>
-                                <InputLabel>Type</InputLabel>
                                 <Select
                                     value={filterType}
-                                    label="Type"
                                     onChange={(e) => setFilterType(e.target.value)}
+                                    displayEmpty
                                 >
-                                    <MenuItem value="">All Types</MenuItem>
+                                    <MenuItem value="">
+                                        <em>All Types</em>
+                                    </MenuItem>
                                     {iconTypes.map((type) => (
                                         <MenuItem key={type.value} value={type.value}>
                                             {type.label}
@@ -403,29 +404,31 @@ export default function AdminIconsPage() {
                             >
                                 Create new
                             </Button>
-                        </Box>
 
-                        {/* Stats */}
-                        <Box sx={{ mt: 2 }}>
-                            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                                Total: {filteredIcons.length} icons
-                                {(searchTerm || filterType) && ` (filtered from ${icons.length})`}
-                            </Typography>
-                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
-                                <Chip
-                                    label={`Active: ${icons.filter(i => i.isActive).length}`}
-                                    color="success"
-                                    size="small"
-                                    variant="outlined"
-                                />
-                                <Chip
-                                    label={`Inactive: ${icons.filter(i => !i.isActive).length}`}
-                                    color="error"
-                                    size="small"
-                                    variant="outlined"
-                                />
+                            {/* Stats */}
+                            <Box sx={{}}>
+                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+                                    Total: {filteredIcons.length} icons
+                                    {(searchTerm || filterType) && ` (filtered from ${icons.length})`}
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
+                                    <Chip
+                                        label={`Active: ${icons.filter(i => i.isActive).length}`}
+                                        color="success"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`Inactive: ${icons.filter(i => !i.isActive).length}`}
+                                        color="error"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                </Box>
                             </Box>
                         </Box>
+
+
                     </CardContent>
                 </Card>
 
@@ -439,27 +442,47 @@ export default function AdminIconsPage() {
 
                 {/* Icons Table */}
                 <Card>
-                    <CardContent>
+                    <CardContent sx={{ p: 0 }}>
                         <TableContainer component={Paper} variant="outlined">
                             <Table>
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell align="center" width="150px">Actions</TableCell>
-                                        <TableCell width="100px">Preview</TableCell>
-                                        <TableCell>Icon Name</TableCell>
-                                        <TableCell>Icon Type</TableCell>
-                                        <TableCell>File Name</TableCell>
-                                        <TableCell>Size</TableCell>
-                                        <TableCell>Icon Url</TableCell>
-                                        <TableCell align="center">Status</TableCell>
-                                        <TableCell>Updated At</TableCell>
+                                        <TableCell sx={{
+                                            fontWeight: 600,
+                                            textAlign: 'center',
+                                            position: 'sticky',
+                                            left: 0,
+                                            backgroundColor: 'background.paper',
+                                            zIndex: 3,
+                                            boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                                            borderRight: '1px solid #e0e0e0'
+                                        }}>
+                                            Actions
+                                        </TableCell>
+                                        <TableCell width="100px" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }} align="center">Preview</TableCell>
+                                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>Icon Name</TableCell>
+                                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>Icon Type</TableCell>
+                                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>File Extension</TableCell>
+                                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>Size</TableCell>
+                                        <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>Icon Url</TableCell>
+                                        <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>Status</TableCell>
+                                        <TableCell sx={{ fontWeight: 500 }}>Updated At</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {currentPageData.length > 0 ? (
                                         currentPageData.map((icon) => (
                                             <TableRow key={icon.id} hover>
-                                                <TableCell align="center">
+                                                <TableCell sx={{
+                                                    fontWeight: 600,
+                                                    textAlign: 'center',
+                                                    position: 'sticky',
+                                                    left: 0,
+                                                    backgroundColor: 'background.paper',
+                                                    zIndex: 3,
+                                                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                                                    borderRight: '1px solid #e0e0e0'
+                                                }}>
                                                     <Tooltip title="Edit">
                                                         <IconButton
                                                             size="small"
@@ -480,7 +503,7 @@ export default function AdminIconsPage() {
                                                         </IconButton>
                                                     </Tooltip>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     <Box
                                                         component="img"
                                                         src={`${API_BASE}${icon.fileUrl}`}
@@ -489,7 +512,6 @@ export default function AdminIconsPage() {
                                                             width: 40,
                                                             height: 40,
                                                             objectFit: 'contain',
-                                                            border: '1px solid #e0e0e0',
                                                             borderRadius: 1,
                                                             p: 0.5,
                                                         }}
@@ -498,31 +520,33 @@ export default function AdminIconsPage() {
                                                         }}
                                                     />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     <Typography variant="body2" fontWeight={600}>
                                                         {icon.name}
                                                     </Typography>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     <Chip label={icon.type === 1 ? "Application" : "Category"} size="small" color={icon.type === 1 ? "success" : "secondary"} variant="outlined" />
                                                 </TableCell>
-                                                <TableCell>{icon.name}</TableCell>
-                                                <TableCell>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                    <Chip label={icon.fileExtension} size="small" variant="outlined" color="primary" />
+                                                </TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {(icon.fileSize / 1024).toFixed(2)} KB
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
                                                         {icon.fileUrl || "-"}
                                                     </Typography>
                                                 </TableCell>
-                                                <TableCell align="center">
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     <Chip
                                                         label={icon.isActive ? "Active" : "Inactive"}
                                                         color={icon.isActive ? "success" : "error"}
                                                         size="small"
                                                     />
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {FormatUtcTime.formatDateTime(icon.updatedAt)}
                                                 </TableCell>
 
@@ -659,7 +683,7 @@ export default function AdminIconsPage() {
                                             borderRadius: 2,
                                             p: 2,
                                         }}
-                                        onError={(e) => {
+                                        onError={(_e: any) => {
                                             console.error('Failed to load image:', previewUrl);
                                         }}
                                     />

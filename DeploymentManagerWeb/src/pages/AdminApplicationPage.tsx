@@ -1083,16 +1083,17 @@ export default function AdminApplicationPage() {
 
                             <Grid size={{ xs: 12, sm: 6, md: 2 }}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Status</InputLabel>
                                     <Select
                                         value={filterStatus}
-                                        label="Status"
                                         onChange={(e) => {
                                             setFilterStatus(e.target.value);
                                             setCurrentPage(1);
                                         }}
+                                        displayEmpty
                                     >
-                                        <MenuItem value="">All Status</MenuItem>
+                                        <MenuItem value="">
+                                            <em>All Status</em>
+                                        </MenuItem>
                                         <MenuItem value="active">Active</MenuItem>
                                         <MenuItem value="inactive">Inactive</MenuItem>
                                     </Select>
@@ -1323,7 +1324,7 @@ export default function AdminApplicationPage() {
                                                     {getColorChipByCategory(application.categoryId, application.categoryName)}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {application.latestVersion || 'N/A'}
+                                                    {application.latestVersion || '-'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip
@@ -2176,7 +2177,7 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFieldChange('configVersion', e.target.value)}
                                         />
                                     ) : (
-                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configVersion || 'N/A'}</Typography>
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configVersion || '-'}</Typography>
                                     )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -2189,7 +2190,7 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFieldChange('configPackage', e.target.value)}
                                         />
                                     ) : (
-                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configPackage || 'N/A'}</Typography>
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.configPackage || '-'}</Typography>
                                     )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -2282,7 +2283,7 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFieldChange('releaseNotes', e.target.value)}
                                         />
                                     ) : (
-                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.releaseNotes || 'N/A'}</Typography>
+                                        <Typography variant="body1" fontWeight={500}>{viewingManifest.releaseNotes || '-'}</Typography>
                                     )}
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 4 }}>

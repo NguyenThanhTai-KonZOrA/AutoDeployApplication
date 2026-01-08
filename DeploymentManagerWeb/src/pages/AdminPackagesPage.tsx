@@ -381,6 +381,7 @@ export default function AdminPackagesPage() {
                                                                                 size="small"
                                                                                 color="error"
                                                                                 onClick={() => handleOpenDeleteDialog(pkg)}
+                                                                                disabled={pkg.applicationName === 'Client Application'}
                                                                             >
                                                                                 <DeleteIcon />
                                                                             </IconButton>

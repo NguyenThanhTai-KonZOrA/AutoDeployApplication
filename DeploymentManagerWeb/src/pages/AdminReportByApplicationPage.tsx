@@ -64,8 +64,29 @@ export default function AdminReportByApplicationPage() {
     const [filterApplicationId, setFilterApplicationId] = useState<number | "">("");
     const [filterMachineName, setFilterMachineName] = useState("");
     const [filterStatus, setFilterStatus] = useState<string>("");
-    const [filterFromDate, setFilterFromDate] = useState("");
-    const [filterToDate, setFilterToDate] = useState("");
+    const [filterFromDate, setFilterFromDate] = useState<string>(() => {
+        // Set to 1 day ago in local time
+        const date = new Date();
+        date.setDate(date.getDate() - 1);
+        // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    });
+    const [filterToDate, setFilterToDate] = useState<string>(() => {
+        // Set to current date/time in local time
+        const date = new Date();
+        // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    });
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -196,6 +217,50 @@ export default function AdminReportByApplicationPage() {
                             <FilterListIcon sx={{ mr: 1 }} /> Filters
                         </Typography>
                         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="From Date"
+                                type="datetime-local"
+                                value={filterFromDate}
+                                onChange={(e) => {
+                                    setFilterFromDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                InputLabelProps={{ shrink: true }}
+                                inputProps={{
+                                    max: FormatUtcTime.getTodayWithTimeString(),
+                                }}
+                                onFocus={(e) => {
+                                    const input = e.target as HTMLInputElement;
+                                    if (input.showPicker) {
+                                        input.showPicker();
+                                    }
+                                }}
+                            />
+
+                            <TextField
+                                fullWidth
+                                size="small"
+                                label="To Date"
+                                type="datetime-local"
+                                value={filterToDate}
+                                onChange={(e) => {
+                                    setFilterToDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                InputLabelProps={{ shrink: true }}
+                                inputProps={{
+                                    max: FormatUtcTime.getTodayWithTimeString(),
+                                    min: filterFromDate
+                                }}
+                                onFocus={(e) => {
+                                    const input = e.target as HTMLInputElement;
+                                    if (input.showPicker) {
+                                        input.showPicker();
+                                    }
+                                }}
+                            />
                             <FormControl fullWidth size="small">
                                 <InputLabel>Application</InputLabel>
                                 <Select
@@ -206,7 +271,7 @@ export default function AdminReportByApplicationPage() {
                                         setCurrentPage(1);
                                     }}
                                 >
-                                    <MenuItem value="">All Applications</MenuItem>
+                                    <MenuItem value={0} selected>All Applications</MenuItem>
                                     {applications.map((app) => (
                                         <MenuItem key={app.id} value={app.id}>
                                             {app.name} ({app.appCode})
@@ -215,6 +280,16 @@ export default function AdminReportByApplicationPage() {
                                 </Select>
                             </FormControl>
 
+                            <TextField
+                                size="small"
+                                placeholder="Search by application name or code..."
+                                value={searchTerm}
+                                onChange={handleSearch}
+                                InputProps={{
+                                    startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
+                                }}
+                                sx={{ flexGrow: 1, minWidth: 250 }}
+                            />
                             <TextField
                                 fullWidth
                                 size="small"
@@ -243,34 +318,6 @@ export default function AdminReportByApplicationPage() {
                                 </Select>
                             </FormControl>
 
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="From Date"
-                                type="datetime-local"
-                                value={filterFromDate}
-                                onChange={(e) => {
-                                    setFilterFromDate(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                InputLabelProps={{ shrink: true }}
-                            />
-
-                            <TextField
-                                fullWidth
-                                size="small"
-                                label="To Date"
-                                type="datetime-local"
-                                value={filterToDate}
-                                onChange={(e) => {
-                                    setFilterToDate(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                InputLabelProps={{ shrink: true }}
-                            />
-
-
-
                             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                                 <Button
                                     variant="contained"
@@ -288,41 +335,24 @@ export default function AdminReportByApplicationPage() {
                                 >
                                     Clear Filters
                                 </Button>
-                            </Box>
-                        </Box>
-                    </CardContent>
-                </Card>
 
-                {/* Search and Pagination Controls */}
-                <Card sx={{ mb: 3 }}>
-                    <CardContent>
-                        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-                            <TextField
-                                size="small"
-                                placeholder="Search by application name or code..."
-                                value={searchTerm}
-                                onChange={handleSearch}
-                                InputProps={{
-                                    startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
-                                }}
-                                sx={{ flexGrow: 1, minWidth: 250 }}
-                            />
-                            <FormControl size="small" sx={{ minWidth: 120 }}>
-                                <InputLabel>Items per page</InputLabel>
-                                <Select
-                                    value={itemsPerPage}
-                                    label="Items per page"
-                                    onChange={(e) => {
-                                        setItemsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                >
-                                    <MenuItem value={5}>5</MenuItem>
-                                    <MenuItem value={10}>10</MenuItem>
-                                    <MenuItem value={25}>25</MenuItem>
-                                    <MenuItem value={50}>50</MenuItem>
-                                </Select>
-                            </FormControl>
+                                <FormControl size="small" sx={{ minWidth: 120 }}>
+                                    <InputLabel>Items per page</InputLabel>
+                                    <Select
+                                        value={itemsPerPage}
+                                        label="Items per page"
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                    >
+                                        <MenuItem value={5}>5</MenuItem>
+                                        <MenuItem value={10}>10</MenuItem>
+                                        <MenuItem value={25}>25</MenuItem>
+                                        <MenuItem value={50}>50</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Box>
                         </Box>
                     </CardContent>
                 </Card>

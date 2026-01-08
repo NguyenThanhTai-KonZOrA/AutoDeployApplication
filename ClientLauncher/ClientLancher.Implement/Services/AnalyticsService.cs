@@ -113,7 +113,8 @@ namespace ClientLancher.Implement.Services
                     AppCode = app.AppCode,
                     ApplicationName = app.Name,
                     DownloadCount = totalDownloads,
-                    LatestVersion = latestVersion?.Version ?? "N/A"
+                    LatestVersion = latestVersion?.Version ?? string.Empty,
+                    IconUrl = app.IconUrl
                 });
             }
 

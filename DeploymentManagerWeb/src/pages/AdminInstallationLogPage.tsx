@@ -165,8 +165,30 @@ export default function AdminInstallationLogPage() {
             MachineName: "",
             Status: "",
             Action: "",
-            FromDate: "",
-            ToDate: "",
+            FromDate: (() => {
+                // Set to 1 day ago in local time
+                const date = new Date();
+                date.setDate(date.getDate() - 1);
+                // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            })(),
+            // to end of today viet nam time UTC +7
+            ToDate: (() => {
+                // Set to current date/time in local time
+                const date = new Date();
+                // Format to local datetime-local format (YYYY-MM-DDTHH:mm)
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            })(),
             Page: 1,
             PageSize: itemsPerPage,
             Take: itemsPerPage,
@@ -243,6 +265,49 @@ export default function AdminInstallationLogPage() {
                         </Typography>
                         <Grid container spacing={2} alignItems="center">
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="From Date"
+                                    type="datetime-local"
+                                    value={filters.FromDate}
+                                    onChange={(e) => handleFilterChange("FromDate", e.target.value)}
+                                    InputLabelProps={{ shrink: true }}
+                                    inputProps={{
+                                        max: FormatUtcTime.getTodayWithTimeString(),
+                                    }}
+                                    onFocus={(e) => {
+                                        const input = e.target as HTMLInputElement;
+                                        if (input.showPicker) {
+                                            input.showPicker();
+                                        }
+                                    }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                                <TextField
+                                    fullWidth
+                                    size="small"
+                                    label="To Date"
+                                    type="datetime-local"
+                                    value={filters.ToDate}
+                                    onChange={(e) => handleFilterChange("ToDate", e.target.value)}
+                                    InputLabelProps={{ shrink: true }}
+                                    inputProps={{
+                                        max: FormatUtcTime.getTodayWithTimeString(),
+                                        min: filters.FromDate
+                                    }}
+                                    onFocus={(e) => {
+                                        const input = e.target as HTMLInputElement;
+                                        if (input.showPicker) {
+                                            input.showPicker();
+                                        }
+                                    }}
+                                />
+                            </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Application</InputLabel>
                                     <Select
@@ -282,13 +347,14 @@ export default function AdminInstallationLogPage() {
 
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Status</InputLabel>
                                     <Select
-                                        label="Status"
                                         value={filters.Status}
                                         onChange={(e) => handleFilterChange("Status", e.target.value)}
+                                        displayEmpty
                                     >
-                                        <MenuItem value="">All Status</MenuItem>
+                                        <MenuItem value="">
+                                            <em>All Status</em>
+                                        </MenuItem>
                                         <MenuItem value="Success">Success</MenuItem>
                                         <MenuItem value="Failed">Failed</MenuItem>
                                         <MenuItem value="InProgress">In Progress</MenuItem>
@@ -298,13 +364,14 @@ export default function AdminInstallationLogPage() {
 
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Action</InputLabel>
                                     <Select
-                                        label="Action"
                                         value={filters.Action}
                                         onChange={(e) => handleFilterChange("Action", e.target.value)}
+                                        displayEmpty
                                     >
-                                        <MenuItem value="">All Actions</MenuItem>
+                                        <MenuItem value="">
+                                            <em>All Actions</em>
+                                        </MenuItem>
                                         <MenuItem value="Install">Install</MenuItem>
                                         <MenuItem value="Update">Update</MenuItem>
                                         <MenuItem value="Uninstall">Uninstall</MenuItem>
@@ -312,63 +379,6 @@ export default function AdminInstallationLogPage() {
                                 </FormControl>
                             </Grid>
 
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="From Date"
-                                    type="datetime-local"
-                                    value={filters.FromDate}
-                                    onChange={(e) => handleFilterChange("FromDate", e.target.value)}
-                                    InputLabelProps={{ shrink: true }}
-                                />
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="To Date"
-                                    type="datetime-local"
-                                    value={filters.ToDate}
-                                    onChange={(e) => handleFilterChange("ToDate", e.target.value)}
-                                    InputLabelProps={{ shrink: true }}
-                                />
-                            </Grid>
-
-                            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<SearchIcon />}
-                                        onClick={handleApplyFilters}
-                                    >
-                                        Search
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<RefreshIcon />}
-                                        onClick={loadLogs}
-                                        disabled={loading}
-                                    >
-                                        Refresh
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        onClick={handleClearFilters}
-                                    >
-                                        Clear
-                                    </Button>
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </CardContent>
-                </Card>
-
-                {/* Actions Bar */}
-                <Card sx={{ mb: 3 }}>
-                    <CardContent>
-                        <Grid container spacing={3} alignItems="center">
                             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Items per page</InputLabel>
@@ -385,7 +395,7 @@ export default function AdminInstallationLogPage() {
                                 </FormControl>
                             </Grid>
 
-                            <Grid size={{ xs: 12, md: 6 }}>
+                            <Grid size={{ xs: 12, md: 3 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                                     Total: {totalRecords} installation logs
                                 </Typography>
@@ -410,6 +420,34 @@ export default function AdminInstallationLogPage() {
                                     />
                                 </Box>
                             </Grid>
+
+                            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<SearchIcon />}
+                                        onClick={handleApplyFilters}
+                                    >
+                                        Search
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<RefreshIcon />}
+                                        onClick={loadLogs}
+                                        disabled={loading}
+                                    >
+                                        Refresh
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={handleClearFilters}
+                                    >
+                                        Clear Filters
+                                    </Button>
+                                </Box>
+                            </Grid>
+
+
                         </Grid>
                     </CardContent>
                 </Card>
@@ -552,19 +590,19 @@ export default function AdminInstallationLogPage() {
                                                     />
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {log.oldVersion || 'N/A'}
+                                                    {log.oldVersion || '-'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {log.newVersion || 'N/A'}
+                                                    {log.newVersion || '-'}
                                                 </TableCell>
                                                 <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {log.durationInSeconds > 0 ? log.durationInSeconds : 'N/A'}
+                                                    {log.durationInSeconds > 0 ? log.durationInSeconds : '-'}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     {FormatUtcTime.formatDateTime(log.startedAt)}
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    {log.completedAt ? FormatUtcTime.formatDateTime(log.completedAt) : 'N/A'}
+                                                    {log.completedAt ? FormatUtcTime.formatDateTime(log.completedAt) : '-'}
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -642,15 +680,15 @@ export default function AdminInstallationLogPage() {
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Old Version</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingLog.oldVersion || 'N/A'}</Typography>
+                                    <Typography variant="body1" fontWeight={500}>{viewingLog.oldVersion || '-'}</Typography>
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">New Version</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingLog.newVersion || 'N/A'}</Typography>
+                                    <Typography variant="body1" fontWeight={500}>{viewingLog.newVersion || '-'}</Typography>
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                     <Typography variant="body2" color="text.secondary">Installation Path</Typography>
-                                    <Typography variant="body1" fontWeight={500}>{viewingLog.installationPath || 'N/A'}</Typography>
+                                    <Typography variant="body1" fontWeight={500}>{viewingLog.installationPath || '-'}</Typography>
                                 </Grid>
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Started At</Typography>
@@ -659,13 +697,13 @@ export default function AdminInstallationLogPage() {
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <Typography variant="body2" color="text.secondary">Completed At</Typography>
                                     <Typography variant="body1" fontWeight={500}>
-                                        {viewingLog.completedAt ? FormatUtcTime.formatDateTime(viewingLog.completedAt) : 'N/A'}
+                                        {viewingLog.completedAt ? FormatUtcTime.formatDateTime(viewingLog.completedAt) : '-'}
                                     </Typography>
                                 </Grid>
                                 <Grid size={{ xs: 12 }}>
                                     <Typography variant="body2" color="text.secondary">Duration</Typography>
                                     <Typography variant="body1" fontWeight={500}>
-                                        {viewingLog.durationInSeconds > 0 ? `${viewingLog.durationInSeconds} seconds` : 'N/A'}
+                                        {viewingLog.durationInSeconds > 0 ? `${viewingLog.durationInSeconds} seconds` : '-'}
                                     </Typography>
                                 </Grid>
                                 {viewingLog.errorMessage && (

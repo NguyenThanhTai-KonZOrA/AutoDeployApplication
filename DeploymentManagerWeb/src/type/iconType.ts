@@ -10,6 +10,7 @@ export interface IconResponse {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
+    fileExtension: string;
 }
 
 export interface CreateIconRequest {

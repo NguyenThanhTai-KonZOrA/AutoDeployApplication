@@ -67,6 +67,7 @@ namespace ClientLancher.Implement.Services
                     throw new Exception($"Category with ID {id} not found");
                 }
 
+                category.Name = request.Name;
                 category.DisplayName = request.DisplayName;
                 category.Description = request.Description;
                 category.IconUrl = request.IconUrl;

@@ -88,7 +88,7 @@ const StatCard = ({ title, value, icon, color, subtitle }: StatCardProps) => (
 
 export default function AdminDashboard() {
     useSetPageTitle(PAGE_TITLES.DASHBOARD);
-
+    const API_BASE = (window as any)._env_?.API_BASE;
     const [loading, setLoading] = useState<boolean>(false);
     const [dashboardData, setDashboardData] = useState<AnalyticDashboardResponse | null>(null);
     const [snackbar, setSnackbar] = useState<{
@@ -281,6 +281,7 @@ export default function AdminDashboard() {
                                             <TableHead>
                                                 <TableRow>
                                                     <TableCell>#</TableCell>
+                                                    <TableCell>Icon</TableCell>
                                                     <TableCell>Application Name</TableCell>
                                                     <TableCell>Application Code</TableCell>
                                                     <TableCell>Latest Version</TableCell>
@@ -304,6 +305,23 @@ export default function AdminDashboard() {
                                                                     label={index + 1}
                                                                     size="small"
                                                                     color={index === 0 ? "primary" : index === 1 ? "success" : index === 2 ? "warning" : "default"}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Box
+                                                                    component="img"
+                                                                    src={`${API_BASE}${app.iconUrl}`}
+                                                                    alt={app.applicationName}
+                                                                    sx={{
+                                                                        width: 40,
+                                                                        height: 40,
+                                                                        objectFit: 'contain',
+                                                                        borderRadius: 1,
+                                                                        p: 0.5,
+                                                                    }}
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                    }}
                                                                 />
                                                             </TableCell>
                                                             <TableCell>
@@ -347,8 +365,22 @@ export default function AdminDashboard() {
                                                 <Box key={category.id}>
                                                     <ListItem>
                                                         <ListItemAvatar>
-                                                            <Avatar sx={{ bgcolor: "primary.light" }}>
-                                                                <CategoryIcon fontSize="small" />
+                                                            <Avatar>
+                                                                <Box
+                                                                    component="img"
+                                                                    src={`${API_BASE}${category.iconUrl}`}
+                                                                    alt={category.name}
+                                                                    sx={{
+                                                                        width: 40,
+                                                                        height: 40,
+                                                                        objectFit: 'contain',
+                                                                        borderRadius: 1,
+                                                                        p: 0.5,
+                                                                    }}
+                                                                    onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                    }}
+                                                                />
                                                             </Avatar>
                                                         </ListItemAvatar>
                                                         <ListItemText
