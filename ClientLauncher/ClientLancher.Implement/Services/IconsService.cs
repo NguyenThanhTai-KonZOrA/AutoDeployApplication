@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using Azure.Core;
+using ClientLancher.Implement.EntityModels;
 using ClientLancher.Implement.Repositories.Interface;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
@@ -34,7 +35,7 @@ namespace ClientLancher.Implement.Services
 
         public async Task<IEnumerable<IconResponse>> GetAllAsync()
         {
-            var icons = await _iconsRepository.FindAsync(i => i.IsActive && !i.IsDelete);
+            var icons = await _iconsRepository.FindAsync(i => !i.IsDelete);
             return icons.Select(MapToDto);
         }
 
@@ -82,24 +83,44 @@ namespace ClientLancher.Implement.Services
             return MapToDto(icon);
         }
 
-        public async Task<IconResponse?> UpdateAsync(int id, UpdateIconRequest updateDto, string updatedBy)
+        public async Task<IconResponse?> UpdateAsync(int id, UpdateIconRequest request, string updatedBy)
         {
             var icon = await _iconsRepository.GetByIdAsync(id);
             if (icon == null || icon.IsDelete)
                 return null;
 
-            if (!string.IsNullOrWhiteSpace(updateDto.Name))
-                icon.Name = updateDto.Name;
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                icon.Name = request.Name;
 
-            if (updateDto.Type.HasValue)
-                icon.Type = updateDto.Type.Value;
+            if (request.Type.HasValue)
+                icon.Type = request.Type.Value;
 
-            if (updateDto.ReferenceId.HasValue)
-                icon.ReferenceId = updateDto.ReferenceId.Value;
+            if (request.ReferenceId.HasValue)
+                icon.ReferenceId = request.ReferenceId.Value;
+
+            if (request.IsActive.HasValue)
+                icon.IsActive = request.IsActive.Value;
+
+            var fileName = icon.Name;
+            var fileExtension = icon.FileExtension;
+            var filePath = icon.FilePath;
+            var fileUrl = icon.FileUrl;
+
+            if (request.File != null)
+            {
+                ValidateFile(request.File);
+                fileName = await SaveFileAsync(request.File);
+                fileExtension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+                filePath = Path.Combine(_iconStoragePath, fileName);
+                fileUrl = $"/icons/{fileName}";
+            }
 
             icon.UpdatedBy = updatedBy;
             icon.UpdatedAt = DateTime.UtcNow;
-
+            icon.Name = fileName;
+            icon.FileExtension = fileExtension;
+            icon.FilePath = filePath;
+            icon.FileUrl = fileUrl;
             _iconsRepository.Update(icon);
             await _unitOfWork.SaveChangesAsync();
 

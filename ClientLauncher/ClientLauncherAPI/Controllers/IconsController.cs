@@ -178,7 +178,7 @@ namespace ClientLauncherAPI.Controllers
                 if (!result)
                     return NotFound(new { message = "Icon not found" });
 
-                return NoContent();
+                return Ok(result);
             }
             catch (Exception ex)
             {

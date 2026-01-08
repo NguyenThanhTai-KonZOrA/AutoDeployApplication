@@ -6,7 +6,7 @@ public interface IPackageVersionService
 {
     // Package Upload & Management
     Task<PackageVersionResponse> UploadPackageAsync(PackageUploadRequest request);
-    Task<PackageVersionResponse> UpdatePackageAsync(int id, PackageUpdateRequest request);
+    Task<PackageVersionResponse> UpdatePackageAsync(PackageUpdateRequest request);
     Task<bool> DeletePackageAsync(int id);
     Task<PackageVersionResponse> PublishPackageAsync(PublishPackageRequest request);
 

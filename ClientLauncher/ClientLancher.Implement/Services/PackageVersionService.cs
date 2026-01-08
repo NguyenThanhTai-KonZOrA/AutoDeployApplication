@@ -131,38 +131,81 @@ namespace ClientLancher.Implement.Services
             }
         }
 
-        public async Task<PackageVersionResponse> UpdatePackageAsync(int id, PackageUpdateRequest request)
+        public async Task<PackageVersionResponse> UpdatePackageAsync(PackageUpdateRequest request)
         {
             try
             {
-                var package = await _unitOfWork.PackageVersions.GetByIdWithDetailsAsync(id);
+                var package = await _unitOfWork.PackageVersions.GetByIdWithDetailsAsync(request.Id);
                 if (package == null)
                 {
-                    throw new Exception($"Package version with ID {id} not found");
+                    throw new Exception($"Package version with ID {request.Id} not found");
                 }
+
+                // 1. Validate application exists
+                var application = await _unitOfWork.Applications.GetByIdAsync(request.ApplicationId);
+                if (application == null)
+                {
+                    throw new Exception($"Application with ID {request.ApplicationId} not found");
+                }
+
+                //// 2. Check if version already exists
+                //var existingVersion = await _unitOfWork.PackageVersions
+                //    .GetByApplicationAndVersionAsync(request.ApplicationId, package.Version);
+
+                //if (existingVersion != null)
+                //{
+                //    throw new Exception($"Version {package.Version} already exists for application {application.AppCode}");
+                //}
+
+                // 3. Validate package file
+                if (!await ValidatePackageAsync(request.NewPackage))
+                {
+                    throw new Exception("Invalid package file");
+                }
+
+                // 4. Calculate file hash
+                using var stream = request.NewPackage.OpenReadStream();
+                var fileHash = await CalculateFileHashAsync(stream);
+                stream.Position = 0;
+
+                // 5. Determine storage path
+                //var fileName = $"{application.AppCode}_v{request.Version}.zip";
+                string fileName;
+                string storagePath;
+                string fullPath;
+                fileName = $"{application.AppCode}_{package.Version}.zip";
+                storagePath = Path.Combine(application.AppCode, package.Version, fileName);
+                fullPath = Path.Combine(_packagesBasePath, storagePath);
+                // 6. Save file to disk
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+
+                using (var fileStream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await request.NewPackage.CopyToAsync(fileStream);
+                }
+
+                _logger.LogInformation("Package file saved to: {Path}", fullPath);
 
                 if (request.ReleaseNotes != null)
                     package.ReleaseNotes = request.ReleaseNotes;
 
-                if (request.IsActive.HasValue)
-                    package.IsActive = request.IsActive.Value;
-
-                if (request.IsStable.HasValue)
-                    package.IsStable = request.IsStable.Value;
-
-                if (request.MinimumClientVersion != null)
-                    package.MinimumClientVersion = request.MinimumClientVersion;
+                package.ReplacesVersionId = package.Id;
+                package.ReplacesVersion = package;
+                package.FileSizeBytes = request.NewPackage.Length;
+                package.FileHash = fileHash;
+                package.StoragePath = storagePath;
+                package.DownloadCount = 0;
 
                 _unitOfWork.PackageVersions.Update(package);
                 await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("Package version updated: ID {Id}", id);
+                _logger.LogInformation("Package version updated: ID {Id}", request.Id);
 
                 return MapToResponse(package, package.Application);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating package ID: {Id}", id);
+                _logger.LogError(ex, "Error updating package ID: {Id}", request.Id);
                 throw;
             }
         }

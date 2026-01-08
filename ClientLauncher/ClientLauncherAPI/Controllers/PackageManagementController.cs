@@ -45,17 +45,17 @@ namespace ClientLauncherAPI.Controllers
         /// <summary>
         /// Update package metadata
         /// </summary>
-        [HttpPost("update/{id}")]
-        public async Task<IActionResult> UpdatePackage(int id, [FromBody] PackageUpdateRequest request)
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdatePackage([FromForm] PackageUpdateRequest request)
         {
             try
             {
-                var result = await _packageService.UpdatePackageAsync(id, request);
+                var result = await _packageService.UpdatePackageAsync(request);
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating package ID: {Id}", id);
+                _logger.LogError(ex, "Error updating package ID: {Id}", request.Id);
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }

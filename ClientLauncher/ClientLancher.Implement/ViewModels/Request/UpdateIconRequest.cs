@@ -9,5 +9,6 @@ namespace ClientLancher.Implement.ViewModels.Request
         public IconType? Type { get; set; }
         public int? ReferenceId { get; set; }
         public IFormFile? File { get; set; } = null!;
+        public bool? IsActive { get; set; } = null!;
     }
 }
