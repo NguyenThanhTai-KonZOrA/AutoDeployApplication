@@ -129,9 +129,9 @@ export default function AdminCategoryPage() {
             name: "",
             displayName: "",
             description: "",
-            icon: icons.length > 0 ? icons[0].filePath : "",
+            icon: icons.length > 0 ? icons[0].fileUrl : "",
             displayOrder: categories.length + 1,
-            iconUrl: icons.length > 0 ? icons[0].filePath : "",
+            iconUrl: icons.length > 0 ? icons[0].fileUrl : "",
         });
         setDialogOpen(true);
     };
@@ -224,6 +224,7 @@ export default function AdminCategoryPage() {
             showSnackbar(errorMessage, "error");
         } finally {
             setDialogLoading(false);
+            loadCategories();
         }
     };
 

@@ -375,6 +375,7 @@ export default function AdminInstallationLogPage() {
                                         <MenuItem value="Install">Install</MenuItem>
                                         <MenuItem value="Update">Update</MenuItem>
                                         <MenuItem value="Uninstall">Uninstall</MenuItem>
+                                        <MenuItem value="UpdateRollback">Update Rollback</MenuItem>
                                     </Select>
                                 </FormControl>
                             </Grid>

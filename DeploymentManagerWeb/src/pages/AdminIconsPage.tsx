@@ -406,7 +406,7 @@ export default function AdminIconsPage() {
                             </Button>
 
                             {/* Stats */}
-                            <Box sx={{}}>
+                            <Box sx={{ mb: 2, flexGrow: 1 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                                     Total: {filteredIcons.length} icons
                                     {(searchTerm || filterType) && ` (filtered from ${icons.length})`}
@@ -569,7 +569,7 @@ export default function AdminIconsPage() {
 
                         {/* Pagination */}
                         {filteredIcons.length > 0 && (
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 2, mb: 2, gap: 2 }}>
                                 <Typography variant="body2" color="text.secondary">
                                     Showing {filteredIcons.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredIcons.length)} of {filteredIcons.length} items
                                 </Typography>

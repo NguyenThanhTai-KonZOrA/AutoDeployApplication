@@ -13,10 +13,10 @@ export interface PackageUploadRequest {
 export interface PackageUpdateRequest {
     ReleaseNotes: string;
     IsActive: boolean;
-    MinimumClientVersion: string;
+    MinimumClientVersion?: string;
     IsStable: boolean;
+    NewPackage: File;
 }
-
 
 export interface PackageVersionResponse {
     id: number;

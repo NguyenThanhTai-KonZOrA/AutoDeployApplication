@@ -30,6 +30,7 @@ import {
     Select,
     MenuItem,
     Stack,
+    Grid,
 } from "@mui/material";
 import {
     Refresh as RefreshIcon,
@@ -39,11 +40,13 @@ import {
     Delete as DeleteIcon,
     FileDownload as FileDownloadIcon,
     Search as SearchIcon,
+    Edit as EditIcon,
+    Save as SaveIcon
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { packageManagementService } from "../services/deploymentManagerService";
-import type { ApplicationPackageResponse } from "../type/packageManagementType";
+import type { ApplicationPackageResponse, PackageVersionResponse } from "../type/packageManagementType";
 import { FormatUtcTime } from "../utils/formatUtcTime";
 import { extractErrorMessage } from "../utils/errorHandler";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
@@ -77,6 +80,11 @@ export default function AdminPackagesPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
+    // Dialog
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [dialogLoading, setDialogLoading] = useState(false);
+    const [editingPackage, setEditingPackage] = useState<ApplicationPackageResponse | null>(null);
+
     // Filtered and paginated data
     const filteredApplications = applications.filter((app) => {
         const searchLower = searchTerm.toLowerCase();
@@ -90,6 +98,18 @@ export default function AdminPackagesPage() {
         (currentPage - 1) * itemsPerPage,
         currentPage * itemsPerPage
     );
+
+    // Form states - Package Upload
+    const [packageFormData, setPackageFormData] = useState({
+        Id: 0,
+        Version: "",
+        ReleaseNotes: "",
+    });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [formErrors, setFormErrors] = useState({
+        file: false,
+        releaseNotes: false,
+    });
 
     // Reset to page 1 when search term changes
     const handleSearchChange = (value: string) => {
@@ -133,6 +153,80 @@ export default function AdminPackagesPage() {
             setLoading(false);
         }
     };
+
+    const handleSubmit = async () => {
+        if (!editingPackage) return;
+
+        // Validate
+        const errors = {
+            file: !selectedFile,
+            releaseNotes: !packageFormData.ReleaseNotes.trim(),
+        };
+        setFormErrors(errors);
+
+        if (errors.file) {
+            setSnackbar({
+                open: true,
+                message: "Package file is required",
+                severity: "error",
+            });
+            return;
+        }
+
+        if (errors.releaseNotes) {
+            setSnackbar({
+                open: true,
+                message: "Release notes are required",
+                severity: "error",
+            });
+            return;
+        }
+
+        setDialogLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('Id', editingPackage.id.toString());
+            formData.append('ApplicationId', editingPackage.applicationId.toString());
+            formData.append('ReleaseNotes', packageFormData.ReleaseNotes);
+
+            if (selectedFile) {
+                formData.append('NewPackage', selectedFile);
+            }
+
+            await packageManagementService.updatePackage(formData);
+
+            setSnackbar({
+                open: true,
+                message: `Package updated successfully!`,
+                severity: "success",
+            });
+
+            handleCloseDialog();
+            loadPackageHistory();
+        } catch (error: any) {
+            console.error("Error updating package:", error);
+            const errorMessage = extractErrorMessage(error, "Failed to update package");
+            setSnackbar({
+                open: true,
+                message: errorMessage,
+                severity: "error",
+            });
+        } finally {
+            setDialogLoading(false);
+        }
+    }
+
+    const handleOpenEditDialog = async (pkg: ApplicationPackageResponse) => {
+        setEditingPackage(pkg);
+        setPackageFormData({
+            Id: pkg.id,
+            Version: pkg.version,
+            ReleaseNotes: "",
+        });
+        setSelectedFile(null);
+        setFormErrors({ file: false, releaseNotes: false });
+        setDialogOpen(true);
+    }
 
     // Handle download package
     const handleDownloadPackage = async (packageId: number, packageName: string) => {
@@ -210,6 +304,32 @@ export default function AdminPackagesPage() {
     const handleOpenDeleteDialog = (pkg: ApplicationPackageResponse) => {
         setDeleteDialogOpen(true);
         setDeletingPackage(pkg);
+    };
+
+    const handleCloseDialog = () => {
+        setDialogOpen(false);
+        setEditingPackage(null);
+        setSelectedFile(null);
+        setPackageFormData({
+            Id: 0,
+            Version: "",
+            ReleaseNotes: "",
+        });
+        setFormErrors({ file: false, releaseNotes: false });
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            setSelectedFile(event.target.files[0]);
+            setFormErrors(prev => ({ ...prev, file: false }));
+        }
+    };
+
+    const handleReleaseNotesChange = (value: string) => {
+        setPackageFormData(prev => ({ ...prev, ReleaseNotes: value }));
+        if (formErrors.releaseNotes) {
+            setFormErrors(prev => ({ ...prev, releaseNotes: false }));
+        }
     };
 
     return (
@@ -324,6 +444,7 @@ export default function AdminPackagesPage() {
                                                                 <TableCell>Size</TableCell>
                                                                 <TableCell>Downloads</TableCell>
                                                                 <TableCell>Last Downloaded</TableCell>
+                                                                <TableCell>Package Changed</TableCell>
                                                                 <TableCell align="center">Actions</TableCell>
                                                             </TableRow>
                                                         </TableHead>
@@ -359,7 +480,23 @@ export default function AdminPackagesPage() {
                                                                             ? FormatUtcTime.formatDateTime(pkg.lastDownloadedAt)
                                                                             : "Never"}
                                                                     </TableCell>
+                                                                    <TableCell>
+                                                                        {pkg.replacesVersionNumber && pkg.replacesVersionId ?
+                                                                            <Chip label={`YES - From version: ${pkg.replacesVersionNumber}`} size="small" color="warning" /> : <Chip label="NO" size="small" color="default" />}
+                                                                    </TableCell>
                                                                     <TableCell align="center">
+                                                                        <Tooltip title="Update Package">
+                                                                            <IconButton
+                                                                                size="small"
+                                                                                color="primary"
+                                                                                sx={{ mr: 1 }}
+                                                                                onClick={() =>
+                                                                                    handleOpenEditDialog(pkg)
+                                                                                }
+                                                                            >
+                                                                                <EditIcon />
+                                                                            </IconButton>
+                                                                        </Tooltip>
                                                                         <Tooltip title="Download Package">
                                                                             <IconButton
                                                                                 size="small"
@@ -472,6 +609,105 @@ export default function AdminPackagesPage() {
                     </Alert>
                 </Snackbar>
             </Box>
+
+            {/* Update Package Dialog */}
+            <Dialog
+                open={dialogOpen}
+                onClose={handleCloseDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    Update Package
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+                        <Alert severity="info">
+                            Upload a new package file for this version. The version number cannot be changed.
+                        </Alert>
+
+                        {/* Display Version (Read-only) */}
+                        <TextField
+                            label="Version"
+                            fullWidth
+                            value={packageFormData.Version}
+                            disabled
+                            helperText="Version cannot be changed"
+                        />
+
+                        {/* Release Notes */}
+                        <TextField
+                            label="Release Notes"
+                            fullWidth
+                            required
+                            multiline
+                            rows={4}
+                            value={packageFormData.ReleaseNotes}
+                            onChange={(e) => handleReleaseNotesChange(e.target.value)}
+                            error={formErrors.releaseNotes}
+                            helperText={formErrors.releaseNotes ? "Release notes are required" : "Describe what's new in this package"}
+                            disabled={dialogLoading}
+                        />
+
+                        {/* File Upload */}
+                        <Box>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                fullWidth
+                                startIcon={<FileDownloadIcon />}
+                                disabled={dialogLoading}
+                                color={formErrors.file ? "error" : "primary"}
+                            >
+                                {selectedFile ? selectedFile.name : "Select New Package File *"}
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept=".zip,.rar,.7z,.tar,.gz"
+                                    onChange={handleFileChange}
+                                />
+                            </Button>
+                            {formErrors.file && (
+                                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                    Package file is required
+                                </Typography>
+                            )}
+                            {selectedFile && (
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                    Selected file: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                                </Typography>
+                            )}
+                        </Box>
+
+                        {editingPackage && (
+                            <Alert severity="warning" sx={{ mt: 1 }}>
+                                <Typography variant="body2" fontWeight={600}>Current Package Info:</Typography>
+                                <Typography variant="caption" display="block">File: {editingPackage.packageFileName}</Typography>
+                                <Typography variant="caption" display="block">Size: {editingPackage.fileSizeFormatted}</Typography>
+                                <Typography variant="caption" display="block">Downloads: {editingPackage.downloadCount}</Typography>
+                            </Alert>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={handleCloseDialog}
+                        disabled={dialogLoading}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        variant="contained"
+                        disabled={dialogLoading}
+                        startIcon={<SaveIcon />}
+                    >
+                        {dialogLoading ? "Updating..." : "Update Package"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+
         </AdminLayout>
     );
 }

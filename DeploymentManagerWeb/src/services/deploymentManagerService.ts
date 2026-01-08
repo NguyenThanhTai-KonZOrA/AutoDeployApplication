@@ -215,6 +215,15 @@ export const packageManagementService = {
     deletePackage: async (id: number): Promise<boolean> => {
         const response = await api.post(`/api/PackageManagement/delete/${id}`);
         return unwrapApiEnvelope(response);
+    },
+
+    updatePackage: async (formData: FormData): Promise<PackageVersionResponse> => {
+        const response = await api.post(`/api/PackageManagement/update`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        return unwrapApiEnvelope(response);
     }
 };
 
