@@ -207,38 +207,7 @@
                                            Margin="0,3,0,0"/>
                             </StackPanel>
 
-                            <Button Grid.Column="1" 
-                                    Content="🔄 Refresh" 
-                                    Command="{Binding LoadApplicationsCommand}"
-                                    Padding="15,8"
-                                    Background="#274549"  
-                                    Foreground="#E1B7A7"
-                                    BorderThickness="0"
-                                    FontSize="15"
-                                    Cursor="Hand"
-                                    FontWeight="SemiBold">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="Button">
-                                                    <Border Background="{TemplateBinding Background}" 
-                                                            CornerRadius="5" 
-                                                            Padding="{TemplateBinding Padding}">
-                                                        <ContentPresenter HorizontalAlignment="Center" 
-                                                                          VerticalAlignment="Center"/>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#2980B9"/>
-                                            </Trigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
+
                         </Grid>
 
                         <!-- Search and Filters Row -->
@@ -246,7 +215,7 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="550"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Search Box -->
@@ -320,14 +289,47 @@
                                 </Grid>
                             </Border>
 
+                            <Button Grid.Column="1" 
+                                    Content="🔄 Refresh" 
+                                    Command="{Binding LoadApplicationsCommand}"
+                                    Padding="15,8"
+                                    Background="#274549"  
+                                    Foreground="#E1B7A7"
+                                    BorderThickness="0"
+                                    FontSize="15"
+                                    Cursor="Hand"
+                                    FontWeight="SemiBold">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="5" 
+                                Padding="{TemplateBinding Padding}">
+                                                        <ContentPresenter HorizontalAlignment="Center" 
+                                              VerticalAlignment="Center"/>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#2980B9"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
                             <!-- Sort ComboBox -->
-                            <ComboBox Grid.Column="2"
+                            <!--<ComboBox Grid.Column="2"
                                       ItemsSource="{Binding SortOptions}"
                                       SelectedItem="{Binding SelectedSortOption}"
                                       Height="32"
                                       Padding="10,5"
                                       FontSize="13"
-                                      BorderBrush="#BDC3C7"/>
+                                      BorderBrush="#BDC3C7"/>-->
                         </Grid>
                     </Grid>
                 </Border>

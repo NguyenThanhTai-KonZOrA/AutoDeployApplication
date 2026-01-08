@@ -257,6 +257,10 @@ namespace ClientLauncher.ViewModels
                         UpdateStatus("❌ Installation failed", 0);
                         await Task.Delay(2000);
                         Application.Current.Shutdown();
+
+                        await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, false, TimeSpan.Zero,
+                            "❌ Installation failed: Verification failed after installation - executable not found",
+                            "0.0.0", "Install");
                         return;
                     }
 
@@ -373,8 +377,7 @@ namespace ClientLauncher.ViewModels
                     Logger.Info("Config-only update, skipping binary verification");
                 }
 
-                // ✅ Step 3: Commit (move from NewVersion to App + save version/manifest)
-                // ✅ Step 3: Commit (move from NewVersion to App + save version/manifest)
+                // Step 3: Commit (move from NewVersion to App + save version/manifest)
                 UpdateStatus("💾 Installing new version...", 85);
                 StatusEmoji = "💾";
                 await Task.Delay(200);

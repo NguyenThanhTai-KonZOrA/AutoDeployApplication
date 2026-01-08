@@ -9,4 +9,12 @@ public interface IInstallationService
     Task<bool> CommitUpdateAsync(string appCode, ManifestDto manifest, string backupPath, string tempAppPath);
     Task<bool> RollbackUpdateAsync(string appCode, string backupPath, string failedVersion);
     Task<bool> FinalizeUpdateAsync(string appCode, string backupPath);
+    Task NotifyInstallationAsync(
+             string appCode,
+             string version,
+             bool success,
+             TimeSpan duration,
+             string? error = null,
+             string? oldVersion = null,
+             string action = "Install");
 }

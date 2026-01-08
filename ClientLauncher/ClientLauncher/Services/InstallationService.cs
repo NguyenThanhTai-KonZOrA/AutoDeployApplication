@@ -92,14 +92,14 @@ namespace ClientLauncher.Services
                     InstallationPath = appPath
                 };
 
-                await NotifyInstallationAsync(
-                    appCode,
-                    result.InstalledVersion ?? string.Empty,
-                    true,
-                    stopwatch.Elapsed,
-                    null,
-                    null,
-                    "Install");
+                //await NotifyInstallationAsync(
+                //    appCode,
+                //    result.InstalledVersion ?? string.Empty,
+                //    true,
+                //    stopwatch.Elapsed,
+                //    null,
+                //    null,
+                //    "Install");
 
                 return result;
             }
@@ -215,7 +215,7 @@ namespace ClientLauncher.Services
                     await NotifyInstallationAsync(
                         appCode,
                         currentBinaryVersion ?? "unknown",
-                        false,
+                        true,
                         stopwatch.Elapsed,
                         $"Update to {newVersion} failed during download: {updateEx.Message}",
                         currentBinaryVersion,
@@ -240,7 +240,7 @@ namespace ClientLauncher.Services
                 await NotifyInstallationAsync(
                     appCode,
                     currentBinaryVersion ?? string.Empty,
-                    false,
+                    true,
                     stopwatch.Elapsed,
                     ex.Message,
                     currentBinaryVersion,
@@ -472,7 +472,7 @@ namespace ClientLauncher.Services
                 await NotifyInstallationAsync(
                     appCode,
                     restoredVersion ?? "unknown",
-                    false,
+                    true,
                     stopwatch.Elapsed,
                     $"Update to {failedVersion} failed commit. System rolled back to {restoredVersion}",
                     restoredVersion,
@@ -725,7 +725,7 @@ namespace ClientLauncher.Services
         /// <summary>
         /// Notify server
         /// </summary>
-        private async Task NotifyInstallationAsync(
+        public async Task NotifyInstallationAsync(
             string appCode,
             string version,
             bool success,
