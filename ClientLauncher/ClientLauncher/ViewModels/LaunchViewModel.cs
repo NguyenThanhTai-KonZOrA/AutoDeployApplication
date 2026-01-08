@@ -222,6 +222,10 @@ namespace ClientLauncher.ViewModels
                                 Application.Current.Shutdown();
                                 return;
                             }
+
+                            await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, TimeSpan.Zero,
+                            "✓ Application is updated successfully",
+                            "0.0.0", "Update");
                         }
                         else
                         {
@@ -264,6 +268,10 @@ namespace ClientLauncher.ViewModels
                         return;
                     }
 
+                    await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, TimeSpan.Zero,
+                           "✓ Application is installed successfully",
+                           "0.0.0", "Install");
+
                     // Launch after installation
                     StatusEmoji = "🚀";
                     await LaunchApplicationAsync();
@@ -287,6 +295,7 @@ namespace ClientLauncher.ViewModels
         /// </summary>
         private async Task<bool> PerformUpdateAsync(ManifestDto manifest)
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 Logger.Info("Starting update process for {AppCode}", AppCode);
@@ -397,7 +406,19 @@ namespace ClientLauncher.ViewModels
 
                         UpdateStatus("⚠️ Update failed. Rolling back to previous version...", 80);
                         StatusEmoji = "⚠️";
+                        stopwatch.Stop();
+
                         await Task.Delay(300);
+
+                        await _installationService.NotifyInstallationAsync(
+                            AppCode,
+                            manifest.Binary?.Version ?? "0.0.0",
+                            false,
+                            stopwatch.Elapsed,
+                            "❌ Failed to commit update - INITIATING ROLLBACK: ⚠️ Update failed. Rolling back to previous version... ",
+                           _installationService.GetVersionFromBackup(updateResult.BackupPath),
+                            "Update"
+                        );
 
                         // 🔥 ROLLBACK
                         try

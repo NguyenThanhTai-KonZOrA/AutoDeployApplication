@@ -373,15 +373,15 @@ namespace ClientLauncher.Services
                 stopwatch.Stop();
 
                 // 5. Notify server
-                await NotifyInstallationAsync(
-                    appCode,
-                    manifest.Binary?.Version ?? "0.0.0",
-                    true,
-                    stopwatch.Elapsed,
-                    null,
-                    oldVersion,
-                    "Update"
-                );
+                //await NotifyInstallationAsync(
+                //    appCode,
+                //    manifest.Binary?.Version ?? "0.0.0",
+                //    true,
+                //    stopwatch.Elapsed,
+                //    null,
+                //    oldVersion,
+                //    "Update"
+                //);
 
                 // ⚠️ IMPORTANT: DO NOT delete backup here!
                 // Backup will be deleted AFTER verification in ViewModel
@@ -802,7 +802,7 @@ namespace ClientLauncher.Services
         /// </summary>
         /// <param name="backupPath"></param>
         /// <returns></returns>
-        private string? GetVersionFromBackup(string backupPath)
+        public string? GetVersionFromBackup(string backupPath)
         {
             try
             {

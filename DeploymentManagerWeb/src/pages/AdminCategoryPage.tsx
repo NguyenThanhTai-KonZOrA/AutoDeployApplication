@@ -51,6 +51,7 @@ import { FormatUtcTime } from "../utils/formatUtcTime";
 
 export default function AdminCategoryPage() {
     useSetPageTitle(PAGE_TITLES.CATEGORIES);
+    const API_BASE = (window as any)._env_?.API_BASE;
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [icons, setIcons] = useState<IconResponse[]>([]);
     const [loading, setLoading] = useState(true);
@@ -427,10 +428,10 @@ export default function AdminCategoryPage() {
                                         }}>
                                             Actions
                                         </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
+                                        {/* <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
-                                        </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                        </TableCell> */}
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
                                             Icon
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 150 }}>
@@ -461,7 +462,7 @@ export default function AdminCategoryPage() {
                                         Array.from({ length: itemsPerPage }).map((_, index) => (
                                             <TableRow key={index}>
                                                 <TableCell align="center"><Skeleton width="120px" /></TableCell>
-                                                <TableCell><Skeleton width="40px" /></TableCell>
+                                                <TableCell align="center"><Skeleton width="40px" /></TableCell>
                                                 <TableCell><Skeleton width="60px" /></TableCell>
                                                 <TableCell><Skeleton width="120px" /></TableCell>
                                                 <TableCell><Skeleton width="150px" /></TableCell>
@@ -512,20 +513,25 @@ export default function AdminCategoryPage() {
                                                         </Tooltip>
                                                     </Box>
                                                 </TableCell>
-                                                <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                {/* <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {category.id}
-                                                </TableCell>
-                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <img
-                                                            src={`${(window as any)._env_?.API_BASE}${category.iconUrl}`}
-                                                            alt={category.name}
-                                                            style={{ width: 30, height: 30 }}
-                                                            onError={(e) => {
-                                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                            }}
-                                                        />
-                                                    </Box>
+                                                </TableCell> */}
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                    <Box
+                                                        component="img"
+                                                        src={`${API_BASE}${category.iconUrl}`}
+                                                        alt={category.name}
+                                                        sx={{
+                                                            width: 40,
+                                                            height: 40,
+                                                            objectFit: 'contain',
+                                                            borderRadius: 1,
+                                                            p: 0.5,
+                                                        }}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
                                                 </TableCell>
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {category.name}

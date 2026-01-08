@@ -78,6 +78,7 @@ function TabPanel(props: TabPanelProps) {
 
 export default function AdminApplicationPage() {
     useSetPageTitle(PAGE_TITLES.APPLICATIONS);
+    const API_BASE = (window as any)._env_?.API_BASE;
     const [applications, setApplications] = useState<ApplicationResponse[]>([]);
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
     const [icons, setIcons] = useState<IconResponse[]>([]);
@@ -1213,6 +1214,7 @@ export default function AdminApplicationPage() {
                                         {/* <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
                                         </TableCell> */}
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }} align="center">App Icon</TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
                                             Application Code
                                         </TableCell>
@@ -1307,6 +1309,23 @@ export default function AdminApplicationPage() {
                                                             </IconButton>
                                                         </Tooltip>
                                                     </Box>
+                                                </TableCell>
+                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                    <Box
+                                                        component="img"
+                                                        src={`${API_BASE}${application.iconUrl}`}
+                                                        alt={application.name}
+                                                        sx={{
+                                                            width: 40,
+                                                            height: 40,
+                                                            objectFit: 'contain',
+                                                            borderRadius: 1,
+                                                            p: 0.5,
+                                                        }}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
                                                 </TableCell>
                                                 {/* <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {application.id}

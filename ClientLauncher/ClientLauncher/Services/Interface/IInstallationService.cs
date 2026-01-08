@@ -17,4 +17,6 @@ public interface IInstallationService
              string? error = null,
              string? oldVersion = null,
              string action = "Install");
+
+    string? GetVersionFromBackup(string backupPath);
 }
