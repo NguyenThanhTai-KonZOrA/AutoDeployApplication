@@ -118,7 +118,7 @@ export default function AdminApplicationPage() {
         BinaryPackage: "",
         ConfigVersion: "",
         ConfigPackage: "",
-        ConfigMergeStrategy: "Replace",
+        ConfigMergeStrategy: "ReplaceAll",
         UpdateType: "Binary",
         ForceUpdate: false,
         ReleaseNotes: "",
@@ -244,7 +244,7 @@ export default function AdminApplicationPage() {
             BinaryPackage: "",
             ConfigVersion: "",
             ConfigPackage: "",
-            ConfigMergeStrategy: "Replace",
+            ConfigMergeStrategy: "ReplaceAll",
             UpdateType: "Binary",
             ForceUpdate: false,
             ReleaseNotes: "",
@@ -301,7 +301,7 @@ export default function AdminApplicationPage() {
                     BinaryPackage: manifest.binaryPackage || "",
                     ConfigVersion: manifest.configVersion || "",
                     ConfigPackage: manifest.configPackage || "",
-                    ConfigMergeStrategy: manifest.configMergeStrategy || "Replace",
+                    ConfigMergeStrategy: manifest.configMergeStrategy || "ReplaceAll",
                     UpdateType: manifest.updateType || "Binary",
                     ForceUpdate: manifest.forceUpdate || false,
                     ReleaseNotes: manifest.releaseNotes || "",
@@ -319,7 +319,7 @@ export default function AdminApplicationPage() {
                 BinaryPackage: "",
                 ConfigVersion: "",
                 ConfigPackage: "",
-                ConfigMergeStrategy: "Replace",
+                ConfigMergeStrategy: "ReplaceAll",
                 UpdateType: "Binary",
                 ForceUpdate: false,
                 ReleaseNotes: "",
@@ -1153,8 +1153,6 @@ export default function AdminApplicationPage() {
                                 </Box>
                             </Grid>
 
-
-
                             <Grid size={{ xs: 12, sm: 6, md: 1 }}>
                                 <Button
                                     variant="contained"
@@ -1627,58 +1625,11 @@ export default function AdminApplicationPage() {
                                             }
                                         }}
                                         error={manifestFormErrors.BinaryPackage}
-                                        disabled={dialogLoading}
+                                        disabled={dialogLoading || manifestFormData.BinaryPackage !== ""}
                                         helperText={manifestFormErrors.BinaryPackage ? "Binary Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
-                                {/* <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                        label="Config Version"
-                                        fullWidth
-                                        //required
-                                        value={manifestFormData.ConfigVersion}
-                                        onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
-                                        onBlur={() => {
-                                            if (!manifestFormData.ConfigVersion.trim()) {
-                                                setManifestFormErrors(prev => ({ ...prev, ConfigVersion: true }));
-                                            }
-                                        }}
-                                        //error={manifestFormErrors.ConfigVersion}
-                                        disabled={dialogLoading}
-                                    //helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
-                                    />
-                                </Grid>
-                                <Grid size={{ xs: 12, sm: 6 }}>
-                                    <TextField
-                                        label="Config Package"
-                                        fullWidth
-                                        //required
-                                        value={manifestFormData.ConfigPackage}
-                                        onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
-                                        onBlur={() => {
-                                            if (!manifestFormData.ConfigPackage.trim()) {
-                                                setManifestFormErrors(prev => ({ ...prev, ConfigPackage: true }));
-                                            }
-                                        }}
-                                        //error={manifestFormErrors.ConfigPackage}
-                                        disabled={dialogLoading}
-                                    //helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
-                                    />
-                                </Grid> */}
-                                {/* <Grid size={{ xs: 12, sm: 6 }}>
-                                    <FormControl fullWidth disabled={dialogLoading}>
-                                        <InputLabel>Config Merge Strategy</InputLabel>
-                                        <Select
-                                            label="Config Merge Strategy"
-                                            value={manifestFormData.ConfigMergeStrategy}
-                                            onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
-                                        >
-                                            <MenuItem value="ReplaceAll">Replace All</MenuItem>
-                                            <MenuItem value="Selective">Selective</MenuItem>
-                                            <MenuItem value="PreserveLocal">Preserve Local</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                </Grid> */}
+
                                 <Grid size={{ xs: 12, sm: 6 }}>
                                     <FormControl fullWidth disabled={dialogLoading}>
                                         <InputLabel>Update Type</InputLabel>
@@ -1688,8 +1639,8 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config" disabled>Config</MenuItem>
-                                            <MenuItem value="Both" disabled>Both</MenuItem>
+                                            <MenuItem value="Config">Config</MenuItem>
+                                            <MenuItem value="Both">Both</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Grid>
@@ -1720,7 +1671,57 @@ export default function AdminApplicationPage() {
                                 </Grid>
 
                                 {/* Config Files Management Section */}
-                                {/* <Grid size={{ xs: 12 }}>
+                                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
+                                    <TextField
+                                        label="Config Version"
+                                        fullWidth
+                                        //required
+                                        value={manifestFormData.ConfigVersion}
+                                        onChange={(e) => handleManifestFormChange("ConfigVersion", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.ConfigVersion.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, ConfigVersion: true }));
+                                            }
+                                        }}
+                                        //error={manifestFormErrors.ConfigVersion}
+                                        disabled={dialogLoading}
+                                    //helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
+                                    <TextField
+                                        label="Config Package"
+                                        fullWidth
+                                        //required
+                                        value={manifestFormData.ConfigPackage}
+                                        onChange={(e) => handleManifestFormChange("ConfigPackage", e.target.value)}
+                                        onBlur={() => {
+                                            if (!manifestFormData.ConfigPackage.trim()) {
+                                                setManifestFormErrors(prev => ({ ...prev, ConfigPackage: true }));
+                                            }
+                                        }}
+                                        //error={manifestFormErrors.ConfigPackage}
+                                        disabled={dialogLoading || manifestFormData.ConfigPackage !== ""}
+                                    //helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
+                                    />
+                                </Grid>
+                                <Grid size={{ xs: 12, sm: 6 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
+                                    <FormControl fullWidth disabled={dialogLoading}>
+                                        <InputLabel>Config Merge Strategy</InputLabel>
+                                        <Select
+                                            label="Config Merge Strategy"
+                                            value={manifestFormData.ConfigMergeStrategy}
+                                            onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
+                                        >
+                                            <MenuItem value="ReplaceAll">Replace All</MenuItem>
+                                            <MenuItem value="Selective">Selective</MenuItem>
+                                            <MenuItem value="PreserveLocal">Preserve Local</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+
+
+                                <Grid size={{ xs: 12 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
                                     <Box sx={{ mt: 2, mb: 1 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                             Config Files
@@ -1729,10 +1730,9 @@ export default function AdminApplicationPage() {
                                             Manage configuration file update policies and priorities
                                         </Typography>
                                     </Box>
-                                </Grid> */}
+                                </Grid>
 
-                                {/* Add Config File Form */}
-                                {/* <Grid size={{ xs: 12 }}>
+                                <Grid size={{ xs: 12 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
                                     <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
                                         <Typography variant="body2" fontWeight={600} sx={{ mb: 2 }}>
                                             Add Config File
@@ -1747,7 +1747,9 @@ export default function AdminApplicationPage() {
                                                     value={configFileForm.name}
                                                     onChange={(e) => handleConfigFileFormChange("name", e.target.value)}
                                                     disabled={dialogLoading}
-                                                    helperText="Enter the config file name"
+                                                    helperText="Please provide a config file name exactly. Many thanks!"
+                                                    required={manifestFormData.ConfigPackage !== ""}
+                                                    error={manifestFormData.ConfigPackage !== "" && configFileForm.name.trim() === "" && dialogMode === "create"}
                                                 />
                                             </Grid>
                                             <Grid size={{ xs: 12, sm: 3 }}>
@@ -1790,10 +1792,10 @@ export default function AdminApplicationPage() {
                                             </Grid>
                                         </Grid>
                                     </Paper>
-                                </Grid> */}
+                                </Grid>
 
                                 {/* Config Files List */}
-                                {/* {manifestFormData.ConfigFiles.length > 0 && (
+                                {manifestFormData.ConfigFiles.length > 0 && (
                                     <Grid size={{ xs: 12 }}>
                                         <TableContainer component={Paper} variant="outlined">
                                             <Table size="small">
@@ -1844,7 +1846,7 @@ export default function AdminApplicationPage() {
                                             </Table>
                                         </TableContainer>
                                     </Grid>
-                                )} */}
+                                )}
 
                                 <Grid size={{ xs: 12 }}>
                                     <TextField

@@ -243,6 +243,8 @@ export default function AdminInstallationLogPage() {
             case 'install': return 'info';
             case 'update': return 'primary';
             case 'uninstall': return 'error';
+            case 'updaterollback': return 'warning';
+            case 'updateconfig': return 'default';
             default: return 'default';
         }
     };
@@ -376,6 +378,8 @@ export default function AdminInstallationLogPage() {
                                         <MenuItem value="Update">Update</MenuItem>
                                         <MenuItem value="Uninstall">Uninstall</MenuItem>
                                         <MenuItem value="UpdateRollback">Update Rollback</MenuItem>
+                                        <MenuItem value="UpdateConfig">Update Config</MenuItem>
+
                                     </Select>
                                 </FormControl>
                             </Grid>
