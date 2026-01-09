@@ -42,6 +42,12 @@ namespace ClientLauncher.Services.Interface
         /// <returns></returns>
         Task<string?> GetInstalledBinaryVersionAsync(string appCode);
         /// <summary>
+        /// GetInstalledConfigVersionAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
+        Task<string?> GetInstalledConfigVersionAsync(string appCode);
+        /// <summary>
         /// GetInstalledVersionAsync
         /// </summary>
         /// <param name="appCode"></param>

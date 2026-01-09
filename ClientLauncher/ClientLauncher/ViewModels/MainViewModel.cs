@@ -219,7 +219,6 @@ namespace ClientLauncher.ViewModels
         {
             try
             {
-                //_logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
@@ -227,15 +226,14 @@ namespace ClientLauncher.ViewModels
 
                 foreach (var app in apps)
                 {
-                    //_logger.Debug("Checking status for application: {AppCode}", app.AppCode);
-
                     // Check LOCAL installation (no API call)
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
 
                     if (app.IsInstalled)
                     {
-                        // Get LOCAL installed version
-                        app.InstalledVersion = await _apiService.GetInstalledVersionAsync(app.AppCode);
+                        // Get LOCAL installed versions
+                        app.InstalledVersion = await _apiService.GetInstalledBinaryVersionAsync(app.AppCode);
+                        var installedConfigVersion = await _apiService.GetInstalledConfigVersionAsync(app.AppCode);
 
                         // Get server version to check for updates
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
@@ -244,22 +242,42 @@ namespace ClientLauncher.ViewModels
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
 
+                            bool binaryUpdate = false;
+                            bool configUpdate = false;
+
+                            // Check binary update
                             if (!string.IsNullOrEmpty(app.InstalledVersion) &&
                                 !string.IsNullOrEmpty(app.ServerVersion))
                             {
-                                app.HasUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+                                binaryUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+                            }
 
-                                if (app.HasUpdate)
-                                {
-                                    //_logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
-                                    //app.AppCode, app.InstalledVersion, app.ServerVersion);
-                                }
+                            // ✅ NEW: Check config update
+                            if (!string.IsNullOrEmpty(installedConfigVersion) &&
+                                !string.IsNullOrEmpty(serverVersionInfo.ConfigVersion))
+                            {
+                                configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, installedConfigVersion);
+                            }
+
+                            // ✅ Update available if EITHER binary OR config has update
+                            app.HasUpdate = binaryUpdate || configUpdate;
+
+                            if (app.HasUpdate)
+                            {
+                                // ✅ Show what type of update is available
+                                var updateParts = new List<string>();
+                                if (binaryUpdate)
+                                    updateParts.Add($"Binary: {app.ServerVersion}");
+                                if (configUpdate)
+                                    updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
+
+                                app.StatusText = $"Installed {app.InstalledVersion} → 🆕 {string.Join(" & ", updateParts)} available";
+                            }
+                            else
+                            {
+                                app.StatusText = $"Installed {app.InstalledVersion}";
                             }
                         }
-
-                        app.StatusText = app.HasUpdate
-                            ? $"Installed {app.InstalledVersion} → 🆕 {app.ServerVersion} available"
-                            : $"Installed {app.InstalledVersion}";
                     }
                     else
                     {
