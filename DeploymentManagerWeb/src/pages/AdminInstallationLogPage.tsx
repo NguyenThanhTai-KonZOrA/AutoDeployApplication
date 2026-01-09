@@ -488,10 +488,10 @@ export default function AdminInstallationLogPage() {
                                         }}>
                                             Actions
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
+                                        {/* <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 80 }}>
                                             ID
-                                        </TableCell>
-                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
+                                        </TableCell> */}
+                                        <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 150 }}>
                                             Application
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
@@ -507,10 +507,10 @@ export default function AdminInstallationLogPage() {
                                             Status
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }} align="center">
-                                            Old <br /> Version
+                                            Old Version
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }} align="center">
-                                            New <br /> Version
+                                            New Version
                                         </TableCell>
                                         <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
                                             Duration (s)
@@ -568,9 +568,9 @@ export default function AdminInstallationLogPage() {
                                                         <VisibilityIcon />
                                                     </IconButton>
                                                 </TableCell>
-                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
+                                                {/* <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {log.id}
-                                                </TableCell>
+                                                </TableCell> */}
                                                 <TableCell sx={{ borderRight: '1px solid #e0e0e0', fontWeight: 500 }}>
                                                     {applications.find(app => app.id === log.applicationId)?.name || `App #${log.applicationId}`}
                                                 </TableCell>

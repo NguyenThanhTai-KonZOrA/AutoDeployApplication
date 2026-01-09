@@ -179,6 +179,31 @@ namespace ClientLauncher.Services
             }
         }
 
+        public async Task<bool> IsUpdateConfigAvailableAsync(string appCode, string currentVersion)
+        {
+            try
+            {
+                var serverManifest = await GetManifestFromServerAsync(appCode);
+                if (serverManifest == null)
+                {
+                    // Logger.Warn("Cannot check update: server manifest not available for {AppCode}", appCode);
+                    return false;
+                }
+
+                var serverVersion = serverManifest.Config?.Version ?? "0.0.0";
+                var isNewer = IsNewerVersion(serverVersion, currentVersion);
+
+                //Logger.Info("Update check for {AppCode}: Current={Current}, Server={Server}, UpdateAvailable={Available}", appCode, currentVersion, serverVersion, isNewer);
+
+                return isNewer;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error checking update for {AppCode}", appCode);
+                return false;
+            }
+        }
+
         public async Task<string> GetUpdateTypeAsync(string appCode)
         {
             try

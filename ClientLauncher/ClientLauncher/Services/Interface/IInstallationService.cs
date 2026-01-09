@@ -19,4 +19,16 @@ public interface IInstallationService
              string action = "Install");
 
     string? GetVersionFromBackup(string backupPath);
+
+    Task CleanupUpdateFoldersAsync(string appCode);
+    Task CleanupConfigBackupAsync(string? backupConfigPath);
+    Task<bool> CommitConfigUpdateAsync(
+            string appCode,
+            string? backupConfigPath,
+            string newConfigVersion);
+
+    Task<bool> VerifyConfigInBackupAsync(string? backupConfigPath);
+    Task<(bool Success, string? BackupConfigPath, string? ErrorMessage)> DownloadAndExtractConfigToBackupAsync(
+            string appCode,
+            string configPackage);
 }

@@ -17,7 +17,8 @@ namespace ClientLauncher.Models
 
         // Properties for version tracking
         public bool IsInstalled { get; set; }
-        public string? InstalledVersion { get; set; }
+        public string? InstalledBinaryVersion { get; set; }
+        public string? InstalledConfigVersion { get; set; }
         public string? ServerVersion { get; set; }
         public bool HasUpdate { get; set; }
         public bool HasBinaryUpdate { get; set; }

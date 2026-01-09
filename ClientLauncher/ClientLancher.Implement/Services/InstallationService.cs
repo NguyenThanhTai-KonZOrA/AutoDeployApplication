@@ -69,6 +69,25 @@ namespace ClientLancher.Implement.Services
                 _versionService.SaveBinaryVersion(appCode, manifest.binary.version);
 
                 // 5. Download config if exists
+                _logger.LogInformation("manifest config: {version}", manifest.config.version);
+                if (manifest.config.version == string.Empty)
+                {
+                    // Init Local
+                    manifest.config.version = "0.0.0";
+                    var configPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "Config");
+
+                    // Create Config directory if it doesn't exist
+                    if (!Directory.Exists(configPath))
+                    {
+                        Directory.CreateDirectory(configPath);
+                        _logger.LogInformation("Created Config directory at {ConfigPath}", configPath);
+                    }
+
+                    _logger.LogInformation("manifest config: {version}", manifest.config.version);
+                    _versionService.SaveConfigVersion(appCode, manifest.config.version);
+                    _logger.LogInformation("Created manifest config: {version}", manifest.config.version);
+                }
+
                 if (!string.IsNullOrEmpty(manifest.config.package))
                 {
                     var configPath = Path.Combine(_deploymentSettings.ServerAppPath, appCode, "Config");

@@ -38,5 +38,7 @@ namespace ClientLauncher.Services.Interface
         /// Check if update is forced
         /// </summary>
         Task<bool> IsUpdateForcedAsync(string appCode);
+
+        Task<bool> IsUpdateConfigAvailableAsync(string appCode, string currentVersion);
     }
 }

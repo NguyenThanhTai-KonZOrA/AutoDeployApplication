@@ -132,6 +132,7 @@ namespace ClientLauncher.ViewModels
         /// <returns></returns>
         private async Task InitializeAndLaunchAsync()
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 Logger.Info("=== Starting launch process for {AppCode} ===", AppCode);
@@ -161,6 +162,7 @@ namespace ClientLauncher.ViewModels
 
                 var isInstalled = _installationChecker.IsApplicationInstalled(AppCode);
                 var currentVersion = _installationChecker.GetInstalledVersion(AppCode);
+                var currentConfigVersion = _installationChecker.GetInstalledConfigVersion(AppCode);
 
                 Logger.Info("Installation check: IsInstalled={IsInstalled}, Version={Version}",
                     isInstalled, currentVersion);
@@ -176,11 +178,15 @@ namespace ClientLauncher.ViewModels
                     StatusEmoji = "🔍";
                     await Task.Delay(100);
 
-                    var isUpdateAvailable = await _versionCheckService.IsUpdateAvailableAsync(AppCode);
-                    Logger.Info("Update available: {IsUpdateAvailable}", isUpdateAvailable);
+                    var isUpdateBinaryAvailable = await _versionCheckService.IsUpdateAvailableAsync(AppCode);
+                    Logger.Info("Update Binary available: {IsUpdateAvailable}", isUpdateBinaryAvailable);
+
+                    var isUpdateConfigAvailable = await _versionCheckService.IsUpdateConfigAvailableAsync(AppCode);
+                    Logger.Info("Update Config available: {isUpdateConfigAvailable}", isUpdateConfigAvailable);
+
                     var isForceUpdate = await _versionCheckService.IsForceUpdateRequiredAsync(AppCode);
 
-                    if (isUpdateAvailable)
+                    if (isUpdateBinaryAvailable)
                     {
                         Logger.Info("Update available for {AppCode}. Force={IsForce}", AppCode, isForceUpdate);
 
@@ -222,14 +228,68 @@ namespace ClientLauncher.ViewModels
                                 Application.Current.Shutdown();
                                 return;
                             }
-
-                            await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, TimeSpan.Zero,
+                            stopwatch.Stop();
+                            await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, stopwatch.Elapsed,
                             "✓ Application is updated successfully",
                             "0.0.0", "Update");
                         }
                         else
                         {
                             UpdateStatus("⏭️ Update skipped", 45);
+                            StatusEmoji = "⏭️";
+                            await Task.Delay(100);
+                        }
+                    }
+                    else if (isUpdateConfigAvailable)
+                    {
+                        Logger.Info("Update available for {AppCode}. Force={IsForce}", AppCode, isForceUpdate);
+
+                        bool shouldUpdate = isForceUpdate;
+
+                        if (!isForceUpdate)
+                        {
+                            StatusEmoji = "ℹ️";
+                            var result = MessageBox.Show(
+                                $"A new config version ({manifest.Config?.Version}) is available.\n\n" +
+                                $"Current config version: {currentConfigVersion}\n" +
+                                $"Do you want to update now?",
+                                "Update Available",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information);
+
+                            shouldUpdate = (result == MessageBoxResult.Yes);
+                        }
+
+                        if (shouldUpdate)
+                        {
+                            UpdateStatus("⚠️ Updating config application...", 40);
+                            StatusEmoji = "⚠️";
+                            await Task.Delay(100);
+
+                            // ✅ Perform update with Verify-then-Commit flow
+                            var updateSuccess = await PerformUpdateAsync(manifest);
+
+                            if (!updateSuccess)
+                            {
+                                Logger.Error("Update config failed, aborting launch");
+                                UpdateStatus("❌ Update config failed. Using current version.", 0);
+                                await Task.Delay(2000);
+
+                                UpdateStatus("ℹ️ We will open the previous version.", 100);
+                                await Task.Delay(2000);
+                                await LaunchApplicationAsync();
+                                // Uncommented this line to ensure shutdown after launching previous version
+                                Application.Current.Shutdown();
+                                return;
+                            }
+                            stopwatch.Stop();
+                            await _installationService.NotifyInstallationAsync(AppCode, manifest.Config.Version, true, stopwatch.Elapsed,
+                            "✓ Application is updated config successfully",
+                            currentConfigVersion ?? "0.0.0", "UpdateConfig");
+                        }
+                        else
+                        {
+                            UpdateStatus("⏭️ Update config skipped", 45);
                             StatusEmoji = "⏭️";
                             await Task.Delay(100);
                         }
@@ -261,16 +321,16 @@ namespace ClientLauncher.ViewModels
                         UpdateStatus("❌ Installation failed", 0);
                         await Task.Delay(2000);
                         Application.Current.Shutdown();
-
-                        await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, false, TimeSpan.Zero,
+                        stopwatch.Stop();
+                        await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, false, stopwatch.Elapsed,
                             "❌ Installation failed: Verification failed after installation - executable not found",
-                            "0.0.0", "Install");
+                            currentVersion ?? "0.0.0", "Install");
                         return;
                     }
 
-                    await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, TimeSpan.Zero,
+                    await _installationService.NotifyInstallationAsync(AppCode, manifest.Binary.Version, true, stopwatch.Elapsed,
                            "✓ Application is installed successfully",
-                           "0.0.0", "Install");
+                            currentVersion ?? "0.0.0", "Install");
 
                     // Launch after installation
                     StatusEmoji = "🚀";
@@ -300,129 +360,222 @@ namespace ClientLauncher.ViewModels
             {
                 Logger.Info("Starting update process for {AppCode}", AppCode);
 
-                UpdateStatus("📥 Downloading update package...", 50);
-                StatusEmoji = "📥";
-                await Task.Delay(100);
+                var updateType = (manifest.UpdatePolicy?.Type ?? "both").ToLower();
+                bool binaryUpdateNeeded = updateType == "binary" || updateType == "both";
+                Logger.Info("Update type: {UpdateType}, Binary update needed: {BinaryUpdateNeeded}", updateType, binaryUpdateNeeded);
+                bool configUpdateNeeded = updateType == "config" || updateType == "both";
+                Logger.Info("Update type: {UpdateType}, Config update needed: {ConfigUpdateNeeded}", updateType, configUpdateNeeded);
 
-                // ✅ Step 1: Download to NewVersion folder
-                var updateResult = await _installationService.UpdateApplicationAsync(
-                    AppCode,
-                    Environment.UserName);
-
-                if (!updateResult.Success)
+                if (binaryUpdateNeeded)
                 {
-                    Logger.Error("Update download failed: {Message}", updateResult.Message);
-
-                    MessageBox.Show(
-                        updateResult.Message ?? "Cannot download the update. Please try again later.",
-                        "Update Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
-
-                    return false;
-                }
-
-                Logger.Info("Update package downloaded successfully to: {Path}", updateResult.TempAppPath);
-
-                UpdateStatus("📦 Extracting files...", 65);
-                StatusEmoji = "📦";
-                await Task.Delay(100);
-
-                // ✅ Step 2: Verify exe trong NewVersion folder (only for binary updates)
-                var updateType = manifest.UpdatePolicy?.Type ?? "both";
-
-                if (updateType == "binary" || updateType == "both")
-                {
-                    UpdateStatus("🔍 Verifying installation...", 75);
-                    StatusEmoji = "🔍";
+                    UpdateStatus("📥 Downloading update package...", 50);
+                    StatusEmoji = "📥";
                     await Task.Delay(100);
 
-                    if (!await VerifyInstallationInNewVersionAsync(updateResult.TempAppPath))
+                    // ✅ Step 1: Download to NewVersion folder
+                    var updateResult = await _installationService.UpdateApplicationAsync(
+                        AppCode,
+                        Environment.UserName);
+
+                    if (!updateResult.Success)
                     {
-                        Logger.Error("Verification failed - executable not found in new version folder");
-
-                        // Clean up new version folder
-                        if (!string.IsNullOrEmpty(updateResult.TempAppPath) && Directory.Exists(updateResult.TempAppPath))
-                        {
-                            try
-                            {
-                                Directory.Delete(updateResult.TempAppPath, true);
-                                Logger.Info("Deleted new version folder after verification failure");
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Warn(ex, "Failed to delete new version folder");
-                            }
-                        }
-
-                        // Delete backup (no rollback needed since the App wasn't overwritten)
-                        if (!string.IsNullOrEmpty(updateResult.BackupPath) && Directory.Exists(updateResult.BackupPath))
-                        {
-                            try
-                            {
-                                Directory.Delete(updateResult.BackupPath, true);
-                                Logger.Info("Deleted backup after verification failure");
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Warn(ex, "Failed to delete backup");
-                            }
-                        }
+                        Logger.Error("Update download failed: {Message}", updateResult.Message);
 
                         MessageBox.Show(
-                            "The update has errors (executable not found).\n" +
-                            "The current version will continue to operate normally.",
-                            "Update Verification Failed",
+                            updateResult.Message ?? "Cannot download the update. Please try again later.",
+                            "Update Failed",
                             MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                            MessageBoxImage.Warning);
 
                         return false;
                     }
 
-                    Logger.Info("✅ Binary verification passed");
-                }
-                else
-                {
-                    Logger.Info("Config-only update, skipping binary verification");
-                }
+                    Logger.Info("Update package downloaded successfully to: {Path}", updateResult.TempAppPath);
 
-                // Step 3: Commit (move from NewVersion to App + save version/manifest)
-                UpdateStatus("💾 Installing new version...", 85);
-                StatusEmoji = "💾";
-                await Task.Delay(200);
+                    UpdateStatus("📦 Extracting files...", 65);
+                    StatusEmoji = "📦";
+                    await Task.Delay(100);
 
-                if (updateResult.UpdatedManifest != null &&
-                    !string.IsNullOrEmpty(updateResult.BackupPath))
-                {
-                    var commitSuccess = await _installationService.CommitUpdateAsync(
-                        AppCode,
-                        updateResult.UpdatedManifest,
-                        updateResult.BackupPath,
-                        updateResult.TempAppPath ?? string.Empty);
+                    // ✅ Step 2: Verify exe trong NewVersion folder (only for binary updates)
+                    updateType = manifest.UpdatePolicy?.Type ?? "both";
 
-                    if (!commitSuccess)
+                    if (updateType == "binary" || updateType == "both")
                     {
-                        Logger.Error("❌ Failed to commit update - INITIATING ROLLBACK");
+                        UpdateStatus("🔍 Verifying installation...", 75);
+                        StatusEmoji = "🔍";
+                        await Task.Delay(100);
 
-                        UpdateStatus("⚠️ Update failed. Rolling back to previous version...", 80);
-                        StatusEmoji = "⚠️";
-                        stopwatch.Stop();
+                        if (!await VerifyInstallationInNewVersionAsync(updateResult.TempAppPath))
+                        {
+                            Logger.Error("Verification failed - executable not found in new version folder");
 
+                            // Clean up new version folder
+                            if (!string.IsNullOrEmpty(updateResult.TempAppPath) && Directory.Exists(updateResult.TempAppPath))
+                            {
+                                try
+                                {
+                                    Directory.Delete(updateResult.TempAppPath, true);
+                                    Logger.Info("Deleted new version folder after verification failure");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Warn(ex, "Failed to delete new version folder");
+                                }
+                            }
+
+                            // Delete backup (no rollback needed since the App wasn't overwritten)
+                            if (!string.IsNullOrEmpty(updateResult.BackupPath) && Directory.Exists(updateResult.BackupPath))
+                            {
+                                try
+                                {
+                                    Directory.Delete(updateResult.BackupPath, true);
+                                    Logger.Info("Deleted backup after verification failure");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.Warn(ex, "Failed to delete backup");
+                                }
+                            }
+
+                            MessageBox.Show(
+                                "The update has errors (executable not found).\n" +
+                                "The current version will continue to operate normally.",
+                                "Update Verification Failed",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+
+                            return false;
+                        }
+
+                        Logger.Info("✅ Binary verification passed");
+                    }
+                    else
+                    {
+                        Logger.Info("Config-only update, skipping binary verification");
+                    }
+
+                    // Step 3: Commit (move from NewVersion to App + save version/manifest)
+                    UpdateStatus("💾 Installing new version...", 85);
+                    StatusEmoji = "💾";
+                    await Task.Delay(200);
+
+                    if (updateResult.UpdatedManifest != null &&
+                        !string.IsNullOrEmpty(updateResult.BackupPath))
+                    {
+                        var commitSuccess = await _installationService.CommitUpdateAsync(
+                            AppCode,
+                            updateResult.UpdatedManifest,
+                            updateResult.BackupPath,
+                            updateResult.TempAppPath ?? string.Empty);
+
+                        if (!commitSuccess)
+                        {
+                            Logger.Error("❌ Failed to commit update - INITIATING ROLLBACK");
+
+                            UpdateStatus("⚠️ Update failed. Rolling back to previous version...", 80);
+                            StatusEmoji = "⚠️";
+                            stopwatch.Stop();
+
+                            await Task.Delay(300);
+
+                            await _installationService.NotifyInstallationAsync(
+                                AppCode,
+                                manifest.Binary?.Version ?? "0.0.0",
+                                false,
+                                stopwatch.Elapsed,
+                                "❌ Failed to commit update - INITIATING ROLLBACK: ⚠️ Update failed. Rolling back to previous version... ",
+                               _installationService.GetVersionFromBackup(updateResult.BackupPath),
+                                "Update"
+                            );
+
+                            // 🔥 ROLLBACK
+                            try
+                            {
+                                var rollbackSuccess = await _installationService.RollbackUpdateAsync(
+                                    AppCode,
+                                    updateResult.BackupPath,
+                                    updateResult.UpdatedManifest.Binary?.Version ?? "unknown");
+
+                                if (rollbackSuccess)
+                                {
+                                    Logger.Info("✅ Rollback successful - App restored to previous version");
+
+                                    UpdateStatus("✓ Rollback completed. Previous version restored.", 100);
+                                    StatusEmoji = "✅";
+                                    await Task.Delay(500);
+
+                                    MessageBox.Show(
+                                        "Update failed, but your application has been restored to the previous version.\n" +
+                                        "The application will launch normally with the previous version.",
+                                        "Rollback Successful",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Information);
+
+                                    return false;
+                                }
+                                else
+                                {
+                                    Logger.Error("❌ CRITICAL: Rollback also failed!");
+
+                                    UpdateStatus("❌ Critical error: Rollback failed", 0);
+                                    StatusEmoji = "❌";
+                                    await Task.Delay(1000);
+
+                                    var appPath = Path.Combine(_appBasePath, AppCode, "App");
+                                    var backupLocation = updateResult.BackupPath;
+
+                                    MessageBox.Show(
+                                        "⚠️ CRITICAL ERROR ⚠️\n\n" +
+                                        "Update failed and automatic rollback also failed.\n\n" +
+                                        "MANUAL RECOVERY NEEDED:\n" +
+                                        $"1. Backup location: {backupLocation}\n" +
+                                        $"2. App location: {appPath}\n\n" +
+                                        "Please contact IT support immediately.",
+                                        "Critical Update Error - Manual Recovery Required",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+
+                                    // Don't try to launch - app might be broken
+                                    Application.Current.Shutdown();
+                                    return false;
+                                }
+                            }
+                            catch (Exception rollbackEx)
+                            {
+                                Logger.Error(rollbackEx, "❌ Exception during rollback attempt");
+
+                                MessageBox.Show(
+                                    $"CRITICAL: Rollback exception:\n{rollbackEx.Message}\n\n" +
+                                    $"Backup: {updateResult.BackupPath}\n" +
+                                    "Contact IT support immediately.",
+                                    "Rollback Error",
+                                    MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+
+                                Application.Current.Shutdown();
+                                return false;
+                            }
+                        }
+
+                        // ✅ COMMIT SUCCESS - NOW VERIFY BEFORE CLEANUP
+                        Logger.Info("✅ Commit successful - Now verifying new version can launch");
+
+                        UpdateStatus("🔍 Verifying new version...", 88);
+                        StatusEmoji = "🔍";
                         await Task.Delay(300);
 
-                        await _installationService.NotifyInstallationAsync(
-                            AppCode,
-                            manifest.Binary?.Version ?? "0.0.0",
-                            false,
-                            stopwatch.Elapsed,
-                            "❌ Failed to commit update - INITIATING ROLLBACK: ⚠️ Update failed. Rolling back to previous version... ",
-                           _installationService.GetVersionFromBackup(updateResult.BackupPath),
-                            "Update"
-                        );
+                        // 🔥 CRITICAL: Verify BEFORE deleting backup
+                        var canLaunch = await VerifyNewVersionCanLaunchAsync();
 
-                        // 🔥 ROLLBACK
-                        try
+                        if (!canLaunch)
                         {
+                            Logger.Error("❌ New version verification FAILED - .exe not found or corrupted");
+
+                            UpdateStatus("⚠️ New version has errors. Rolling back...", 80);
+                            StatusEmoji = "⚠️";
+                            await Task.Delay(500);
+
+                            // 🔥 ROLLBACK because verification failed
                             var rollbackSuccess = await _installationService.RollbackUpdateAsync(
                                 AppCode,
                                 updateResult.BackupPath,
@@ -430,136 +583,135 @@ namespace ClientLauncher.ViewModels
 
                             if (rollbackSuccess)
                             {
-                                Logger.Info("✅ Rollback successful - App restored to previous version");
+                                Logger.Info("✅ Rollback successful after verification failure");
 
                                 UpdateStatus("✓ Rollback completed. Previous version restored.", 100);
                                 StatusEmoji = "✅";
                                 await Task.Delay(500);
 
                                 MessageBox.Show(
-                                    "Update failed, but your application has been restored to the previous version.\n" +
-                                    "The application will launch normally with the previous version.",
-                                    "Rollback Successful",
+                                    "The new version has errors and cannot be launched.\n" +
+                                    "Your application has been restored to the previous version.\n" +
+                                    "The application will launch normally.",
+                                    "Update Verification Failed - Rollback Successful",
                                     MessageBoxButton.OK,
-                                    MessageBoxImage.Information);
+                                    MessageBoxImage.Warning);
 
-                                return false;
+                                return false; // Launch old version
                             }
                             else
                             {
-                                Logger.Error("❌ CRITICAL: Rollback also failed!");
-
-                                UpdateStatus("❌ Critical error: Rollback failed", 0);
-                                StatusEmoji = "❌";
-                                await Task.Delay(1000);
-
-                                var appPath = Path.Combine(_appBasePath, AppCode, "App");
-                                var backupLocation = updateResult.BackupPath;
+                                Logger.Error("❌ CRITICAL: Rollback failed after verification failure!");
 
                                 MessageBox.Show(
-                                    "⚠️ CRITICAL ERROR ⚠️\n\n" +
-                                    "Update failed and automatic rollback also failed.\n\n" +
-                                    "MANUAL RECOVERY NEEDED:\n" +
-                                    $"1. Backup location: {backupLocation}\n" +
-                                    $"2. App location: {appPath}\n\n" +
-                                    "Please contact IT support immediately.",
-                                    "Critical Update Error - Manual Recovery Required",
+                                    "CRITICAL ERROR:\n" +
+                                    "New version verification failed and rollback also failed.\n\n" +
+                                    $"Backup location: {updateResult.BackupPath}\n" +
+                                    "Contact IT support immediately.",
+                                    "Critical Error",
                                     MessageBoxButton.OK,
                                     MessageBoxImage.Error);
 
-                                // Don't try to launch - app might be broken
                                 Application.Current.Shutdown();
                                 return false;
                             }
                         }
-                        catch (Exception rollbackEx)
-                        {
-                            Logger.Error(rollbackEx, "❌ Exception during rollback attempt");
 
-                            MessageBox.Show(
-                                $"CRITICAL: Rollback exception:\n{rollbackEx.Message}\n\n" +
-                                $"Backup: {updateResult.BackupPath}\n" +
-                                "Contact IT support immediately.",
-                                "Rollback Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
+                        // ✅ VERIFICATION PASSED - Safe to delete backup now
+                        Logger.Info("✅ New version verification PASSED - Finalizing update");
 
-                            Application.Current.Shutdown();
-                            return false;
-                        }
+                        UpdateStatus("🗑️ Cleaning up...", 92);
+                        StatusEmoji = "🗑️";
+                        await Task.Delay(100);
+
+                        await _installationService.FinalizeUpdateAsync(AppCode, updateResult.BackupPath);
+
+                        Logger.Info("✅ Update committed successfully - Version: {Version}",
+                            updateResult.UpdatedManifest.Binary?.Version);
                     }
 
-                    // ✅ COMMIT SUCCESS - NOW VERIFY BEFORE CLEANUP
-                    Logger.Info("✅ Commit successful - Now verifying new version can launch");
 
-                    UpdateStatus("🔍 Verifying new version...", 88);
-                    StatusEmoji = "🔍";
-                    await Task.Delay(300);
+                }
 
-                    // 🔥 CRITICAL: Verify BEFORE deleting backup
-                    var canLaunch = await VerifyNewVersionCanLaunchAsync();
-
-                    if (!canLaunch)
-                    {
-                        Logger.Error("❌ New version verification FAILED - .exe not found or corrupted");
-
-                        UpdateStatus("⚠️ New version has errors. Rolling back...", 80);
-                        StatusEmoji = "⚠️";
-                        await Task.Delay(500);
-
-                        // 🔥 ROLLBACK because verification failed
-                        var rollbackSuccess = await _installationService.RollbackUpdateAsync(
-                            AppCode,
-                            updateResult.BackupPath,
-                            updateResult.UpdatedManifest.Binary?.Version ?? "unknown");
-
-                        if (rollbackSuccess)
-                        {
-                            Logger.Info("✅ Rollback successful after verification failure");
-
-                            UpdateStatus("✓ Rollback completed. Previous version restored.", 100);
-                            StatusEmoji = "✅";
-                            await Task.Delay(500);
-
-                            MessageBox.Show(
-                                "The new version has errors and cannot be launched.\n" +
-                                "Your application has been restored to the previous version.\n" +
-                                "The application will launch normally.",
-                                "Update Verification Failed - Rollback Successful",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-
-                            return false; // Launch old version
-                        }
-                        else
-                        {
-                            Logger.Error("❌ CRITICAL: Rollback failed after verification failure!");
-
-                            MessageBox.Show(
-                                "CRITICAL ERROR:\n" +
-                                "New version verification failed and rollback also failed.\n\n" +
-                                $"Backup location: {updateResult.BackupPath}\n" +
-                                "Contact IT support immediately.",
-                                "Critical Error",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Error);
-
-                            Application.Current.Shutdown();
-                            return false;
-                        }
-                    }
-
-                    // ✅ VERIFICATION PASSED - Safe to delete backup now
-                    Logger.Info("✅ New version verification PASSED - Finalizing update");
-
-                    UpdateStatus("🗑️ Cleaning up...", 92);
-                    StatusEmoji = "🗑️";
+                if (configUpdateNeeded && !string.IsNullOrEmpty(manifest.Config?.Package))
+                {
+                    UpdateStatus("📥 Downloading config update...", 60);
+                    StatusEmoji = "📥";
                     await Task.Delay(100);
 
-                    await _installationService.FinalizeUpdateAsync(AppCode, updateResult.BackupPath);
+                    // Download and extract config to backup folder
+                    var configResult = await _installationService.DownloadAndExtractConfigToBackupAsync(
+                        AppCode,
+                        manifest.Config.Package);
 
-                    Logger.Info("✅ Update committed successfully - Version: {Version}",
-                        updateResult.UpdatedManifest.Binary?.Version);
+                    if (!configResult.Success)
+                    {
+                        Logger.Error("Config download failed: {Message}", configResult.ErrorMessage);
+                        MessageBox.Show(
+                            $"Cannot download config update: {configResult.ErrorMessage}",
+                            "Config Update Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                        return false;
+                    }
+
+                    Logger.Info("Config downloaded to backup: {Path}", configResult.BackupConfigPath);
+
+                    // Verify config in backup folder
+                    UpdateStatus("🔍 Verifying config files...", 70);
+                    StatusEmoji = "🔍";
+                    await Task.Delay(100);
+
+                    if (!await _installationService.VerifyConfigInBackupAsync(configResult.BackupConfigPath))
+                    {
+                        Logger.Error("Config verification failed - no valid config files found");
+
+                        // Cleanup backup
+                        await _installationService.CleanupConfigBackupAsync(configResult.BackupConfigPath);
+
+                        MessageBox.Show(
+                            "Config update verification failed (no valid config files found).\n" +
+                            "The current config will continue to be used.",
+                            "Config Verification Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+
+                        return false;
+                    }
+
+                    Logger.Info("✅ Config verification passed");
+
+                    // Commit config update
+                    UpdateStatus("💾 Installing new config...", 80);
+                    StatusEmoji = "💾";
+                    await Task.Delay(200);
+
+                    var commitSuccess = await _installationService.CommitConfigUpdateAsync(
+                        AppCode,
+                        configResult.BackupConfigPath,
+                        manifest.Config.Version);
+
+                    if (!commitSuccess)
+                    {
+                        Logger.Error("Failed to commit config update");
+
+                        // Cleanup backup
+                        await _installationService.CleanupConfigBackupAsync(configResult.BackupConfigPath);
+
+                        MessageBox.Show(
+                            "Failed to apply config update.\n" +
+                            "The current config will continue to be used.",
+                            "Config Update Failed",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+
+                        return false;
+                    }
+
+                    // Cleanup backup after successful commit
+                    await _installationService.CleanupConfigBackupAsync(configResult.BackupConfigPath);
+
+                    Logger.Info("✅ Config update committed successfully - Version: {Version}", manifest.Config.Version);
                 }
 
                 UpdateStatus("✓ Update completed successfully", 95);
@@ -567,6 +719,7 @@ namespace ClientLauncher.ViewModels
                 await Task.Delay(100);
 
                 return true;
+
             }
             catch (Exception ex)
             {
@@ -801,7 +954,17 @@ namespace ClientLauncher.ViewModels
                 });
 
                 StatusEmoji = "✓";
-                UpdateStatus("✓ Application launched successfully!", 100);
+                UpdateStatus("✓ Application launched successfully!", 95);
+                await Task.Delay(200);
+
+                // ✅ NEW: Cleanup update folders after successful launch
+                UpdateStatus("🗑️ Cleaning up temporary files...", 98);
+                await Task.Delay(100);
+
+                await _installationService.CleanupUpdateFoldersAsync(AppCode);
+                Logger.Info("✅ Update folders cleaned up successfully");
+
+                UpdateStatus("✓ All done!", 100);
                 await Task.Delay(200);
 
                 Logger.Info("=== Launch process completed for {AppCode} ===", AppCode);

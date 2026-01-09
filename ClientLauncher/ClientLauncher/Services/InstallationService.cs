@@ -294,6 +294,303 @@ namespace ClientLauncher.Services
             }
         }
 
+        /// <summary>
+        /// Download and extract config to backup folder for verification
+        /// </summary>
+        public async Task<(bool Success, string? BackupConfigPath, string? ErrorMessage)> DownloadAndExtractConfigToBackupAsync(
+            string appCode,
+            string configPackage)
+        {
+            try
+            {
+                var configBackupPath = Path.Combine(_appBasePath, appCode, $"ConfigBackup_{DateTime.Now:yyyyMMddHHmmss}");
+                Directory.CreateDirectory(configBackupPath);
+
+                Logger.Info("Downloading config package {Package} to backup: {Path}", configPackage, configBackupPath);
+
+                // Download config package from server
+                var packageUrl = $"{_baseUrl}/api/apps/{appCode}/download/{configPackage}";
+                var response = await _httpClient.GetAsync(packageUrl);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Logger.Error("Failed to download config package. Status: {StatusCode}, Response: {Response}",
+                        response.StatusCode, errorContent);
+                    return (false, null, $"Failed to download config package. Status: {response.StatusCode}");
+                }
+
+                var packageData = await response.Content.ReadAsByteArrayAsync();
+
+                if (packageData == null || packageData.Length == 0)
+                {
+                    return (false, null, $"Downloaded config package '{configPackage}' is empty");
+                }
+
+                Logger.Info("Downloaded {Size} bytes", packageData.Length);
+
+                // Save to temp zip
+                var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_config_{Guid.NewGuid()}.zip");
+                await File.WriteAllBytesAsync(tempZip, packageData);
+
+                try
+                {
+                    // Extract to backup folder
+                    ZipFile.ExtractToDirectory(tempZip, configBackupPath, overwriteFiles: true);
+                    Logger.Info("Config extracted to backup: {Path}", configBackupPath);
+
+                    return (true, configBackupPath, null);
+                }
+                finally
+                {
+                    if (File.Exists(tempZip))
+                    {
+                        File.Delete(tempZip);
+                        Logger.Debug("Deleted temp zip: {Path}", tempZip);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to download and extract config for {AppCode}", appCode);
+                return (false, null, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Verify config files in backup folder (check if config files exist)
+        /// </summary>
+        public async Task<bool> VerifyConfigInBackupAsync(string? backupConfigPath)
+        {
+            await Task.Delay(100);
+
+            if (string.IsNullOrEmpty(backupConfigPath) || !Directory.Exists(backupConfigPath))
+            {
+                Logger.Error("Config backup folder not found: {Path}", backupConfigPath ?? "NULL");
+                return false;
+            }
+
+            // Check if there are any config files (.json, .xml, .config, etc.)
+            var configExtensions = new[] { "*.json", "*.xml", "*.config", "*.txt", "*.ini" };
+            var configFiles = configExtensions
+                .SelectMany(ext => Directory.GetFiles(backupConfigPath, ext, SearchOption.AllDirectories))
+                .ToList();
+
+            if (!configFiles.Any())
+            {
+                Logger.Error("No config files found in backup: {Path}", backupConfigPath);
+
+                // Log all files for debugging
+                var allFiles = Directory.GetFiles(backupConfigPath, "*.*", SearchOption.AllDirectories);
+                Logger.Error("Files in backup folder: {Files}", string.Join(", ", allFiles.Select(Path.GetFileName)));
+
+                return false;
+            }
+
+            Logger.Info("✅ Found {Count} config file(s) in backup: {Files}",
+                configFiles.Count,
+                string.Join(", ", configFiles.Select(Path.GetFileName)));
+
+            return true;
+        }
+
+        /// <summary>
+        /// Commit config update:
+        /// 1. Copy all files from backup → Config folder
+        /// 2. Save config version in Config folder
+        /// 3. Copy all config files from Config → App folder (overwrite)
+        /// </summary>
+        public async Task<bool> CommitConfigUpdateAsync(
+            string appCode,
+            string? backupConfigPath,
+            string newConfigVersion)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(backupConfigPath) || !Directory.Exists(backupConfigPath))
+                {
+                    Logger.Error("Backup config path is invalid: {Path}", backupConfigPath ?? "NULL");
+                    return false;
+                }
+
+                var configPath = Path.Combine(_appBasePath, appCode, "Config");
+                var appPath = Path.Combine(_appBasePath, appCode, "App");
+
+                if (!Directory.Exists(appPath))
+                {
+                    Logger.Error("App folder not found: {Path}", appPath);
+                    return false;
+                }
+
+                Logger.Info("Committing config update from backup: {Backup}", backupConfigPath);
+
+                // ============================================
+                // STEP 1: Copy all files from backup → Config folder
+                // ============================================
+                if (Directory.Exists(configPath))
+                {
+                    Directory.Delete(configPath, true);
+                    Logger.Info("Deleted old Config folder");
+                }
+                Directory.CreateDirectory(configPath);
+
+                await CopyDirectoryAsync(backupConfigPath, configPath, overwrite: true);
+                Logger.Info("✅ Copied all files from backup → Config folder");
+
+                // ============================================
+                // STEP 2: Save config version in Config folder
+                // ============================================
+                var versionFilePath = Path.Combine(configPath, "version.txt");
+                await File.WriteAllTextAsync(versionFilePath, newConfigVersion);
+                Logger.Info("✅ Saved config version: {Version} in Config folder", newConfigVersion);
+
+                // ============================================
+                // STEP 3: Copy all config files from Config → App folder (OVERWRITE)
+                // ============================================
+                Logger.Info("Copying config files from Config → App folder...");
+
+                var configFiles = Directory.GetFiles(configPath, "*.*", SearchOption.AllDirectories);
+                int copiedCount = 0;
+
+                foreach (var configFile in configFiles)
+                {
+                    // Skip version file
+                    if (Path.GetFileName(configFile) == "version.txt")
+                        continue;
+
+                    // Get relative path from Config folder
+                    var relativePath = Path.GetRelativePath(configPath, configFile);
+                    var destFile = Path.Combine(appPath, relativePath);
+
+                    // Create subdirectory if needed
+                    var destDir = Path.GetDirectoryName(destFile);
+                    if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
+                    {
+                        Directory.CreateDirectory(destDir);
+                    }
+
+                    // Copy file (overwrite)
+                    File.Copy(configFile, destFile, overwrite: true);
+                    copiedCount++;
+                    Logger.Debug("Copied: {File} → App folder", Path.GetFileName(configFile));
+                }
+
+                Logger.Info("✅ Copied {Count} config file(s) from Config → App folder (overwrite)", copiedCount);
+                Logger.Info("✅ Config update committed successfully. Version: {Version}", newConfigVersion);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to commit config update for {AppCode}", appCode);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to copy directory recursively with overwrite option
+        /// </summary>
+        private async Task CopyDirectoryAsync(string sourceDir, string destDir, bool overwrite = false)
+        {
+            Directory.CreateDirectory(destDir);
+
+            // Copy all files
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, overwrite);
+            }
+
+            // Copy all subdirectories recursively
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var dirName = new DirectoryInfo(dir).Name;
+                var destSubDir = Path.Combine(destDir, dirName);
+                await CopyDirectoryAsync(dir, destSubDir, overwrite);
+            }
+        }
+
+        /// <summary>
+        /// Cleanup config backup folder
+        /// </summary>
+        public async Task CleanupConfigBackupAsync(string? backupConfigPath)
+        {
+            await Task.Delay(50);
+
+            try
+            {
+                if (!string.IsNullOrEmpty(backupConfigPath) && Directory.Exists(backupConfigPath))
+                {
+                    Directory.Delete(backupConfigPath, true);
+                    Logger.Info("🗑️ Cleaned up config backup: {Path}", backupConfigPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to cleanup config backup: {Path}", backupConfigPath);
+            }
+        }
+
+        /// <summary>
+        /// Cleanup all update folders (NewVersion_* and Backup_*) after successful launch
+        /// </summary>
+        public async Task CleanupUpdateFoldersAsync(string appCode)
+        {
+            await Task.Delay(50);
+
+            try
+            {
+                var updatesPath = Path.Combine(_appBasePath, appCode, "Updates");
+
+                if (!Directory.Exists(updatesPath))
+                {
+                    Logger.Debug("No Updates folder to cleanup for {AppCode}", appCode);
+                    return;
+                }
+
+                // Get all NewVersion_* and Backup_* folders
+                var foldersToDelete = Directory.GetDirectories(updatesPath)
+                    .Where(dir =>
+                    {
+                        var folderName = new DirectoryInfo(dir).Name;
+                        return folderName.StartsWith("NewVersion_") || folderName.StartsWith("Backup_");
+                    })
+                    .ToList();
+
+                if (!foldersToDelete.Any())
+                {
+                    Logger.Debug("No update folders to cleanup for {AppCode}", appCode);
+                    return;
+                }
+
+                Logger.Info("🗑️ Cleaning up {Count} update folder(s) for {AppCode}", foldersToDelete.Count, appCode);
+
+                foreach (var folder in foldersToDelete)
+                {
+                    try
+                    {
+                        Directory.Delete(folder, true);
+                        Logger.Info("✅ Deleted: {Folder}", new DirectoryInfo(folder).Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warn(ex, "Failed to delete folder: {Folder}", folder);
+                    }
+                }
+
+                // If Updates folder is now empty, delete it too
+                if (!Directory.EnumerateFileSystemEntries(updatesPath).Any())
+                {
+                    Directory.Delete(updatesPath);
+                    Logger.Info("🗑️ Deleted empty Updates folder for {AppCode}", appCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to cleanup update folders for {AppCode}", appCode);
+            }
+        }
+
         #endregion
 
         #region Public Commit/Rollback Methods

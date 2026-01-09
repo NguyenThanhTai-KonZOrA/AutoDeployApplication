@@ -1961,7 +1961,7 @@ export default function AdminApplicationPage() {
                                             }}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config" disabled>Config</MenuItem>
+                                            <MenuItem value="Config">Config</MenuItem>
                                             {/* <MenuItem value="Full">Full Package</MenuItem> */}
                                         </Select>
                                         {packageFormErrors.PackageType && (

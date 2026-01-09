@@ -42,6 +42,33 @@ namespace ClientLauncher.Services
             }
         }
 
+        public async Task<bool> IsUpdateConfigAvailableAsync(string appCode)
+        {
+            try
+            {
+                Logger.Info("Checking for updates: {AppCode}", appCode);
+
+                // 1. Get local version
+                var localVersion = _installationChecker.GetInstalledConfigVersion(appCode);
+                if (string.IsNullOrEmpty(localVersion))
+                {
+                    Logger.Debug("No local version found for {AppCode}", appCode);
+                    return false;
+                }
+
+                // 2. Check against server manifest (generated from database)
+                var isUpdateAvailable = await _manifestService.IsUpdateConfigAvailableAsync(appCode, localVersion);
+
+                Logger.Info("Update check result for {AppCode}: {Result}", appCode, isUpdateAvailable);
+                return isUpdateAvailable;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error checking for updates: {AppCode}", appCode);
+                return false;
+            }
+        }
+
         public async Task<string?> GetLatestVersionAsync(string appCode)
         {
             try

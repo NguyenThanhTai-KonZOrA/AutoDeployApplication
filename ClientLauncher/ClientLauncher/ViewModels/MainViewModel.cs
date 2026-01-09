@@ -232,8 +232,8 @@ namespace ClientLauncher.ViewModels
                     if (app.IsInstalled)
                     {
                         // Get LOCAL installed versions
-                        app.InstalledVersion = await _apiService.GetInstalledBinaryVersionAsync(app.AppCode);
-                        var installedConfigVersion = await _apiService.GetInstalledConfigVersionAsync(app.AppCode);
+                        app.InstalledBinaryVersion = await _apiService.GetInstalledBinaryVersionAsync(app.AppCode);
+                        app.InstalledConfigVersion = await _apiService.GetInstalledConfigVersionAsync(app.AppCode);
 
                         // Get server version to check for updates
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
@@ -246,36 +246,46 @@ namespace ClientLauncher.ViewModels
                             bool configUpdate = false;
 
                             // Check binary update
-                            if (!string.IsNullOrEmpty(app.InstalledVersion) &&
+                            if (!string.IsNullOrEmpty(app.InstalledBinaryVersion) &&
                                 !string.IsNullOrEmpty(app.ServerVersion))
                             {
-                                binaryUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+                                binaryUpdate = IsNewerVersion(app.ServerVersion, app.InstalledBinaryVersion);
                             }
 
                             // ✅ NEW: Check config update
-                            if (!string.IsNullOrEmpty(installedConfigVersion) &&
+                            if (!string.IsNullOrEmpty(app.InstalledConfigVersion) &&
                                 !string.IsNullOrEmpty(serverVersionInfo.ConfigVersion))
                             {
-                                configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, installedConfigVersion);
+                                configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, app.InstalledConfigVersion);
                             }
 
                             // ✅ Update available if EITHER binary OR config has update
                             app.HasUpdate = binaryUpdate || configUpdate;
-
-                            if (app.HasUpdate)
+                            if (binaryUpdate && configUpdate)
+                            {
+                                var updateParts = new List<string>();
+                                updateParts.Add("Binary and Config have new version. Please run shortcut application to update!");
+                                app.StatusText = $"{string.Join("  ", updateParts)}";
+                            }
+                            else if (binaryUpdate)
                             {
                                 // ✅ Show what type of update is available
                                 var updateParts = new List<string>();
                                 if (binaryUpdate)
                                     updateParts.Add($"Binary: {app.ServerVersion}");
-                                if (configUpdate)
-                                    updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
 
-                                app.StatusText = $"Installed {app.InstalledVersion} → 🆕 {string.Join(" & ", updateParts)} available";
+
+                                app.StatusText = $"Binary Installed {app.InstalledBinaryVersion} → 🆕 {string.Join(" & ", updateParts)} available";
+                            }
+                            else if (configUpdate)
+                            {
+                                var updateParts = new List<string>();
+                                updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
+                                app.StatusText = $"Config Installed {app.InstalledConfigVersion} → 🆕 {string.Join(" & ", updateParts)} available";
                             }
                             else
                             {
-                                app.StatusText = $"Installed {app.InstalledVersion}";
+                                app.StatusText = $"Installed Binary: {app.InstalledBinaryVersion} & Config: {app.InstalledConfigVersion ?? "None"}";
                             }
                         }
                     }
@@ -808,11 +818,11 @@ namespace ClientLauncher.ViewModels
                 stopwatch.Stop();
                 await _apiService.NotifyInstallationAsync(
                     SelectedApplication.AppCode,
-                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
                     true,
                     stopwatch.Elapsed,
                     null,
-                    SelectedApplication.InstalledVersion,
+                    SelectedApplication.InstalledBinaryVersion,
                     "Uninstall");
 
                 InstallationSuccess = uninstallResult.Success;
@@ -844,11 +854,11 @@ namespace ClientLauncher.ViewModels
                 stopwatch.Stop();
                 await _apiService.NotifyInstallationAsync(
                     SelectedApplication.AppCode,
-                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
                     false,
                     stopwatch.Elapsed,
                     $"Access Denied: {uaEx.Message}",
-                    SelectedApplication.InstalledVersion,
+                    SelectedApplication.InstalledBinaryVersion,
                     "Uninstall");
             }
             catch (IOException ioEx)
@@ -870,11 +880,11 @@ namespace ClientLauncher.ViewModels
                 stopwatch.Stop();
                 await _apiService.NotifyInstallationAsync(
                     SelectedApplication.AppCode,
-                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
                     false,
                     stopwatch.Elapsed,
                     $"File in use: {ioEx.Message}",
-                    SelectedApplication.InstalledVersion,
+                    SelectedApplication.InstalledBinaryVersion,
                     "Uninstall");
             }
             catch (Exception ex)
@@ -893,11 +903,11 @@ namespace ClientLauncher.ViewModels
                 stopwatch.Stop();
                 await _apiService.NotifyInstallationAsync(
                     SelectedApplication.AppCode,
-                    SelectedApplication.InstalledVersion ?? string.Empty,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
                     false,
                     stopwatch.Elapsed,
                     ex.Message,
-                    SelectedApplication.InstalledVersion,
+                    SelectedApplication.InstalledBinaryVersion,
                     "Uninstall");
             }
             finally
