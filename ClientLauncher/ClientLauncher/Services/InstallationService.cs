@@ -70,6 +70,27 @@ namespace ClientLauncher.Services
                 Logger.Info("Downloading binary package: {Package}", binaryPackage);
                 await DownloadAndExtractAsync(appCode, binaryPackage, appPath);
 
+                Logger.Info("manifest config: {version}", manifest.Config.Version);
+                if (string.IsNullOrEmpty(manifest.Config.Version))
+                {
+                    // Init Local
+                    manifest.Config.Version = "0.0.0";
+                    var configPath = Path.Combine(_appBasePath, appCode, "Config");
+
+                    // Create Config directory if it doesn't exist
+                    if (!Directory.Exists(configPath))
+                    {
+                        Directory.CreateDirectory(configPath);
+                        Logger.Info("Created Config directory at {ConfigPath}", configPath);
+                    }
+
+                    Logger.Info("manifest config: {version}", manifest.Config.Version);
+                    var versionFile = Path.Combine(_appBasePath, appCode, "Config", "version.txt");
+                    Directory.CreateDirectory(Path.GetDirectoryName(versionFile)!);
+                    File.WriteAllText(versionFile, manifest.Config.Version);
+                    Logger.Info("Created manifest config: {version}", manifest.Config.Version);
+                }
+
                 if (!string.IsNullOrEmpty(manifest.Config?.Package) &&
                     manifest.UpdatePolicy?.Type != "binary")
                 {
