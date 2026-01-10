@@ -9,6 +9,8 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace ClientLauncher.Services
 {
@@ -30,9 +32,15 @@ namespace ClientLauncher.Services
             _manifestService = new ManifestService();
             _selectiveUpdateService = new SelectiveUpdateService(_manifestService);
 
-            if (!Directory.Exists(_appBasePath))
+            // ✅ Ensure directory exists and has proper permissions
+            EnsureDirectoryWithPermissions(_appBasePath);
+
+            // ✅ Ensure Icons folder exists (will inherit permissions)
+            var iconsPath = Path.Combine(_appBasePath, "Icons");
+            if (!Directory.Exists(iconsPath))
             {
-                Directory.CreateDirectory(_appBasePath);
+                Directory.CreateDirectory(iconsPath);
+                Logger.Info("Created Icons directory at: {IconsPath}", iconsPath);
             }
 
             Logger.Debug("InstallationService initialized with base path: {Path}", _appBasePath);
@@ -1436,5 +1444,50 @@ namespace ClientLauncher.Services
             }
         }
         #endregion
+
+        private void EnsureDirectoryWithPermissions(string path)
+        {
+            try
+            {
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                    Logger.Info("Created directory: {Path}", path);
+                }
+
+                // Try to set permissions (requires admin rights)
+                try
+                {
+                    var directoryInfo = new DirectoryInfo(path);
+                    var security = directoryInfo.GetAccessControl();
+
+                    // Get Users group SID
+                    var usersSid = new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null);
+
+                    // Create Full Control rule for Users
+                    var accessRule = new FileSystemAccessRule(
+                        usersSid,
+                        FileSystemRights.FullControl,
+                        InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+                        PropagationFlags.None,
+                        AccessControlType.Allow
+                    );
+
+                    // Add the rule
+                    security.AddAccessRule(accessRule);
+                    directoryInfo.SetAccessControl(security);
+
+                    Logger.Info("Successfully set Full Control permissions for Users on: {Path}", path);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Logger.Warn("Cannot set permissions (requires admin rights). Users may need admin to install apps.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to ensure directory with permissions: {Path}", path);
+            }
+        }
     }
 }

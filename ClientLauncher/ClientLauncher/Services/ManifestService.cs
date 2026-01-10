@@ -240,6 +240,12 @@ namespace ClientLauncher.Services
 
         private bool IsNewerVersion(string serverVersion, string localVersion)
         {
+            if (string.IsNullOrEmpty(serverVersion))
+            {
+                Logger.Info("<============ Skip update! ============>");
+                return false;
+            }
+
             try
             {
                 // Remove 'v' prefix if exists

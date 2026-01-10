@@ -20,13 +20,8 @@ public class IconService : IIconService
         _baseUrl = ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] ?? "http://10.21.10.1:8102";
         _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
 
-        // Setup local cache folder for icons
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ClientLauncher",
-            "IconCache"
-        );
-        _iconCachePath = appDataPath;
+        var appsBasePath = ConfigurationManager.AppSettings["AppsBasePath"] ?? @"C:\CompanyApps";
+        _iconCachePath = Path.Combine(appsBasePath, "Icons");
 
         // Create cache directory if not exists
         if (!Directory.Exists(_iconCachePath))
