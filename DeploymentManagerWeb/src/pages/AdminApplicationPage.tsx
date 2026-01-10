@@ -138,7 +138,7 @@ export default function AdminApplicationPage() {
     // Form states - Package Upload
     const [packageFormData, setPackageFormData] = useState({
         Version: "",
-        PackageType: "Binary",
+        PackageType: manifestFormData.UpdateType == "Binary" ? "Binary" : "Config",
         ReleaseNotes: "",
         IsStable: true,
         MinimumClientVersion: "",
@@ -255,7 +255,7 @@ export default function AdminApplicationPage() {
         });
         setPackageFormData({
             Version: "",
-            PackageType: "Binary",
+            PackageType: manifestFormData.UpdateType == "Binary" ? "Binary" : "Config",
             ReleaseNotes: "",
             IsStable: true,
             MinimumClientVersion: "",
@@ -414,6 +414,13 @@ export default function AdminApplicationPage() {
                 setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
             }
 
+            if (field === "BinaryVersion") {
+                // If Update Type is Binary, sync Package Version
+                if (newData.UpdateType === "Binary") {
+                    setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
+                }
+            }
+
             if (field === "ConfigVersion") {
                 newData.ConfigVersion = String(value);
                 if (value) {
@@ -421,8 +428,32 @@ export default function AdminApplicationPage() {
                     if (appFormData.appCode) {
                         newData.ConfigPackage = `${appFormData.appCode}_config_${value}.zip`;
                     }
+                    // If Update Type is Config, sync Package Version
+                    if (newData.UpdateType === "Config") {
+                        setPackageFormData(prevPkg => ({ ...prevPkg, Version: String(value) }));
+                    }
                 } else {
                     newData.ConfigPackage = "";
+                }
+            }
+
+            // Auto-sync Package Type and Version when Update Type changes
+            if (field === "UpdateType") {
+                const updateType = String(value);
+                if (updateType === "Binary") {
+                    // Set Package Type to Binary and sync with Binary Version
+                    setPackageFormData(prevPkg => ({
+                        ...prevPkg,
+                        PackageType: "Binary",
+                        Version: newData.BinaryVersion
+                    }));
+                } else if (updateType === "Config") {
+                    // Set Package Type to Config and sync with Config Version
+                    setPackageFormData(prevPkg => ({
+                        ...prevPkg,
+                        PackageType: "Config",
+                        Version: newData.ConfigVersion
+                    }));
                 }
             }
 
@@ -1225,15 +1256,15 @@ export default function AdminApplicationPage() {
                                         <TableCell sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 150 }}>
                                             Category
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 120 }}>
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 130 }}>
                                             Latest Version
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 130 }}>
                                             Total Versions
                                         </TableCell>
-                                        <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
+                                        {/* <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
                                             Total Installs
-                                        </TableCell>
+                                        </TableCell> */}
                                         <TableCell align="center" sx={{ fontWeight: 600, borderRight: '1px solid #e0e0e0', minWidth: 100 }}>
                                             Status
                                         </TableCell>
@@ -1351,14 +1382,14 @@ export default function AdminApplicationPage() {
                                                         variant="outlined"
                                                     />
                                                 </TableCell>
-                                                <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
+                                                {/* <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip
                                                         label={application.totalInstalls}
                                                         color="success"
                                                         size="small"
                                                         variant="outlined"
                                                     />
-                                                </TableCell>
+                                                </TableCell> */}
                                                 {/* <TableCell align="center" sx={{ borderRight: '1px solid #e0e0e0' }}>
                                                     <Chip
                                                         label={application.isActive ? "Active" : "Inactive"}
@@ -1608,7 +1639,7 @@ export default function AdminApplicationPage() {
                                             }
                                         }}
                                         error={manifestFormErrors.BinaryVersion}
-                                        disabled={dialogLoading}
+                                        disabled={dialogLoading || manifestFormData.UpdateType === "Config"}
                                         helperText={manifestFormErrors.BinaryVersion ? "Binary Version is required" : "Auto-filled from Version"}
                                     />
                                 </Grid>
@@ -1639,8 +1670,8 @@ export default function AdminApplicationPage() {
                                             onChange={(e) => handleManifestFormChange("UpdateType", e.target.value)}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config">Config</MenuItem>
-                                            <MenuItem value="Both">Both</MenuItem>
+                                            <MenuItem value="Config" disabled={dialogMode === "create"}>Config</MenuItem>
+                                            {/* <MenuItem value="Both" disabled={dialogMode === "create"}>Both</MenuItem> */}
                                         </Select>
                                     </FormControl>
                                 </Grid>
@@ -1684,7 +1715,7 @@ export default function AdminApplicationPage() {
                                             }
                                         }}
                                         //error={manifestFormErrors.ConfigVersion}
-                                        disabled={dialogLoading}
+                                        disabled={dialogLoading || manifestFormData.UpdateType === "Binary"}
                                     //helperText={manifestFormErrors.ConfigVersion ? "Config Version is required" : "Auto-filled from Version"}
                                     />
                                 </Grid>
@@ -1701,7 +1732,7 @@ export default function AdminApplicationPage() {
                                             }
                                         }}
                                         //error={manifestFormErrors.ConfigPackage}
-                                        disabled={dialogLoading || manifestFormData.ConfigPackage !== ""}
+                                        disabled={dialogLoading || manifestFormData.ConfigPackage !== "" || manifestFormData.UpdateType === "Binary"}
                                     //helperText={manifestFormErrors.ConfigPackage ? "Config Package is required" : "Auto-filled: AppCode_Version"}
                                     />
                                 </Grid>
@@ -1712,6 +1743,7 @@ export default function AdminApplicationPage() {
                                             label="Config Merge Strategy"
                                             value={manifestFormData.ConfigMergeStrategy}
                                             onChange={(e) => handleManifestFormChange("ConfigMergeStrategy", e.target.value)}
+                                            disabled={dialogLoading || manifestFormData.UpdateType === "Binary"}
                                         >
                                             <MenuItem value="ReplaceAll">Replace All</MenuItem>
                                             <MenuItem value="Selective">Selective</MenuItem>
@@ -1721,7 +1753,7 @@ export default function AdminApplicationPage() {
                                 </Grid>
 
 
-                                <Grid size={{ xs: 12 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
+                                {/* <Grid size={{ xs: 12 }} sx={{ display: dialogMode === "edit" ? "block" : "none" }}>
                                     <Box sx={{ mt: 2, mb: 1 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                                             Config Files
@@ -1792,7 +1824,7 @@ export default function AdminApplicationPage() {
                                             </Grid>
                                         </Grid>
                                     </Paper>
-                                </Grid>
+                                </Grid> */}
 
                                 {/* Config Files List */}
                                 {manifestFormData.ConfigFiles.length > 0 && (
@@ -1961,7 +1993,7 @@ export default function AdminApplicationPage() {
                                             }}
                                         >
                                             <MenuItem value="Binary">Binary</MenuItem>
-                                            <MenuItem value="Config">Config</MenuItem>
+                                            <MenuItem value="Config" disabled={dialogMode === "create"}>Config</MenuItem>
                                             {/* <MenuItem value="Full">Full Package</MenuItem> */}
                                         </Select>
                                         {packageFormErrors.PackageType && (
@@ -2169,6 +2201,7 @@ export default function AdminApplicationPage() {
                                             fullWidth
                                             size="small"
                                             value={viewingManifest.binaryVersion}
+                                            disabled={dialogLoading || manifestFormData.UpdateType === "Config"}
                                             onChange={(e) => handleManifestFieldChange('binaryVersion', e.target.value)}
                                         />
                                     ) : (
@@ -2222,9 +2255,9 @@ export default function AdminApplicationPage() {
                                                 value={viewingManifest.configMergeStrategy}
                                                 onChange={(e) => handleManifestFieldChange('configMergeStrategy', e.target.value)}
                                             >
-                                                <MenuItem value="Replace">Replace</MenuItem>
-                                                <MenuItem value="Merge">Merge</MenuItem>
-                                                <MenuItem value="KeepExisting">Keep Existing</MenuItem>
+                                                <MenuItem value="ReplaceAll">Replace All</MenuItem>
+                                                <MenuItem value="Selective">Selective</MenuItem>
+                                                <MenuItem value="PreserveLocal">Preserve Local</MenuItem>
                                             </Select>
                                         </FormControl>
                                     ) : (

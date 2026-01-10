@@ -285,7 +285,8 @@ namespace ClientLauncher.ViewModels
                             }
                             else
                             {
-                                app.StatusText = $"Installed Binary: {app.InstalledBinaryVersion} & Config: {app.InstalledConfigVersion ?? "None"}";
+                                string configVersionDisplay = app.InstalledConfigVersion == "0.0.0" ? "None" : app.InstalledConfigVersion;
+                                app.StatusText = $"Installed Binary: {app.InstalledBinaryVersion} & Config: {configVersionDisplay}";
                             }
                         }
                     }
