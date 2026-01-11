@@ -176,20 +176,26 @@ namespace ClientLauncher.ViewModels
         public AsyncRelayCommand LoadApplicationsCommand { get; }
         public AsyncRelayCommand InstallCommand { get; }
         public AsyncRelayCommand UninstallCommand { get; }
+        public AsyncRelayCommand<ApplicationDto> UninstallAppCommand { get; }
         public RelayCommand BackToListCommand { get; }
         public RelayCommand SelectAllCommand { get; }
         public RelayCommand SelectNoneCommand { get; }
         public RelayCommand ClearSearchCommand { get; }
+        public RelayCommand SwitchToListViewCommand { get; }
+        public RelayCommand SwitchToTabViewCommand { get; }
 
         public MainViewModel()
         {
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
-            _iconService = new IconService(); // ADD THIS
+            _iconService = new IconService();
+
             string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.0.0";
             CurrentVersion = $"Version: {currentVersion}";
+
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
+
             InstallCommand = new AsyncRelayCommand(
                 async _ => await InstallSelectedApplicationsAsync(),
                 _ => HasSelectedApplications && !IsProcessing
@@ -200,17 +206,44 @@ namespace ClientLauncher.ViewModels
                 _ => SelectedApplication != null && !IsProcessing && SelectedApplication.IsInstalled
             );
 
+            // ✅ NEW: Command với parameter cho Tab View
+            UninstallAppCommand = new AsyncRelayCommand<ApplicationDto>(
+                async app => await UninstallSpecificApplicationAsync(app),
+                app => app != null && !IsProcessing && app.IsInstalled
+            );
+
             BackToListCommand = new RelayCommand(_ => BackToList());
             SelectAllCommand = new RelayCommand(_ => SelectAll());
             SelectNoneCommand = new RelayCommand(_ => SelectNone());
             ClearSearchCommand = new RelayCommand(_ => ClearSearch());
+            SwitchToListViewCommand = new RelayCommand(_ => IsTabView = false);
+            SwitchToTabViewCommand = new RelayCommand(_ => IsTabView = true);
 
             _ = LoadApplicationsAsync();
             InitializeClockTimer();
         }
         #endregion
 
+        private async Task UninstallSpecificApplicationAsync(ApplicationDto? app)
+        {
+            if (app == null) return;
+
+            // Set as selected application temporarily
+            SelectedApplication = app;
+
+            // Execute uninstall
+            await UninstallApplicationAsync();
+        }
+
         #region Application Loading and Management
+        private bool _isTabView = false;
+        public bool IsTabView
+        {
+            get => _isTabView;
+            set => SetProperty(ref _isTabView, value);
+        }
+
+        public bool IsListView => !IsTabView;
 
         /// <summary>
         /// UPDATED: Load applications with LOCAL installation check
@@ -674,8 +707,6 @@ namespace ClientLauncher.ViewModels
         /// Uninstall application
         /// </summary>
         /// <summary>
-        /// Uninstall application with process check
-        /// </summary>
         private async Task UninstallApplicationAsync()
         {
             var stopwatch = Stopwatch.StartNew();
@@ -720,6 +751,7 @@ namespace ClientLauncher.ViewModels
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Error
                             );
+                            StatusMessage = "Uninstallation cancelled - processes still running";
                             return;
                         }
 
@@ -737,6 +769,7 @@ namespace ClientLauncher.ViewModels
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Error
                             );
+                            StatusMessage = "Uninstallation cancelled - processes still running";
                             return;
                         }
 
@@ -745,6 +778,7 @@ namespace ClientLauncher.ViewModels
                     else
                     {
                         // _logger.Info("User cancelled uninstallation for {AppCode}", SelectedApplication.AppCode);
+                        StatusMessage = "Uninstallation cancelled by user";
                         return;
                     }
                 }
@@ -759,7 +793,10 @@ namespace ClientLauncher.ViewModels
                 );
 
                 if (confirmResult != MessageBoxResult.Yes)
+                {
+                    StatusMessage = "Uninstallation cancelled by user";
                     return;
+                }
 
                 // _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
 
@@ -792,10 +829,15 @@ namespace ClientLauncher.ViewModels
                     ProgressValue = 90;
                     await Task.Delay(300);
 
+                    StatusMessage = "Finalizing uninstallation...";
+                    ProgressValue = 95;
+                    await Task.Delay(200);
+
                     // _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
                 }
                 else
                 {
+                    StatusMessage = "Uninstallation failed";
                     InstallationResult = $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
                     CurrentStep = 3;
                     OnPropertyChanged(nameof(IsStep1Visible));
@@ -806,7 +848,7 @@ namespace ClientLauncher.ViewModels
                     return;
                 }
 
-                StatusMessage = "Finalizing...";
+                StatusMessage = "Uninstallation completed successfully";
                 ProgressValue = 100;
                 await Task.Delay(300);
 
@@ -827,7 +869,6 @@ namespace ClientLauncher.ViewModels
                     "Uninstall");
 
                 InstallationSuccess = uninstallResult.Success;
-                StatusMessage = "Uninstallation completed";
                 InstallationResult = $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
                                    $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +
                                    $"Desktop shortcut removed\n\n" +
@@ -837,6 +878,7 @@ namespace ClientLauncher.ViewModels
             {
                 //_logger.Error(uaEx, "Access denied during uninstallation for {AppCode}", SelectedApplication?.AppCode);
 
+                StatusMessage = "Uninstallation failed - Access Denied";
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -866,6 +908,7 @@ namespace ClientLauncher.ViewModels
             {
                 //_logger.Error(ioEx, "IO error during uninstallation for {AppCode}", SelectedApplication?.AppCode);
 
+                StatusMessage = "Uninstallation failed - File Access Error";
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -892,6 +935,7 @@ namespace ClientLauncher.ViewModels
             {
                 //_logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication?.AppCode);
 
+                StatusMessage = "Uninstallation failed - Unexpected Error";
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));

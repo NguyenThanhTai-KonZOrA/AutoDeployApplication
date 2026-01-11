@@ -107,4 +107,11 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Page Update="XamlStyles\Styles.xaml">
+      <CustomToolNamespace>XamlIntelliSenseFileGenerator</CustomToolNamespace>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Page>
+  </ItemGroup>
+
 </Project>
