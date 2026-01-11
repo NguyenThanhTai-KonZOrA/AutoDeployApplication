@@ -85,6 +85,13 @@ const navItems: NavItem[] = [
         icon: AssessmentIcon,
         //requiredPermission: Permission.VIEW_ADMIN_DASHBOARD
     },
+    {
+        key: 'admin-audit-logs',
+        title: 'Audit Logs',
+        href: '/admin-audit-logs',
+        icon: ManageHistoryIcon,
+        requiredPermission: Permission.VIEW_AUDIT_LOGS,
+    },
 ];
 
 

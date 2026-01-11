@@ -12,15 +12,18 @@ namespace ClientLauncherAPI.Controllers
         private readonly IApplicationManagementService _appService;
         private readonly ILogger<ApplicationManagementController> _logger;
         private readonly IManifestManagementService _manifestService;
+        private readonly IAuditLogService _auditLogService;
 
         public ApplicationManagementController(
             IApplicationManagementService appService,
             IManifestManagementService manifestService,
-            ILogger<ApplicationManagementController> logger)
+            ILogger<ApplicationManagementController> logger,
+            IAuditLogService auditLogService)
         {
             _appService = appService;
             _manifestService = manifestService;
             _logger = logger;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -31,7 +34,27 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Creating new application with code: {AppCode}", request.AppCode);
                 var result = await _appService.CreateApplicationAsync(request);
+
+                // Log audit entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "CreateApplication",
+                    EntityType = "Application",
+                    Details = $"Created application with ID: {result.Id}",
+                    ErrorMessage = null,
+                    IsSuccess = true,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 200,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = result.Id
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -49,7 +72,26 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Updating application ID: {Id}", id);
                 var result = await _appService.UpdateApplicationAsync(id, request);
+
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "UpdateApplication",
+                    EntityType = "Application",
+                    Details = $"Updated application ID: {id}",
+                    ErrorMessage = null,
+                    IsSuccess = true,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 200,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = id
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -67,16 +109,53 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Deleting application ID: {Id}", id);
                 var result = await _appService.DeleteApplicationAsync(id);
                 if (!result)
                 {
+                    _logger.LogWarning("Application ID: {Id} not found for deletion", id);
                     return NotFound(new { success = false, message = "Application not found" });
                 }
+
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "DeleteApplication",
+                    EntityType = "Application",
+                    Details = $"Deleted application ID: {id}",
+                    ErrorMessage = null,
+                    IsSuccess = true,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 200,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = id
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting application ID: {Id}", id);
+                // Audit log for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "DeleteApplication",
+                    EntityType = "Application",
+                    Details = $"Failed to delete application ID: {id}",
+                    ErrorMessage = ex.Message,
+                    IsSuccess = false,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 400,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = id
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -86,12 +165,48 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Attempting to change status for application ID: {Id}", id);
                 var result = await _appService.ChangeApplicationStatusAsync(id);
+
+                // Log audit entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "ChangeApplicationStatus",
+                    EntityType = "Application",
+                    Details = $"Changed status for application ID: {id}",
+                    ErrorMessage = null,
+                    IsSuccess = true,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 200,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = id
+                });
                 return Ok(true);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error changing status for application ID: {Id}", id);
+                // Log audit entry for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "ChangeApplicationStatus",
+                    EntityType = "Application",
+                    Details = $"Failed to change status for application ID: {id}",
+                    ErrorMessage = ex.Message,
+                    IsSuccess = false,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 400,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = id
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -204,12 +319,49 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Creating manifest for application ID: {Id}", id);
                 var result = await _manifestService.CreateManifestAsync(id, request, User.Identity?.Name ?? CommonConstants.SystemUser);
+
+                // Log audit entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "CreateManifest",
+                    EntityType = "Manifest",
+                    Details = $"Created manifest ID: {result.Id} for application ID: {id}",
+                    ErrorMessage = null,
+                    IsSuccess = true,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 200,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = result.Id
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating manifest for application ID: {Id}", id);
+                // Log audit entry for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    Action = "CreateManifest",
+                    EntityType = "Manifest",
+                    Details = $"Failed to create manifest for application ID: {id}",
+                    ErrorMessage = ex.Message,
+                    IsSuccess = false,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    StatusCode = 400,
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    DurationMs = 0,
+                    EntityId = null
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }

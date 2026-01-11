@@ -10,13 +10,16 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly ICategoryService _categoryService;
         private readonly ILogger<CategoryController> _logger;
+        private readonly IAuditLogService _auditLogService;
 
         public CategoryController(
             ICategoryService categoryService,
-            ILogger<CategoryController> logger)
+            ILogger<CategoryController> logger,
+            IAuditLogService auditLogService)
         {
             _categoryService = categoryService;
             _logger = logger;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -27,12 +30,48 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Creating new category: {CategoryName}", request.Name);
                 var result = await _categoryService.CreateCategoryAsync(request);
+                // Audit log entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "CreateCategory",
+                    EntityType = "Category",
+                    EntityId = result.Id,
+                    IsSuccess = true,
+                    Details = $"Category '{request.Name}' created successfully.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating category");
+                // Audit log entry for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "CreateCategory",
+                    EntityType = "Category",
+                    EntityId = null,
+                    IsSuccess = false,
+                    Details = $"Failed to create category '{request.Name}'.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 500
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -45,12 +84,49 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Updating category ID: {Id}", id);
                 var result = await _categoryService.UpdateCategoryAsync(id, request);
+
+                //audit log entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "UpdateCategory",
+                    EntityType = "Category",
+                    EntityId = id,
+                    IsSuccess = true,
+                    Details = $"Category ID '{id}' updated successfully.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating category ID: {Id}", id);
+                // Audit log entry for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "UpdateCategory",
+                    EntityType = "Category",
+                    EntityId = id,
+                    IsSuccess = false,
+                    Details = $"Failed to update category ID '{id}'.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 500
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -63,16 +139,53 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Deleting category ID: {Id}", id);
                 var result = await _categoryService.DeleteCategoryAsync(id);
                 if (!result)
                 {
                     return NotFound(new { success = false, message = "Category not found" });
                 }
+
+                // Audit log entry
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "DeleteCategory",
+                    EntityType = "Category",
+                    EntityId = id,
+                    IsSuccess = true,
+                    Details = $"Category ID '{id}' deleted successfully.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting category ID: {Id}", id);
+                // Audit log entry for failure
+                await _auditLogService.LogActionAsync(new CreateAuditLogRequest
+                {
+                    Action = "DeleteCategory",
+                    EntityType = "Category",
+                    EntityId = id,
+                    IsSuccess = false,
+                    Details = $"Failed to delete category ID '{id}'.",
+                    DurationMs = 0,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = Request.Method,
+                    RequestPath = Request.Path,
+                    UserName = User.Identity?.Name ?? "Anonymous",
+                    StatusCode = 500
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }

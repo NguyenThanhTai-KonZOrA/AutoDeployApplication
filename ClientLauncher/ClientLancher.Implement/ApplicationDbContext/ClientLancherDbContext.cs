@@ -18,6 +18,9 @@ namespace ClientLancher.Implement.ApplicationDbContext
         public DbSet<ApplicationManifest> ApplicationManifests { get; set; }
         public DbSet<Icons> Icons { get; set; }
 
+        // Audit Logs table
+        public DbSet<AuditLog> AuditLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -165,6 +168,36 @@ namespace ClientLancher.Implement.ApplicationDbContext
                 entity.Property(e => e.FileUrl).IsRequired().HasMaxLength(1000);
                 entity.Property(e => e.FileExtension).IsRequired().HasMaxLength(10);
                 entity.Property(e => e.Type).IsRequired();
+            });
+
+            // AuditLog configurations
+            modelBuilder.Entity<AuditLog>(entity =>
+            {
+                entity.HasKey(a => a.ID);
+
+                // Index for searching by user
+                entity.HasIndex(a => a.UserName)
+                    .HasDatabaseName("IX_AuditLogs_UserName");
+
+                // Index for searching by action
+                entity.HasIndex(a => a.Action)
+                    .HasDatabaseName("IX_AuditLogs_Action");
+
+                // Index for searching by entity type and ID
+                entity.HasIndex(a => new { a.EntityType, a.EntityId })
+                    .HasDatabaseName("IX_AuditLogs_Entity");
+
+                // Index for searching by date range
+                entity.HasIndex(a => a.CreatedAt)
+                    .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+                // Index for failed actions
+                entity.HasIndex(a => new { a.IsSuccess, a.CreatedAt })
+                    .HasDatabaseName("IX_AuditLogs_Success")
+                    .HasFilter("[IsSuccess] = 0");
+
+                // Soft delete filter
+                entity.HasQueryFilter(x => !x.IsDelete);
             });
         }
     }

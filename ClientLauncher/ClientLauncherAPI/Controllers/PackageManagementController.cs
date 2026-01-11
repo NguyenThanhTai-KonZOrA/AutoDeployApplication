@@ -1,4 +1,5 @@
-﻿using ClientLancher.Implement.Services.Interface;
+﻿using ClientLancher.Common.Constants;
+using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,13 +11,16 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IPackageVersionService _packageService;
         private readonly ILogger<PackageManagementController> _logger;
+        private readonly IAuditLogService _auditLogService;
 
         public PackageManagementController(
             IPackageVersionService packageService,
-            ILogger<PackageManagementController> logger)
+            ILogger<PackageManagementController> logger,
+            IAuditLogService auditLogService)
         {
             _packageService = packageService;
             _logger = logger;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -31,13 +35,49 @@ namespace ClientLauncherAPI.Controllers
             {
                 _logger.LogInformation("Package upload request received for Application ID: {ApplicationId}",
                     request.ApplicationId);
-
+                request.UploadedBy = User.Identity?.Name ?? CommonConstants.SystemUser;
                 var result = await _packageService.UploadPackageAsync(request);
+
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UploadPackage",
+                    EntityType = "PackageVersion",
+                    EntityId = result.Id,
+                    UserName = request.UploadedBy,
+                    IsSuccess = true,
+                    Details = $"Uploaded package version {request.Version} for Application ID {request.ApplicationId}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error uploading package");
+                // Audit log for failure
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UploadPackage",
+                    EntityType = "PackageVersion",
+                    EntityId = null,
+                    UserName = request.UploadedBy,
+                    IsSuccess = false,
+                    Details = $"Failed to upload package version {request.Version} for Application ID {request.ApplicationId}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 400
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -50,12 +90,49 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Package update request received for Package ID: {Id}", request.Id);
                 var result = await _packageService.UpdatePackageAsync(request);
+
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UpdatePackage",
+                    EntityType = "PackageVersion",
+                    EntityId = result.Id,
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    IsSuccess = true,
+                    Details = $"Updated package ID {request.Id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating package ID: {Id}", request.Id);
+                // Audit log for failure
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UpdatePackage",
+                    EntityType = "PackageVersion",
+                    EntityId = request.Id,
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    IsSuccess = false,
+                    Details = $"Failed to update package ID {request.Id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 400
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -68,16 +145,53 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Package delete request received for Package ID: {Id}", id);
                 var result = await _packageService.DeletePackageAsync(id);
                 if (!result)
                 {
                     return NotFound(new { success = false, message = "Package not found" });
                 }
+
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "DeletePackage",
+                    EntityType = "PackageVersion",
+                    EntityId = id,
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    IsSuccess = true,
+                    Details = $"Deleted package ID {id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = null,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 200
+                });
+
                 return Ok(result);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting package ID: {Id}", id);
+                // Audit log for failure
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "DeletePackage",
+                    EntityType = "PackageVersion",
+                    EntityId = id,
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    IsSuccess = false,
+                    Details = $"Failed to delete package ID {id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 400
+                });
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
@@ -209,21 +323,56 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Download request received for Package ID: {Id}", id);
                 var (fileData, fileName, contentType) = await _packageService.DownloadPackageAsync(id);
 
                 // Record download statistic
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
                 var machineName = Request.Headers["X-Machine-Name"].ToString() ?? "Unknown";
-                var userName = Request.Headers["X-User-Name"].ToString() ?? "Unknown";
+                var userName = User.Identity?.Name ?? CommonConstants.SystemUser;
 
                 await _packageService.RecordDownloadStatisticAsync(
                     id, machineName, userName, ipAddress, true, fileData.Length, 0);
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "DownloadPackage",
+                    EntityType = "PackageVersion",
+                    EntityId = id,
+                    UserName = userName,
+                    IsSuccess = true,
+                    Details = $"Downloaded package ID {id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = ipAddress,
+                    ErrorMessage = null,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 200
+                });
 
                 return File(fileData, contentType, fileName);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error downloading package ID: {Id}", id);
+                // Audit log for failure
+                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "DownloadPackage",
+                    EntityType = "PackageVersion",
+                    EntityId = id,
+                    UserName = User.Identity?.Name ?? CommonConstants.SystemUser,
+                    IsSuccess = false,
+                    Details = $"Failed to download package ID {id}",
+                    DurationMs = null,
+                    UserAgent = Request.Headers["User-Agent"].ToString(),
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    ErrorMessage = ex.Message,
+                    HttpMethod = HttpContext.Request.Method,
+                    RequestPath = HttpContext.Request.Path,
+                    StatusCode = 404
+                });
                 return NotFound(new { success = false, message = ex.Message });
             }
         }

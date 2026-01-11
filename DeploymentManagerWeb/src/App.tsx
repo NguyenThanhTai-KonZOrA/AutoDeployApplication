@@ -89,6 +89,12 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
+        <Route path="/admin-audit-logs" element={
+          <ProtectedRoute>
+            <AdminAuditLogsPage />
+          </ProtectedRoute>
+        } />
+
       </Routes>
     </>
   );
