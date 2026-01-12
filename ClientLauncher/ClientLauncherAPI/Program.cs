@@ -1,16 +1,25 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
+﻿using ClientLancher.Common.ApiClient;
+using ClientLancher.Common.MemoryCache;
+using ClientLancher.Common.SystemConfiguration;
+using ClientLancher.Implement.ApplicationDbContext;
 using ClientLancher.Implement.Repositories;
 using ClientLancher.Implement.Repositories.Interface;
 using ClientLancher.Implement.Services;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.UnitOfWork;
 using ClientLancher.Implement.ViewModels;
+using ClientLauncherAPI.WindowHelpers;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using NLog;
 using NLog.Web;
+using System.Security.Claims;
+using System.Text;
 
 // ================================================================
 // 🟢 NLog initialization (before builder)
@@ -67,15 +76,43 @@ try
     // ================================================================
     builder.Logging.ClearProviders();
     builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Trace);
-    builder.Host.UseNLog();
+    builder.Host.UseNLog();  // ✅ Connects NLog to ASP.NET Core pipeline
+
+    // JWT Auth
+    var jwtSection = builder.Configuration.GetSection("Jwt");
+    var jwtKey = jwtSection["Key"];
+    var jwtIssuer = jwtSection["Issuer"];
+    var jwtAudience = jwtSection["Audience"];
+
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(o =>
+        {
+            o.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                NameClaimType = ClaimTypes.Name,
+                RoleClaimType = ClaimTypes.Role
+            };
+        });
 
     // Database
     builder.Services.AddDbContext<ClientLancherDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+    builder.Services.AddMemoryCache();
+    builder.Services.AddHttpClient<IApiClient, ApiClient>();
     builder.Services.Configure<DeploymentSettings>(builder.Configuration.GetSection("DeploymentSettings"));
-    builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<DeploymentSettings>>().Value);
 
+    builder.Services.AddSingleton(resolver => resolver.GetRequiredService<IOptions<DeploymentSettings>>().Value);
+    builder.Services.AddSingleton<TokenValidationService>();
+    builder.Services.AddSingleton<ISystemConfiguration, SystemConfiguration>();
+    builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
     // REPOSITORIES
     builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
     builder.Services.AddScoped<IInstallationLogRepository, InstallationLogRepository>();
@@ -85,10 +122,12 @@ try
     builder.Services.AddScoped<IDownloadStatisticRepository, DownloadStatisticRepository>();
     builder.Services.AddScoped<IIconsRepository, IconsRepository>();
     builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+    builder.Services.AddTransient<IEmployeeRepository, EmployeeRepository>();
     // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
     // SERVICES
+    builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
     builder.Services.AddScoped<IAppCatalogService, AppCatalogService>();
     builder.Services.AddScoped<IManifestService, ManifestService>();
     builder.Services.AddScoped<IServerManifestService, ServerManifestService>();
@@ -105,6 +144,7 @@ try
     builder.Services.AddScoped<IInstallationLogService, InstallationLogService>();
     builder.Services.AddScoped<IIconsService, IconsService>();
     builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+    builder.Services.AddTransient<IEmployeeService, EmployeeService>();
 
     // Add CORS if needed
     builder.Services.AddCors(options =>
@@ -117,11 +157,37 @@ try
         });
     });
 
+    // ================================================================
+    // 🧩 Register Controllers, Swagger
+    // ================================================================
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(c =>
+    builder.Services.AddSwaggerGen(options =>
     {
-        c.SwaggerDoc("v1", new() { Title = "Deployment Manager API", Version = "v1" });
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            In = ParameterLocation.Header,
+            Description = "Please enter a valid token",
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            BearerFormat = "JWT",
+            Scheme = "Bearer"
+        });
+        options.SwaggerDoc("v1", new() { Title = "Deployment Manager API", Version = "v1" });
+        options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type=ReferenceType.SecurityScheme,
+                    Id="Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
     });
 
     var app = builder.Build();
@@ -142,6 +208,8 @@ try
 
     // Enable CORS
     app.UseCors("AllowAll");
+    app.UseAuthentication();
+    app.UseAuthorization();
 
     // Seed database
     using (var scope = app.Services.CreateScope())
@@ -159,7 +227,6 @@ try
 
     app.UseMiddleware<ApiMiddleware>();
     app.UseHttpsRedirection();
-    app.UseAuthorization();
     app.MapControllers();
 
     logger.Info("✅ API started successfully. Listening on configured ports...");

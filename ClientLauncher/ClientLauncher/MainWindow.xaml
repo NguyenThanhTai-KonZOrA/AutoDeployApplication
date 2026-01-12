@@ -10,7 +10,7 @@
         Height="720" 
         Width="1200"
         WindowStartupLocation="CenterScreen"
-        Icon="pack://application:,,,/Assets/Images/NewLogo-01.png"
+        Icon="pack://application:,,,/Assets/Icons/ClientLauncherApplogo.ico"
         Background="#F5F5F5">
 
     <Window.DataContext>
@@ -163,32 +163,32 @@
         </Style>
 
         <!-- ==================== TOGGLE BUTTON FOR VIEW MODE ==================== -->
-<Style x:Key="ViewModeToggle" TargetType="ToggleButton">
-    <Setter Property="Width" Value="50"/>
-    <Setter Property="Height" Value="42"/>
-    <Setter Property="Background" Value="White"/>
-    <Setter Property="BorderBrush" Value="#BDC3C7"/>
-    <Setter Property="BorderThickness" Value="2"/>
-    <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Template">
-        <Setter.Value>
-            <ControlTemplate TargetType="ToggleButton">
-                <Border Background="{TemplateBinding Background}"
+        <Style x:Key="ViewModeToggle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#BDC3C7"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
                         BorderThickness="{TemplateBinding BorderThickness}"
                         CornerRadius="8">
-                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-            </ControlTemplate>
-        </Setter.Value>
-    </Setter>
-    <Style.Triggers>
-        <!-- ✅ REMOVED: Không dùng IsChecked trigger nữa, dùng DataTrigger thay thế -->
-        <Trigger Property="IsMouseOver" Value="True">
-            <Setter Property="BorderBrush" Value="#3498DB"/>
-        </Trigger>
-    </Style.Triggers>
-</Style>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <!-- ✅ REMOVED: Không dùng IsChecked trigger nữa, dùng DataTrigger thay thế -->
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#3498DB"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
         <!-- ==================== GROUP STYLE ==================== -->
         <GroupStyle x:Key="CategoryGroupStyle">
@@ -341,51 +341,51 @@
                             </StackPanel>
 
                             <!-- View Mode Switcher -->
-<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-    <TextBlock Text="View:" FontSize="14" Foreground="#7F8C8D"
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="View:" FontSize="14" Foreground="#7F8C8D"
                VerticalAlignment="Center" Margin="0,0,10,0"/>
-    
-    <!-- ✅ List View Button - Click to switch to List -->
-    <ToggleButton Style="{StaticResource ViewModeToggle}"
+
+                                <!-- ✅ List View Button - Click to switch to List -->
+                                <ToggleButton Style="{StaticResource ViewModeToggle}"
                   IsChecked="{Binding IsTabView, Mode=OneWay}"
                   Command="{Binding SwitchToListViewCommand}"
                   ToolTip="List View"
                   Margin="0,0,6,0">
-        <TextBlock Text="☰" FontSize="22" FontWeight="Bold">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="#7F8C8D"/>
-                    <Style.Triggers>
-                        <!-- ✅ Sáng lên khi NOT IsTabView (tức là List View) -->
-                        <DataTrigger Binding="{Binding IsTabView}" Value="False">
-                            <Setter Property="Foreground" Value="Black"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-    </ToggleButton>
+                                    <TextBlock Text="☰" FontSize="22" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#7F8C8D"/>
+                                                <Style.Triggers>
+                                                    <!-- ✅ Sáng lên khi NOT IsTabView (tức là List View) -->
+                                                    <DataTrigger Binding="{Binding IsTabView}" Value="False">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </ToggleButton>
 
-    <!-- ✅ Grid View Button - Click to switch to Grid -->
-    <ToggleButton Style="{StaticResource ViewModeToggle}"
+                                <!-- ✅ Grid View Button - Click to switch to Grid -->
+                                <ToggleButton Style="{StaticResource ViewModeToggle}"
                   IsChecked="{Binding IsTabView, Mode=OneWay}"
                   Command="{Binding SwitchToTabViewCommand}"
                   ToolTip="Grid View">
-        <TextBlock Text="▦" FontSize="22" FontWeight="Bold">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="#7F8C8D"/>
-                    <Style.Triggers>
-                        <!-- ✅ Sáng lên khi IsTabView = True -->
-                        <DataTrigger Binding="{Binding IsTabView}" Value="True">
-                            <Setter Property="Foreground" Value="Black"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-    </ToggleButton>
-</StackPanel>
+                                    <TextBlock Text="▦" FontSize="22" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#7F8C8D"/>
+                                                <Style.Triggers>
+                                                    <!-- ✅ Sáng lên khi IsTabView = True -->
+                                                    <DataTrigger Binding="{Binding IsTabView}" Value="True">
+                                                        <Setter Property="Foreground" Value="Black"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </ToggleButton>
+                            </StackPanel>
                         </Grid>
 
                         <!-- Search & Refresh -->
@@ -504,7 +504,7 @@
                          Background="Transparent"
                          BorderThickness="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    
+
                     <ListBox.Style>
                         <Style TargetType="ListBox">
                             <Setter Property="Visibility" Value="Visible"/>
@@ -594,7 +594,7 @@
                                                    FontSize="18" 
                                                    FontWeight="SemiBold"
                                                    Foreground="#2C3E50"/>
-                                        
+
                                         <TextBlock Text="{Binding Description}" 
                                                    FontSize="13" 
                                                    Foreground="#7F8C8D"
@@ -628,7 +628,7 @@
                                             <Border Background="#E74C3C" Padding="8,4" CornerRadius="5" Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding Category}" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
                                             </Border>
-                                            
+
                                             <Border Background="#7F8C8D" Padding="8,4" CornerRadius="5">
                                                 <TextBlock Text="{Binding AppCode}" FontSize="11" Foreground="White" FontWeight="SemiBold"/>
                                             </Border>
@@ -639,15 +639,15 @@
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
-<!-- Uninstall Button -->
-  <Button Grid.Column="3"
+                                    <!-- Uninstall Button -->
+                                    <Button Grid.Column="3"
           Content="🗑️ Uninstall"
           Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
           Style="{StaticResource DangerButton}"
           VerticalAlignment="Center"
           FontSize="13"
           Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                  
+
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -655,35 +655,35 @@
                 </ListBox>
 
                 <!-- Application Grid (Tab View) -->
-<ScrollViewer Grid.Row="2"
+                <ScrollViewer Grid.Row="2"
               VerticalScrollBarVisibility="Auto"
               HorizontalScrollBarVisibility="Disabled">
-    <ScrollViewer.Style>
-        <Style TargetType="ScrollViewer">
-            <Setter Property="Visibility" Value="Collapsed"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsTabView}" Value="True">
-                    <Setter Property="Visibility" Value="Visible"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </ScrollViewer.Style>
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTabView}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
 
-    <ItemsControl ItemsSource="{Binding ApplicationsView}">
-        <ItemsControl.GroupStyle>
-            <StaticResource ResourceKey="CategoryGroupStyle"/>
-        </ItemsControl.GroupStyle>
-        
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal"/>
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
+                    <ItemsControl ItemsSource="{Binding ApplicationsView}">
+                        <ItemsControl.GroupStyle>
+                            <StaticResource ResourceKey="CategoryGroupStyle"/>
+                        </ItemsControl.GroupStyle>
 
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <!-- ✅ FIX: Tăng height và cải thiện layout -->
-                <Border Padding="15" 
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- ✅ FIX: Tăng height và cải thiện layout -->
+                                <Border Padding="15" 
                         Margin="8" 
                         Background="#FAFAFA" 
                         BorderBrush="#E0E0E0" 
@@ -691,67 +691,67 @@
                         CornerRadius="10"
                         Width="290" 
                         Height="260">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#ECF0F1"/>
-                                    <Setter Property="BorderBrush" Value="#3498DB"/>
-                                    <Setter Property="BorderThickness" Value="2"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#ECF0F1"/>
+                                                    <Setter Property="BorderBrush" Value="#3498DB"/>
+                                                    <Setter Property="BorderThickness" Value="2"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
 
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
 
-                        <!-- Header with Checkbox and Update Badge -->
-                        <Grid Grid.Row="0" Margin="0,0,0,10">
-                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                        <!-- Header with Checkbox and Update Badge -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                       Style="{StaticResource ModernCheckBox}"
                                       HorizontalAlignment="Left"
                                       VerticalAlignment="Center"/>
-                            
-                            <Border Background="#F39C12" 
+
+                                            <Border Background="#F39C12" 
                                     Padding="6,3" 
                                     CornerRadius="4"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center"
                                     Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVisibilityConverter}}">
-                                <TextBlock Text="🆕 UPDATE" 
+                                                <TextBlock Text="🆕 UPDATE" 
                                            FontSize="10" 
                                            Foreground="White" 
                                            FontWeight="Bold"/>
-                            </Border>
-                        </Grid>
+                                            </Border>
+                                        </Grid>
 
-                        <!-- ✅ FIX: Icon với kích thước phù hợp -->
-                        <Border Grid.Row="1"
+                                        <!-- ✅ FIX: Icon với kích thước phù hợp -->
+                                        <Border Grid.Row="1"
                                 Width="90" 
                                 Height="90" 
                                 Background="Transparent" 
                                 CornerRadius="12" 
                                 HorizontalAlignment="Center"
                                 Margin="0,0,0,10">
-                            <Image Stretch="Uniform">
-                                <Image.Source>
-                                    <MultiBinding Converter="{StaticResource IconConverter}">
-                                        <Binding Path="IconUrl"/>
-                                        <Binding Path="Category"/>
-                                    </MultiBinding>
-                                </Image.Source>
-                            </Image>
-                        </Border>
+                                            <Image Stretch="Uniform">
+                                                <Image.Source>
+                                                    <MultiBinding Converter="{StaticResource IconConverter}">
+                                                        <Binding Path="IconUrl"/>
+                                                        <Binding Path="Category"/>
+                                                    </MultiBinding>
+                                                </Image.Source>
+                                            </Image>
+                                        </Border>
 
-                        <!-- App Name -->
-                        <TextBlock Grid.Row="2"
+                                        <!-- App Name -->
+                                        <TextBlock Grid.Row="2"
                                    Text="{Binding Name}" 
                                    FontSize="16" 
                                    FontWeight="SemiBold"
@@ -762,8 +762,8 @@
                                    MaxHeight="45"
                                    Margin="0,0,0,8"/>
 
-                        <!-- Status Text -->
-                        <TextBlock Grid.Row="3"
+                                        <!-- Status Text -->
+                                        <TextBlock Grid.Row="3"
                                    Text="{Binding StatusText}" 
                                    FontSize="11" 
                                    FontWeight="SemiBold"
@@ -771,25 +771,25 @@
                                    TextAlignment="Center"
                                    Margin="0,0,0,10"
                                    MaxHeight="40">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsInstalled}" Value="True">
-                                            <Setter Property="Foreground" Value="#27AE60"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsInstalled}" Value="False">
-                                            <Setter Property="Foreground" Value="#E74C3C"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding HasUpdate}" Value="True">
-                                            <Setter Property="Foreground" Value="#F39C12"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                            <Setter Property="Foreground" Value="#27AE60"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsInstalled}" Value="False">
+                                                            <Setter Property="Foreground" Value="#E74C3C"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                                            <Setter Property="Foreground" Value="#F39C12"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
 
-                        <!-- ✅ FIX: Uninstall Button với command mới -->
-<Button Grid.Row="4"
+                                        <!-- ✅ FIX: Uninstall Button với command mới -->
+                                        <Button Grid.Row="4"
         Content="🗑️ Uninstall"
         Command="{Binding DataContext.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}"
         CommandParameter="{Binding}"
@@ -803,37 +803,37 @@
         Cursor="Hand"
         HorizontalAlignment="Stretch"
         VerticalAlignment="Bottom">
-    <Button.Style>
-        <Style TargetType="Button">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border Background="{TemplateBinding Background}" 
                                 CornerRadius="6" 
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#C0392B"/>
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Background" Value="#BDC3C7"/>
-                    <Setter Property="Cursor" Value="No"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </Button.Style>
-</Button>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
-</ScrollViewer>
+                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#C0392B"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Background" Value="#BDC3C7"/>
+                                                            <Setter Property="Cursor" Value="No"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
 
             <!-- STEP 2: Processing -->

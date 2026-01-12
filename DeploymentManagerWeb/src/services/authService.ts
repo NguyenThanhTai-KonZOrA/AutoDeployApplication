@@ -8,9 +8,9 @@ import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotif
 import type { ApiEnvelope } from "../type/commonType";
 
 
-const API_AUTH_BASE = (window as any)._env_?.API_AUTH_BASE;
+const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
-    baseURL: API_AUTH_BASE,
+    baseURL: API_BASE,
     headers: { "Content-Type": "application/json" }
 });
 

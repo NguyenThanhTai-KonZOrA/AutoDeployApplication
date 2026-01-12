@@ -1,0 +1,113 @@
+﻿using ClientLancher.Common.ApiClient;
+using ClientLancher.Common.Constants;
+using ClientLancher.Implement.EntityModels;
+using ClientLancher.Implement.Repositories.Interface;
+using ClientLancher.Implement.Services.Interface;
+using ClientLancher.Implement.UnitOfWork;
+using ClientLancher.Implement.ViewModels.Response;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace ClientLancher.Implement.Services
+{
+    public class EmployeeService : IEmployeeService
+    {
+        private readonly IEmployeeRepository _employeeRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<EmployeeService> _logger;
+        private readonly IApiClient _apiClient;
+        private readonly IConfiguration _configuration;
+
+        public EmployeeService(
+            IEmployeeRepository employeeRepository,
+            IUnitOfWork unitOfWork,
+            ILogger<EmployeeService> logger,
+            IApiClient apiClient,
+            IConfiguration configuration)
+        {
+            _employeeRepository = employeeRepository;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+            _apiClient = apiClient;
+            _configuration = configuration;
+        }
+
+        public async Task<Employee> GetOrCreateEmployeeFromWindowsAccountAsync(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new ArgumentException("Username cannot be empty", nameof(username));
+            }
+
+            var employee = await _employeeRepository.GetEmployeeByCodeOrUserNameAsync(username);
+
+            if (employee == null)
+            {
+                string userEmail = $"{username}@thegrandhotram.com";
+                employee = await _employeeRepository.GetEmployeeByEmailAsync(userEmail);
+            }
+
+            if (employee != null)
+            {
+                _logger.LogInformation("Employee found: {EmployeeCode}", employee.EmployeeCode);
+                return employee;
+            }
+
+            var theGrandEmployee = await GetTheGrandEmployeeByUserNameAsync(username);
+
+            if (!string.IsNullOrEmpty(theGrandEmployee.adUserName) && !string.IsNullOrEmpty(theGrandEmployee.employeeID))
+            {
+                // Create new employee from Windows account
+                _logger.LogInformation("Creating new employee for code: {EmployeeCode}", theGrandEmployee.employeeID);
+                employee = new Employee
+                {
+                    EmployeeCode = theGrandEmployee?.employeeID ?? username,
+                    WindowAccount = username,
+                    Department = theGrandEmployee?.departmentName,
+                    Position = theGrandEmployee?.position,
+                    FullName = theGrandEmployee?.fullName ?? username,
+                    Email = $"{username}@thegrandhotram.com",
+                    CreatedBy = CommonConstants.SystemUser,
+                    UpdatedBy = CommonConstants.SystemUser,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    IsDelete = false,
+                };
+
+                await _employeeRepository.AddAsync(employee);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("New employee created: {EmployeeCode} (ID: {EmployeeId})",
+                    theGrandEmployee.employeeID, employee.Id);
+
+                return employee;
+            }
+            else
+            {
+                throw new ArgumentException("Username cannot found", nameof(username));
+            }
+        }
+
+        public async Task<TheGrandEmployeeResponse> GetTheGrandEmployeeByUserNameAsync(string userName)
+        {
+            _logger.LogInformation("Fetching The Grand employee info for username: {UserName}", userName);
+            string baseUrl = _configuration.GetValue<string>("TheGrandEmployeeUrl") ?? "http://10.21.10.1:6969/EmployeeApis/getEmployeeInfoByADUser";
+            var response = await _apiClient.GetAsync<TheGrandEmployeeBaseResponse>($"{baseUrl}/{userName}");
+
+            if (response != null && response?.result == "Success" && response?.data.Count > 0)
+            {
+                _logger.LogInformation("Successfully retrieved The Grand employee info for username: {UserName}", userName);
+                return response.data.FirstOrDefault() ?? new TheGrandEmployeeResponse();
+            }
+
+            _logger.LogWarning("Failed to retrieve The Grand employee info for username: {UserName}", userName);
+            return new TheGrandEmployeeResponse();
+        }
+
+        public async Task<Employee?> GetEmployeeByCodeAsync(string employeeCode)
+        {
+            return await _employeeRepository.GetEmployeeByCodeOrUserNameAsync(employeeCode);
+        }
+    }
+}

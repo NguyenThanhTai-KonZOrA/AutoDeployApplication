@@ -15,9 +15,7 @@
     <None Remove="Assets\Icons\LevyNotifyRemainingTimeLogo.ico" />
     <None Remove="Assets\Icons\LEVYPOSlogo.ico" />
     <None Remove="Assets\Icons\LEVYTICKETMONITORlogo.ico" />
-    <None Remove="Assets\Icons\QUEUDISPlogo.ico" />
     <None Remove="Assets\Icons\QUEUEDISP.ico" />
-    <None Remove="Assets\Icons\QUEUEKiosklogo.ico" />
     <None Remove="Assets\Icons\QUEUkiosklogo.ico" />
   </ItemGroup>
 
@@ -63,13 +61,7 @@
     <Content Include="Assets\Icons\LEVYTICKETMONITORlogo.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\Icons\QUEUDISPlogo.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Assets\Icons\QUEUEDISP.ico">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\Icons\QUEUEKiosklogo.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

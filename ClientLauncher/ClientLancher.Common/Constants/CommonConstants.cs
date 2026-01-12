@@ -6,5 +6,9 @@
         public const string SystemUser = "System";
         #endregion
         public const string UnknownUser = "Anonymous";
+        public const string AdminUserName = "admin";
+        public const string AdminPassword = "admin@123";
+        public const string AdminRole = "Administrator";
+        public const string UserRole = "user";
     }
 }

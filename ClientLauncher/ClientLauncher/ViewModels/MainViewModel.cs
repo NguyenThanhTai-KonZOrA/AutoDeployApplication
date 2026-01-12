@@ -191,7 +191,7 @@ namespace ClientLauncher.ViewModels
             _manifestService = new ManifestService();
             _iconService = new IconService();
 
-            string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.0.0";
+            string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
             CurrentVersion = $"Version: {currentVersion}";
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());

@@ -20,6 +20,7 @@ namespace ClientLancher.Implement.ApplicationDbContext
 
         // Audit Logs table
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<Employee> Employees { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -198,6 +199,12 @@ namespace ClientLancher.Implement.ApplicationDbContext
 
                 // Soft delete filter
                 entity.HasQueryFilter(x => !x.IsDelete);
+
+                // Employee Configuration
+                modelBuilder.Entity<Employee>().HasQueryFilter(x => !x.IsDelete);
+                modelBuilder.Entity<Employee>()
+                    .HasIndex(e => e.EmployeeCode)
+                    .IsUnique();
             });
         }
     }

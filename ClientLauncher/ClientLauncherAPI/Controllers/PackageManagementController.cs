@@ -1,7 +1,9 @@
 ﻿using ClientLancher.Common.Constants;
 using ClientLancher.Implement.Services.Interface;
 using ClientLancher.Implement.ViewModels.Request;
+using ClientLauncherAPI.WindowHelpers;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ClientLauncherAPI.Controllers
 {
@@ -329,7 +331,7 @@ namespace ClientLauncherAPI.Controllers
                 // Record download statistic
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
                 var machineName = Request.Headers["X-Machine-Name"].ToString() ?? "Unknown";
-                var userName = User.Identity?.Name ?? CommonConstants.SystemUser;
+                var userName = EmployeeHelper.GetCurrentUsername(HttpContext) ?? CommonConstants.SystemUser;
 
                 await _packageService.RecordDownloadStatisticAsync(
                     id, machineName, userName, ipAddress, true, fileData.Length, 0);
