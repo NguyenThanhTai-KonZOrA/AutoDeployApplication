@@ -95,6 +95,42 @@ function AppContent() {
           </ProtectedRoute>
         } />
 
+        <Route path="/admin-roles" element={
+          <ProtectedRoute>
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_ROLE_MANAGEMENT}
+              fallbackPath="/admin-roles"
+              showAccessDenied={true}
+            >
+              <AdminRolePage />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin-permissions" element={
+          <ProtectedRoute>
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_ROLE_MANAGEMENT}
+              fallbackPath="/admin-permissions"
+              showAccessDenied={true}
+            >
+              <AdminPermissionPage />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin-employees" element={
+          <ProtectedRoute>
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_EMPLOYEE_MANAGEMENT}
+              fallbackPath="/admin-employees"
+              showAccessDenied={true}
+            >
+              <AdminEmployeePage />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        } />
+
       </Routes>
     </>
   );

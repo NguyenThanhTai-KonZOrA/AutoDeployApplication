@@ -1,5 +1,7 @@
-﻿using ClientLauncher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.ApplicationDbContext.SeedData;
+using ClientLauncher.Implement.EntityModels;
 using Microsoft.EntityFrameworkCore;
+using QueueSystem.Implement.ApplicationDbContext.SeedData;
 
 namespace ClientLauncher.Implement.ApplicationDbContext
 {
@@ -21,6 +23,12 @@ namespace ClientLauncher.Implement.ApplicationDbContext
         // Audit Logs table
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Employee> Employees { get; set; }
+
+        // Role and Permission tables
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<EmployeeRole> EmployeeRoles { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -205,6 +213,71 @@ namespace ClientLauncher.Implement.ApplicationDbContext
                 modelBuilder.Entity<Employee>()
                     .HasIndex(e => e.EmployeeCode)
                     .IsUnique();
+
+                // Role configuration
+                modelBuilder.Entity<Role>().HasQueryFilter(x => !x.IsDelete);
+                modelBuilder.Entity<Role>()
+                    .HasIndex(r => r.RoleName)
+                    .IsUnique();
+
+                // Permission configuration
+                modelBuilder.Entity<Permission>().HasQueryFilter(x => !x.IsDelete);
+                modelBuilder.Entity<Permission>()
+                    .HasIndex(p => p.PermissionCode)
+                    .IsUnique();
+
+                // EmployeeRole configuration (Many-to-Many)
+                modelBuilder.Entity<EmployeeRole>()
+                    .HasKey(er => er.Id);
+
+                modelBuilder.Entity<EmployeeRole>()
+                    .HasIndex(er => new { er.EmployeeId, er.RoleId })
+                    .IsUnique();
+
+                modelBuilder.Entity<EmployeeRole>()
+                    .HasOne(er => er.Employee)
+                    .WithMany(e => e.EmployeeRoles)
+                    .HasForeignKey(er => er.EmployeeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                modelBuilder.Entity<EmployeeRole>()
+                    .HasOne(er => er.Role)
+                    .WithMany(r => r.EmployeeRoles)
+                    .HasForeignKey(er => er.RoleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                modelBuilder.Entity<EmployeeRole>()
+                    .HasQueryFilter(x => !x.IsDelete);
+
+                // RolePermission configuration (Many-to-Many)
+                modelBuilder.Entity<RolePermission>()
+                    .HasKey(rp => rp.Id);
+
+                modelBuilder.Entity<RolePermission>()
+                    .HasIndex(rp => new { rp.RoleId, rp.PermissionId })
+                    .IsUnique();
+
+                modelBuilder.Entity<RolePermission>()
+                    .HasOne(rp => rp.Role)
+                    .WithMany(r => r.RolePermissions)
+                    .HasForeignKey(rp => rp.RoleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                modelBuilder.Entity<RolePermission>()
+                    .HasOne(rp => rp.Permission)
+                    .WithMany(p => p.RolePermissions)
+                    .HasForeignKey(rp => rp.PermissionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                modelBuilder.Entity<RolePermission>()
+                    .HasQueryFilter(x => !x.IsDelete);
+
+
+                RoleSeed.Seed(modelBuilder.Entity<Role>());
+                //PermissionSeed.Seed(modelBuilder.Entity<Permission>());
+                //RolePermissionSeed.Seed(modelBuilder.Entity<RolePermission>());
+                EmployeeSeed.Seed(modelBuilder.Entity<Employee>());
+                EmployeeRoleSeed.Seed(modelBuilder.Entity<EmployeeRole>());
             });
         }
     }

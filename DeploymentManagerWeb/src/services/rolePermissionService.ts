@@ -1,7 +1,7 @@
 import axios from "axios";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
 import type { ApiEnvelope } from "../type/commonType";
-import type { AssignRoleRequest, CreatePermissionRequest, CreateRoleRequest, EmployeeResponse, EmployeeWithRoles, PermissionResponse, RoleResponse, UpdatePermissionRequest, UpdateRoleRequest } from "../rolePermissionType";
+import type { AssignRoleRequest, CreatePermissionRequest, CreateRoleRequest, EmployeeResponse, EmployeeWithRoles, PermissionResponse, RoleResponse, UpdatePermissionRequest, UpdateRoleRequest } from "../type/rolePermissionType";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({

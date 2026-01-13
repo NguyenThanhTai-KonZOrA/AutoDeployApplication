@@ -1,5 +1,5 @@
-﻿using  ClientLauncher.Common.ApiClient;
-using  ClientLauncher.Common.Constants;
+﻿using ClientLauncher.Common.ApiClient;
+using ClientLauncher.Common.Constants;
 using ClientLauncher.Implement.EntityModels;
 using ClientLauncher.Implement.Repositories.Interface;
 using ClientLauncher.Implement.Services.Interface;
@@ -39,14 +39,7 @@ namespace ClientLauncher.Implement.Services
                 throw new ArgumentException("Username cannot be empty", nameof(username));
             }
 
-            var employee = await _employeeRepository.GetEmployeeByCodeOrUserNameAsync(username);
-
-            if (employee == null)
-            {
-                string userEmail = $"{username}@thegrandhotram.com";
-                employee = await _employeeRepository.GetEmployeeByEmailAsync(userEmail);
-            }
-
+            var employee = await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(username);
             if (employee != null)
             {
                 _logger.LogInformation("Employee found: {EmployeeCode}", employee.EmployeeCode);
@@ -72,15 +65,13 @@ namespace ClientLauncher.Implement.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     IsActive = true,
-                    IsDelete = false,
+                    IsDelete = false
                 };
-
                 await _employeeRepository.AddAsync(employee);
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation("New employee created: {EmployeeCode} (ID: {EmployeeId})",
                     theGrandEmployee.employeeID, employee.Id);
-
                 return employee;
             }
             else
@@ -107,7 +98,7 @@ namespace ClientLauncher.Implement.Services
 
         public async Task<Employee?> GetEmployeeByCodeAsync(string employeeCode)
         {
-            return await _employeeRepository.GetEmployeeByCodeOrUserNameAsync(employeeCode);
+            return await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(employeeCode);
         }
     }
 }

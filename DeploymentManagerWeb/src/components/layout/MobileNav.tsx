@@ -92,6 +92,27 @@ const navItems: NavItem[] = [
         icon: ManageHistoryIcon,
         requiredPermission: Permission.VIEW_AUDIT_LOGS,
     },
+    {
+        key: 'admin-roles',
+        title: 'Role Management',
+        href: '/admin-roles',
+        icon: RoleManagementIcon,
+        requiredPermission: Permission.VIEW_ROLE_MANAGEMENT
+    },
+    {
+        key: 'admin-permissions',
+        title: 'Permission Management',
+        href: '/admin-permissions',
+        icon: PermissionManagementIcon,
+        requiredPermission: Permission.VIEW_ROLE_MANAGEMENT
+    },
+    {
+        key: 'admin-employees',
+        title: 'Employee Management',
+        href: '/admin-employees',
+        icon: PeopleIcon,
+        requiredPermission: Permission.VIEW_EMPLOYEE_MANAGEMENT
+    },
 ];
 
 interface MobileNavProps {

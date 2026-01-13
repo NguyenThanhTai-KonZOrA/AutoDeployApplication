@@ -13,17 +13,10 @@ namespace ClientLauncher.Implement.Repositories
             _context = context;
         }
 
-        public async Task<Employee?> GetEmployeeByCodeOrUserNameAsync(string employeeCode)
+        public async Task<Employee?> GetByEmployeeByCodeOrUserNameAsync(string employeeCode)
         {
             return await _context.Employees
-                .Where(e => (e.EmployeeCode == employeeCode || e.WindowAccount == employeeCode) && e.IsActive)
-                .FirstOrDefaultAsync();
-        }
-
-        public async Task<Employee?> GetEmployeeByEmailAsync(string email)
-        {
-            return await _context.Employees
-                .Where(e => e.Email == email && e.IsActive)
+                .Where(e => (e.EmployeeCode == employeeCode || e.WindowAccount == employeeCode) && e.IsActive).Include(x => x.EmployeeRoles)
                 .FirstOrDefaultAsync();
         }
 
@@ -31,7 +24,7 @@ namespace ClientLauncher.Implement.Repositories
         {
             return await _context.Employees
                 .Where(e => e.IsActive)
-                .OrderBy(e => e.Id)
+                .OrderBy(e => e.FullName)
                 .ToListAsync();
         }
     }

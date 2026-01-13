@@ -123,6 +123,10 @@ try
     builder.Services.AddScoped<IIconsRepository, IconsRepository>();
     builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
     builder.Services.AddTransient<IEmployeeRepository, EmployeeRepository>();
+    builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+    builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
+    builder.Services.AddScoped<IEmployeeRoleRepository, EmployeeRoleRepository>();
+    builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
     // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -145,6 +149,9 @@ try
     builder.Services.AddScoped<IIconsService, IconsService>();
     builder.Services.AddScoped<IAuditLogService, AuditLogService>();
     builder.Services.AddTransient<IEmployeeService, EmployeeService>();
+    builder.Services.AddScoped<IRoleService, RoleService>();
+    builder.Services.AddScoped<IPermissionService, PermissionService>();
+    builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
 
     // Add CORS if needed
     builder.Services.AddCors(options =>

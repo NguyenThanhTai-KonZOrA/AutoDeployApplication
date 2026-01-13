@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClientLauncher.Implement.Migrations
 {
     [DbContext(typeof(DeploymentManagerDbContext))]
-    partial class ClientLancherDbContextModelSnapshot : ModelSnapshot
+    partial class DeploymentManagerDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -602,6 +602,25 @@ namespace ClientLauncher.Implement.Migrations
                         .IsUnique();
 
                     b.ToTable("Employees");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
+                            Department = "IT",
+                            Email = "admin@thegrandhotram.com",
+                            EmployeeCode = "admin",
+                            FullName = "System Administrator",
+                            IsActive = true,
+                            IsDelete = false,
+                            PhoneNumber = "System",
+                            Position = "Administrator",
+                            UpdatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "System",
+                            WindowAccount = "admin"
+                        });
                 });
 
             modelBuilder.Entity("ClientLauncher.Implement.EntityModels.EmployeeRole", b =>
@@ -642,11 +661,26 @@ namespace ClientLauncher.Implement.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
-
                     b.HasIndex("RoleId");
 
-                    b.ToTable("EmployeeRole");
+                    b.HasIndex("EmployeeId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("EmployeeRoles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
+                            EmployeeId = 1,
+                            IsActive = true,
+                            IsDelete = false,
+                            RoleId = 1,
+                            UpdatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "System"
+                        });
                 });
 
             modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Icons", b =>
@@ -960,7 +994,11 @@ namespace ClientLauncher.Implement.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Permission");
+                    b.HasIndex("PermissionCode")
+                        .IsUnique()
+                        .HasFilter("[PermissionCode] IS NOT NULL");
+
+                    b.ToTable("Permissions");
                 });
 
             modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Role", b =>
@@ -1004,7 +1042,48 @@ namespace ClientLauncher.Implement.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Role");
+                    b.HasIndex("RoleName")
+                        .IsUnique();
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
+                            Description = "Full system access",
+                            IsActive = true,
+                            IsDelete = false,
+                            RoleName = "Administrator",
+                            UpdatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "System"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
+                            Description = "Management level access",
+                            IsActive = true,
+                            IsDelete = false,
+                            RoleName = "Manager",
+                            UpdatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "System"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
+                            Description = "Read-only access",
+                            IsActive = true,
+                            IsDelete = false,
+                            RoleName = "Viewer",
+                            UpdatedAt = new DateTime(2025, 12, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "System"
+                        });
                 });
 
             modelBuilder.Entity("ClientLauncher.Implement.EntityModels.RolePermission", b =>
@@ -1047,9 +1126,10 @@ namespace ClientLauncher.Implement.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.HasIndex("RoleId");
+                    b.HasIndex("RoleId", "PermissionId")
+                        .IsUnique();
 
-                    b.ToTable("RolePermission");
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Application", b =>
