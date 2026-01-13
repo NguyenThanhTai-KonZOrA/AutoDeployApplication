@@ -52,7 +52,7 @@ namespace ClientLauncher.Services
             try
             {
                 // Logger.Info("Fetching all applications from API");
-                var apps = await GetApiDataAsync<List<ApplicationDto>>("/api/AppCatalog/applications");
+                var apps = await GetApiDataAsync<List<ApplicationDto>>($"/api/AppCatalog/applications?userName={Environment.UserName}");
                 // Logger.Info("Successfully fetched {Count} applications", apps?.Count ?? 0);
                 return apps ?? new List<ApplicationDto>();
             }

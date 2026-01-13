@@ -20,7 +20,7 @@ namespace ClientLauncherAPI.Controllers
         }
 
         [HttpGet("applications")]
-        public async Task<IActionResult> GetAllApplications()
+        public async Task<IActionResult> GetAllApplications([FromQuery] string userName)
         {
             try
             {
