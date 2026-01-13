@@ -23,5 +23,6 @@ namespace ClientLauncher.Implement.Services.Interface
         // Activation
         Task<bool> ActivateManifestAsync(int manifestId);
         Task<bool> DeactivateManifestAsync(int manifestId);
+        Task<LatestManifestByAppCodeResponse?> GetLatestManifestByAppCodeSmallAsync(string appCode);
     }
 }

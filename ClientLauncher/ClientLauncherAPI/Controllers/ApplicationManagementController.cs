@@ -512,6 +512,24 @@ namespace ClientLauncherAPI.Controllers
             }
         }
 
+        [HttpGet("manifest/latest/{appCode}")]
+        public async Task<IActionResult> GetLatestManifestByAppCode(string appCode)
+        {
+            try
+            {
+                var result = await _manifestService.GetLatestManifestByAppCodeSmallAsync(appCode);
+                if (result == null)
+                {
+                    return NotFound(new { success = false, message = "No active manifest found" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting latest manifest for application code: {AppCode}", appCode);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
         #endregion
     }
 }

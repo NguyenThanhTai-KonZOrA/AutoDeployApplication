@@ -215,6 +215,19 @@ namespace ClientLauncher.Implement.Services
             return manifest == null ? null : MapToResponse(manifest);
         }
 
+        public async Task<LatestManifestByAppCodeResponse?> GetLatestManifestByAppCodeSmallAsync(string appCode)
+        {
+            var manifest = await _unitOfWork.ApplicationManifests.GetLatestActiveManifestByAppCodeAsync(appCode);
+            return new LatestManifestByAppCodeResponse
+            {
+                Id = manifest!.Id,
+                ApplicationId = manifest.ApplicationId,
+                AppCode = manifest.Application.AppCode,
+                AppName = manifest.Application.Name,
+                Version = manifest.Version
+            };
+        }
+
         public async Task<ManifestResponse?> GetManifestByVersionAsync(int applicationId, string version)
         {
             var manifest = await _unitOfWork.ApplicationManifests.GetByVersionAsync(applicationId, version);

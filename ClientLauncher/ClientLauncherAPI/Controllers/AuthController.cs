@@ -23,21 +23,24 @@ namespace ClientLauncherAPI.Controllers
         #region Constructor
         private readonly ISystemConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
+        private readonly IEmployeeService _employeeService;
         private readonly IRefreshTokenService _refreshTokenService;
         private readonly IAuditLogService _auditLogService;
-        private readonly IEmployeeService _employeeService;
+        private readonly IRoleService _roleService;
         public AuthController(
             ISystemConfiguration configuration,
             ILogger<AuthController> logger,
+            IEmployeeService employeeService,
             IRefreshTokenService refreshTokenService,
             IAuditLogService auditLogService,
-            IEmployeeService employeeService)
+            IRoleService roleService)
         {
             _configuration = configuration;
             _logger = logger;
+            _employeeService = employeeService;
             _refreshTokenService = refreshTokenService;
             _auditLogService = auditLogService;
-            _employeeService = employeeService;
+            _roleService = roleService;
         }
         #endregion
 
@@ -52,7 +55,7 @@ namespace ClientLauncherAPI.Controllers
                 _logger.LogInformation("Login attempt for user {Username}", loginRequest.Username);
                 var result = WindowsAuthHelper.WindowsAccount(loginRequest.Username, loginRequest.Password);
                 string adminUserName = _configuration.GetValue("AdminAccount:UserName") ?? "admin";
-                string adminPassword = _configuration.GetValue("AdminAccount:Password") ?? "admin@123";
+                string adminPassword = _configuration.GetValue("AdminAccount:Password") ?? "123456";
                 if (loginRequest.Username == adminUserName && loginRequest.Password == adminPassword)
                 {
                     result = 1;
@@ -77,8 +80,6 @@ namespace ClientLauncherAPI.Controllers
                 _logger.LogInformation("✅ Employee authenticated: {EmployeeCode} (ID: {EmployeeId})", employee.EmployeeCode, employee.Id);
 #endif
 
-
-
                 // Resolve role
                 var adminsConfig = "admin;superuser;";
                 var adminUsers = adminsConfig.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -87,8 +88,18 @@ namespace ClientLauncherAPI.Controllers
                     : CommonConstants.UserRole;
 
                 // Resolve role
+                var roleIds = employee.EmployeeRoles?.Select(er => er.RoleId).ToList() ?? new List<int>();
+                var getRolesResult = await _roleService.GetActiveRolesByIdsAsync(roleIds);
                 string[] rolesName = Array.Empty<string>();
-                rolesName = new string[] { CommonConstants.AdminRole };
+                if (getRolesResult.Count == 0)
+                {
+                    rolesName = new string[] { CommonConstants.UserRole };
+                }
+                else
+                {
+                    rolesName = getRolesResult.Select(r => r.RoleName).ToArray();
+                }
+
                 var tokenResponse = GenerateTokens(loginRequest.Username, rolesName, employee);
 
                 await _auditLogService.LogActionAsync(new CreateAuditLogRequest
@@ -112,7 +123,14 @@ namespace ClientLauncherAPI.Controllers
                     loginRequest.Username,
                     TokenValidationService.ServerStartTime);
 
-                return Ok(tokenResponse);
+                return Ok(
+                    new
+                    {
+                        status = 200,
+                        success = true,
+                        data = tokenResponse
+                    }
+                );
             }
             catch (Exception ex)
             {
@@ -173,13 +191,30 @@ namespace ClientLauncherAPI.Controllers
                 var employee = await _employeeService.GetOrCreateEmployeeFromWindowsAccountAsync(username);
 
                 // Resolve role
+                var roleIds = employee.EmployeeRoles?.Select(er => er.RoleId).ToList() ?? new List<int>();
+                var getRolesResult = await _roleService.GetActiveRolesByIdsAsync(roleIds);
                 string[] rolesName = Array.Empty<string>();
-                rolesName = new string[] { CommonConstants.AdminRole };
+                if (getRolesResult.Count == 0)
+                {
+                    rolesName = new string[] { CommonConstants.UserRole };
+                }
+                else
+                {
+                    rolesName = getRolesResult.Select(r => r.RoleName).ToArray();
+                }
+
                 var tokenResponse = GenerateTokens(username, rolesName, employee);
 
                 _logger.LogInformation("✅ Token refreshed for {Username}", username);
 
-                return Ok(tokenResponse);
+                return Ok(
+                    new
+                    {
+                        status = 200,
+                        success = true,
+                        data = tokenResponse
+                    }
+                );
             }
             catch (Exception ex)
             {

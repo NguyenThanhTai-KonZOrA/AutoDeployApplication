@@ -63,6 +63,29 @@ namespace ClientLauncher.Services
             }
         }
 
+        public async Task<ManifestApplicationResponse?> GetApplicationByCodeAsync(string appCode)
+        {
+            try
+            {
+                // Logger.Info("Fetching application {AppCode} from API", appCode);
+                var app = await GetApiDataAsync<ManifestApplicationResponse>($"/api/ApplicationManagement/manifest/latest/{appCode}");
+                if (app != null)
+                {
+                    // Logger.Info("Successfully fetched manifest for application {AppCode}", appCode);
+                }
+                else
+                {
+                    // Logger.Warn("Application {AppCode} not found in API", appCode);
+                }
+                return app;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to fetch application {AppCode} from API", appCode);
+                throw new Exception($"Failed to fetch application {appCode}: {ex.Message}", ex);
+            }
+        }
+
         public async Task<InstallationResultDto> InstallApplicationAsync(string appCode, string userName)
         {
             try

@@ -1,9 +1,16 @@
 ﻿using ClientLauncher.Models;
+using ClientLauncher.Models.Response;
 
 namespace ClientLauncher.Services.Interface
 {
     public interface IApiService
     {
+        /// <summary>
+        /// GetApplicationByCodeAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
+        Task<ManifestApplicationResponse?> GetApplicationByCodeAsync(string appCode);
         /// <summary>
         /// GetAllApplicationsAsync
         /// </summary>

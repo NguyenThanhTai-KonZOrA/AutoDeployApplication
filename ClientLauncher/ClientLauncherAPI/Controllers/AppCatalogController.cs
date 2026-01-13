@@ -10,13 +10,16 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IAppCatalogService _appCatalogService;
         private readonly ILogger<AppCatalogController> _logger;
+        private readonly IEmployeeService _employeeService;
 
         public AppCatalogController(
             IAppCatalogService appCatalogService,
-            ILogger<AppCatalogController> logger)
+            ILogger<AppCatalogController> logger,
+            IEmployeeService employeeService)
         {
             _appCatalogService = appCatalogService;
             _logger = logger;
+            _employeeService = employeeService;
         }
 
         [HttpGet("applications")]
@@ -24,6 +27,13 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                var isAdmin = await _employeeService.IsUserAdminAsync(userName);
+                if (!isAdmin)
+                {
+                    _logger.LogWarning("User {UserName} attempted to access all applications without permission", userName);
+                    return Forbid("User does not have permission to access all applications");
+                }
+
                 var apps = await _appCatalogService.GetAllApplicationsAsync();
                 if (apps == null || !apps.Any())
                 {

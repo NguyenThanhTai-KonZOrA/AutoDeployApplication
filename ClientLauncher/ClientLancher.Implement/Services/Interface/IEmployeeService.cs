@@ -6,5 +6,6 @@ namespace ClientLauncher.Implement.Services.Interface
     {
         Task<Employee> GetOrCreateEmployeeFromWindowsAccountAsync(string username);
         Task<Employee?> GetEmployeeByCodeAsync(string employeeCode);
+        Task<bool> IsUserAdminAsync(string userName);
     }
 }

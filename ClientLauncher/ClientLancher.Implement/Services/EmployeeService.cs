@@ -17,19 +17,22 @@ namespace ClientLauncher.Implement.Services
         private readonly ILogger<EmployeeService> _logger;
         private readonly IApiClient _apiClient;
         private readonly IConfiguration _configuration;
+        private readonly IRoleService _roleService;
 
         public EmployeeService(
             IEmployeeRepository employeeRepository,
             IUnitOfWork unitOfWork,
             ILogger<EmployeeService> logger,
             IApiClient apiClient,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IRoleService roleService)
         {
             _employeeRepository = employeeRepository;
             _unitOfWork = unitOfWork;
             _logger = logger;
             _apiClient = apiClient;
             _configuration = configuration;
+            _roleService = roleService;
         }
 
         public async Task<Employee> GetOrCreateEmployeeFromWindowsAccountAsync(string username)
@@ -99,6 +102,24 @@ namespace ClientLauncher.Implement.Services
         public async Task<Employee?> GetEmployeeByCodeAsync(string employeeCode)
         {
             return await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(employeeCode);
+        }
+
+        public async Task<bool> IsUserAdminAsync(string userName)
+        {
+            var employee = await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(userName);
+            if (employee == null)
+            {
+                _logger.LogWarning("Employee not found for username: {UserName}", userName);
+                return false;
+            }
+            var roleIds = employee.EmployeeRoles?.Select(er => er.RoleId).ToList() ?? new List<int>();
+            var activeRoles = await _roleService.GetActiveRolesByIdsAsync(roleIds);
+
+            bool isAdmin = activeRoles.Any(r => r.RoleName.Equals(CommonConstants.AdminRole, StringComparison.OrdinalIgnoreCase));
+
+            _logger.LogInformation("User {UserName} admin status: {IsAdmin}", userName, isAdmin);
+
+            return isAdmin;
         }
     }
 }

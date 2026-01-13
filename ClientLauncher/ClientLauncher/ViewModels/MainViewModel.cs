@@ -191,8 +191,7 @@ namespace ClientLauncher.ViewModels
             _manifestService = new ManifestService();
             _iconService = new IconService();
 
-            string currentVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
-            CurrentVersion = $"Version: {currentVersion}";
+            CurrentVersion = "Version: Loading...";
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
 
@@ -206,7 +205,6 @@ namespace ClientLauncher.ViewModels
                 _ => SelectedApplication != null && !IsProcessing && SelectedApplication.IsInstalled
             );
 
-            // ✅ NEW: Command với parameter cho Tab View
             UninstallAppCommand = new AsyncRelayCommand<ApplicationDto>(
                 async app => await UninstallSpecificApplicationAsync(app),
                 app => app != null && !IsProcessing && app.IsInstalled
@@ -218,6 +216,8 @@ namespace ClientLauncher.ViewModels
             ClearSearchCommand = new RelayCommand(_ => ClearSearch());
             SwitchToListViewCommand = new RelayCommand(_ => IsTabView = false);
             SwitchToTabViewCommand = new RelayCommand(_ => IsTabView = true);
+
+            _ = LoadVersionAsync();
 
             _ = LoadApplicationsAsync();
             InitializeClockTimer();
@@ -244,6 +244,38 @@ namespace ClientLauncher.ViewModels
         }
 
         public bool IsListView => !IsTabView;
+
+        private async Task LoadVersionAsync()
+        {
+            try
+            {
+                _logger.Info("Loading ClientLauncher version from API...");
+
+                var versionResponse = await _apiService.GetApplicationByCodeAsync("ClientApplication");
+
+                if (versionResponse != null && !string.IsNullOrEmpty(versionResponse.Version))
+                {
+                    CurrentVersion = $"Version: {versionResponse.Version}";
+                    _logger.Info("Loaded version: {Version}", versionResponse.Version);
+                }
+                else
+                {
+                    // Fallback to config if API returns null/empty
+                    string configVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
+                    CurrentVersion = $"Version: {configVersion}";
+                    _logger.Warn("API returned null/empty version, using config: {Version}", configVersion);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to load version from API");
+
+                // Fallback to App.config if API call failed
+                string configVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
+                CurrentVersion = $"Version: {configVersion}";
+                _logger.Warn("Using fallback version: {Version}", configVersion);
+            }
+        }
 
         /// <summary>
         /// UPDATED: Load applications with LOCAL installation check
@@ -368,10 +400,8 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
-                //_logger.Error(ex, "Failed to load applications");
-                //StatusMessage = $"Error: {ex.Message}";
-                //MessageBox.Show($"Failed to load applications: {ex.Message}",
-                //    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger.Error(ex, "Failed to load applications for user {UserName}", Environment.UserName);
+                StatusMessage = $"Error: Hi {Environment.UserName}! You don't have permission to view this resource. Please contact ITer for support.";
             }
             finally
             {
