@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Implement.ViewModels.Response
+﻿namespace ClientLauncher.Implement.ViewModels.Response
 {
     public class InstallationReportResponse
     {

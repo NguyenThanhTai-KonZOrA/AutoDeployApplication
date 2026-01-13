@@ -1,11 +1,11 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
+using ClientLauncher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Logging;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class AuditLogService : IAuditLogService
     {

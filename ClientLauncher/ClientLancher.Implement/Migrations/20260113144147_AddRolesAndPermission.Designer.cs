@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClientLauncher.Implement.Migrations
 {
     [DbContext(typeof(DeploymentManagerDbContext))]
-    [Migration("20260107052328_Init_Database")]
-    partial class Init_Database
+    [Migration("20260113144147_AddRolesAndPermission")]
+    partial class AddRolesAndPermission
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,7 +25,7 @@ namespace ClientLauncher.Implement.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.Application", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Application", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -86,7 +86,7 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("Applications");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.ApplicationCategory", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.ApplicationCategory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -143,7 +143,7 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("ApplicationCategories");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.ApplicationManifest", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.ApplicationManifest", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -251,7 +251,107 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("ApplicationManifests");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.DeploymentHistory", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.AuditLog", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("DurationMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("HttpMethod")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSuccess")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RequestPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_AuditLogs_Action");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AuditLogs_CreatedAt");
+
+                    b.HasIndex("UserName")
+                        .HasDatabaseName("IX_AuditLogs_UserName");
+
+                    b.HasIndex("EntityType", "EntityId")
+                        .HasDatabaseName("IX_AuditLogs_Entity");
+
+                    b.HasIndex("IsSuccess", "CreatedAt")
+                        .HasDatabaseName("IX_AuditLogs_Success")
+                        .HasFilter("[IsSuccess] = 0");
+
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.DeploymentHistory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -354,7 +454,7 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("DeploymentHistories");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.DownloadStatistic", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.DownloadStatistic", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -439,7 +539,188 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("DownloadStatistics");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.InstallationLog", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Employee", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EmployeeCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Position")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("WindowAccount")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeCode")
+                        .IsUnique();
+
+                    b.ToTable("Employees");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.EmployeeRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmployeeId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("EmployeeRole");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Icons", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FileExtension")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ReferenceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type");
+
+                    b.HasIndex("Type", "ReferenceId");
+
+                    b.ToTable("Icons");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.InstallationLog", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -530,7 +811,7 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("InstallationLogs");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.PackageVersion", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.PackageVersion", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -633,9 +914,150 @@ namespace ClientLauncher.Implement.Migrations
                     b.ToTable("PackageVersions");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.Application", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Permission", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.ApplicationCategory", "Category")
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PermissionCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PermissionName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Permission");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Role", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Role");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.RolePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PermissionId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("RolePermission");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Application", b =>
+                {
+                    b.HasOne("ClientLauncher.Implement.EntityModels.ApplicationCategory", "Category")
                         .WithMany("Applications")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -643,9 +1065,9 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.ApplicationManifest", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.ApplicationManifest", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.Application", "Application")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Application", "Application")
                         .WithMany()
                         .HasForeignKey("ApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -654,9 +1076,9 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("Application");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.DeploymentHistory", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.DeploymentHistory", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.PackageVersion", "PackageVersion")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.PackageVersion", "PackageVersion")
                         .WithMany("DeploymentHistories")
                         .HasForeignKey("PackageVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -665,9 +1087,9 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("PackageVersion");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.DownloadStatistic", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.DownloadStatistic", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.PackageVersion", "PackageVersion")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.PackageVersion", "PackageVersion")
                         .WithMany("DownloadStatistics")
                         .HasForeignKey("PackageVersionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -676,9 +1098,28 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("PackageVersion");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.InstallationLog", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.EmployeeRole", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.Application", "Application")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Employee", "Employee")
+                        .WithMany("EmployeeRoles")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Role", "Role")
+                        .WithMany("EmployeeRoles")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.InstallationLog", b =>
+                {
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Application", "Application")
                         .WithMany("InstallationLogs")
                         .HasForeignKey("ApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -687,15 +1128,15 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("Application");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.PackageVersion", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.PackageVersion", b =>
                 {
-                    b.HasOne("ClientLancher.Implement.EntityModels.Application", "Application")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Application", "Application")
                         .WithMany("PackageVersions")
                         .HasForeignKey("ApplicationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ClientLancher.Implement.EntityModels.PackageVersion", "ReplacesVersion")
+                    b.HasOne("ClientLauncher.Implement.EntityModels.PackageVersion", "ReplacesVersion")
                         .WithMany()
                         .HasForeignKey("ReplacesVersionId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -705,23 +1146,59 @@ namespace ClientLauncher.Implement.Migrations
                     b.Navigation("ReplacesVersion");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.Application", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.RolePermission", b =>
+                {
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClientLauncher.Implement.EntityModels.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Application", b =>
                 {
                     b.Navigation("InstallationLogs");
 
                     b.Navigation("PackageVersions");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.ApplicationCategory", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.ApplicationCategory", b =>
                 {
                     b.Navigation("Applications");
                 });
 
-            modelBuilder.Entity("ClientLancher.Implement.EntityModels.PackageVersion", b =>
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Employee", b =>
+                {
+                    b.Navigation("EmployeeRoles");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.PackageVersion", b =>
                 {
                     b.Navigation("DeploymentHistories");
 
                     b.Navigation("DownloadStatistics");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("ClientLauncher.Implement.EntityModels.Role", b =>
+                {
+                    b.Navigation("EmployeeRoles");
+
+                    b.Navigation("RolePermissions");
                 });
 #pragma warning restore 612, 618
         }

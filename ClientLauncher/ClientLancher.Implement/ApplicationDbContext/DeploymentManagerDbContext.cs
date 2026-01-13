@@ -1,11 +1,11 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.ApplicationDbContext
+namespace ClientLauncher.Implement.ApplicationDbContext
 {
-    public class ClientLancherDbContext : DbContext
+    public class DeploymentManagerDbContext : DbContext
     {
-        public ClientLancherDbContext(DbContextOptions<ClientLancherDbContext> options) : base(options)
+        public DeploymentManagerDbContext(DbContextOptions<DeploymentManagerDbContext> options) : base(options)
         {
         }
 

@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace ClientLancher.Implement.Migrations
+namespace ClientLauncher.Implement.Migrations
 {
     /// <inheritdoc />
     public partial class Added_Icons_Table : Migration

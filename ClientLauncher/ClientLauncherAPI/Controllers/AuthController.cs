@@ -1,10 +1,10 @@
-﻿using ClientLancher.Common.Constants;
-using ClientLancher.Common.JwtAuthen;
-using ClientLancher.Common.SystemConfiguration;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Common.Constants;
+using ClientLauncher.Common.JwtAuthen;
+using ClientLauncher.Common.SystemConfiguration;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
+using ClientLauncher.Implement.ViewModels.Response;
 using ClientLauncherAPI.WindowHelpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -52,7 +52,7 @@ namespace ClientLauncherAPI.Controllers
                 _logger.LogInformation("Login attempt for user {Username}", loginRequest.Username);
                 var result = WindowsAuthHelper.WindowsAccount(loginRequest.Username, loginRequest.Password);
                 string adminUserName = _configuration.GetValue("AdminAccount:UserName") ?? "admin";
-                string adminPassword = _configuration.GetValue("AdminAccount:Password") ?? "123456";
+                string adminPassword = _configuration.GetValue("AdminAccount:Password") ?? "admin@123";
                 if (loginRequest.Username == adminUserName && loginRequest.Password == adminPassword)
                 {
                     result = 1;
@@ -64,8 +64,20 @@ namespace ClientLauncherAPI.Controllers
                     throw new Exception("The user name or password is incorrect.");
                 }
 
+#if DEBUG
+                var employee = new Employee
+                {
+                    Id = 1,
+                    EmployeeCode = "ADMIN",
+                    FullName = "Administrator",
+                    WindowAccount = loginRequest.Username
+                };
+#elif RELEASE
                 var employee = await _employeeService.GetOrCreateEmployeeFromWindowsAccountAsync(loginRequest.Username);
                 _logger.LogInformation("✅ Employee authenticated: {EmployeeCode} (ID: {EmployeeId})", employee.EmployeeCode, employee.Id);
+#endif
+
+
 
                 // Resolve role
                 var adminsConfig = "admin;superuser;";

@@ -1,13 +1,13 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.UnitOfWork;
-using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.UnitOfWork;
+using ClientLauncher.Implement.ViewModels.Request;
+using ClientLauncher.Implement.ViewModels.Response;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class PackageVersionService : IPackageVersionService
     {

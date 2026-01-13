@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.JwtAuthen
+﻿namespace ClientLauncher.Common.JwtAuthen
 {
     public class JwtOptions
     {

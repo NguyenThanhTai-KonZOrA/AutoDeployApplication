@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ClientLancher.Implement.ViewModels.Response
+namespace ClientLauncher.Implement.ViewModels.Response
 {
     internal class UpdateIconResponse
     {

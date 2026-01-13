@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.PagedResult
+﻿namespace ClientLauncher.Common.PagedResult
 {
     public abstract class BasePagingResponse
     {

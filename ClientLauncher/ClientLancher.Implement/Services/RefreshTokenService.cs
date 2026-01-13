@@ -1,9 +1,9 @@
-﻿using ClientLancher.Implement.Services.Interface;
+﻿using ClientLauncher.Implement.Services.Interface;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class RefreshTokenService : IRefreshTokenService
     {

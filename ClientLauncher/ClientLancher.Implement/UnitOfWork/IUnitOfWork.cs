@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.Repositories.Interface;
 
-namespace ClientLancher.Implement.UnitOfWork
+namespace ClientLauncher.Implement.UnitOfWork
 {
     public interface IUnitOfWork : IDisposable
     {

@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 
-namespace ClientLancher.Implement.ViewModels.Response
+namespace ClientLauncher.Implement.ViewModels.Response
 {
     public class IconResponse
     {

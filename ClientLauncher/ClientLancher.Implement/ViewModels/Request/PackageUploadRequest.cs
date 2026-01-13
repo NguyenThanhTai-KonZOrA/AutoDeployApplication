@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace ClientLancher.Implement.ViewModels.Request
+namespace ClientLauncher.Implement.ViewModels.Request
 {
     public class PackageUploadRequest
     {

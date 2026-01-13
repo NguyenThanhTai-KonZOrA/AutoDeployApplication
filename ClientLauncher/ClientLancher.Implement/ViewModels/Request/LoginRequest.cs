@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ClientLancher.Implement.ViewModels.Request
+namespace ClientLauncher.Implement.ViewModels.Request
 {
     public class LoginRequest
     {

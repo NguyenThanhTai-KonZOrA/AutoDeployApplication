@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.Helper
+﻿namespace ClientLauncher.Common.Helper
 {
     public static class DateTimeHelper
     {

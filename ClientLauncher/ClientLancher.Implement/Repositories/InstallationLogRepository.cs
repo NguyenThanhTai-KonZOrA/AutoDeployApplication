@@ -1,14 +1,14 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class InstallationLogRepository : GenericRepository<InstallationLog>, IInstallationLogRepository
     {
-        public InstallationLogRepository(ClientLancherDbContext context) : base(context)
+        public InstallationLogRepository(DeploymentManagerDbContext context) : base(context)
         {
         }
 

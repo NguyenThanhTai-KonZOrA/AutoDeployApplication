@@ -1,5 +1,5 @@
-﻿using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.ViewModels.Request;
+using ClientLauncher.Implement.ViewModels.Response;
 using Microsoft.AspNetCore.Http;
 
 public interface IPackageVersionService

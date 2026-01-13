@@ -1,14 +1,14 @@
-﻿using ClientLancher.Common.ApiClient;
-using ClientLancher.Common.Constants;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.UnitOfWork;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using  ClientLauncher.Common.ApiClient;
+using  ClientLauncher.Common.Constants;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.UnitOfWork;
+using ClientLauncher.Implement.ViewModels.Response;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class EmployeeService : IEmployeeService
     {

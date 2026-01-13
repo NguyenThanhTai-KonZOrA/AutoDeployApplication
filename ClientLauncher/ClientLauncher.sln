@@ -7,9 +7,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLauncher", "ClientLau
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLauncherAPI", "ClientLauncherAPI\ClientLauncherAPI.csproj", "{E6BA8AE1-A7A9-4072-8A08-209FB893C901}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLancher.Implement", "ClientLancher.Implement\ClientLancher.Implement.csproj", "{56B427EC-15D6-48FD-B820-F91C0335424B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLauncher.Implement", "ClientLancher.Implement\ClientLauncher.Implement.csproj", "{56B427EC-15D6-48FD-B820-F91C0335424B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLancher.Common", "ClientLancher.Common\ClientLancher.Common.csproj", "{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLauncher.Common", "ClientLancher.Common\ClientLauncher.Common.csproj", "{326E3FCE-D532-4119-8BFE-D3C4FDEBC675}"
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "ClientLauncherSetup", "ClientLauncherSetup\ClientLauncherSetup.vdproj", "{D06F1FC8-1B01-B26E-7EDB-7103B95E6870}"
 EndProject

@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 
-namespace ClientLancher.Implement.Repositories.Interface
+namespace ClientLauncher.Implement.Repositories.Interface
 {
     public interface IDeploymentHistoryRepository : IGenericRepository<DeploymentHistory>
     {

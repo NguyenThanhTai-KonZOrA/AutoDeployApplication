@@ -1,7 +1,7 @@
-﻿using ClientLancher.Common.Constants;
+﻿using ClientLauncher.Common.Constants;
 using System.ComponentModel.DataAnnotations;
 
-namespace ClientLancher.Common.BaseEntity
+namespace ClientLauncher.Common.BaseEntity
 {
     public abstract class BaseEntity
     {

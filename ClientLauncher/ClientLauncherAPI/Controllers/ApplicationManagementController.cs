@@ -1,6 +1,6 @@
-﻿using ClientLancher.Common.Constants;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Common.Constants;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers

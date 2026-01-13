@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.SystemConfiguration
+﻿namespace ClientLauncher.Common.SystemConfiguration
 {
     public interface ISystemConfiguration
     {

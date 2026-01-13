@@ -1,7 +1,7 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 using Microsoft.AspNetCore.Http;
 
-namespace ClientLancher.Implement.ViewModels.Request
+namespace ClientLauncher.Implement.ViewModels.Request
 {
     public class UpdateIconRequest
     {

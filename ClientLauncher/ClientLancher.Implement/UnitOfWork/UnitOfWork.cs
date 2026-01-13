@@ -1,13 +1,13 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.Repositories;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.Repositories;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace ClientLancher.Implement.UnitOfWork
+namespace ClientLauncher.Implement.UnitOfWork
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly ClientLancherDbContext _context;
+        private readonly DeploymentManagerDbContext _context;
         private IDbContextTransaction? _transaction;
 
         public IApplicationRepository Applications { get; }
@@ -21,7 +21,7 @@ namespace ClientLancher.Implement.UnitOfWork
         public IApplicationManifestRepository ApplicationManifests { get; }
 
         public UnitOfWork(
-            ClientLancherDbContext context,
+            DeploymentManagerDbContext context,
             IApplicationRepository applications,
             IInstallationLogRepository installationLogs,
             IPackageVersionRepository packageVersions,

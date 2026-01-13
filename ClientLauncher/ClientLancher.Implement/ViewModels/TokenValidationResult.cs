@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ClientLancher.Implement.ViewModels
+namespace ClientLauncher.Implement.ViewModels
 {
     /// <summary>
     /// Result of token validation

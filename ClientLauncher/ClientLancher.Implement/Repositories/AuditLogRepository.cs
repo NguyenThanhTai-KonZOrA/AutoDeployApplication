@@ -1,7 +1,7 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,13 +9,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class AuditLogRepository : IAuditLogRepository
     {
-        private readonly ClientLancherDbContext _context;
+        private readonly DeploymentManagerDbContext _context;
 
-        public AuditLogRepository(ClientLancherDbContext context)
+        public AuditLogRepository(DeploymentManagerDbContext context)
         {
             _context = context;
         }

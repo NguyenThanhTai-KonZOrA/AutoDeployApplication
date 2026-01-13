@@ -1,6 +1,6 @@
-﻿using ClientLancher.Common.BaseEntity;
+﻿using  ClientLauncher.Common.BaseEntity;
 
-namespace ClientLancher.Implement.EntityModels
+namespace ClientLauncher.Implement.EntityModels
 {
     public class DeploymentHistory : BaseEntity
     {

@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Implement.Services.Interface
+﻿namespace ClientLauncher.Implement.Services.Interface
 {
     public interface IUpdateService
     {

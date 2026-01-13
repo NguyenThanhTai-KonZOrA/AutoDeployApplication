@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.Constants
+﻿namespace ClientLauncher.Common.Constants
 {
     public class CommonConstants
     {

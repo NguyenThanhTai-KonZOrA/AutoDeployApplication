@@ -1,13 +1,13 @@
-﻿using ClientLancher.Common.ApiClient;
-using ClientLancher.Common.MemoryCache;
-using ClientLancher.Common.SystemConfiguration;
-using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.Repositories;
-using ClientLancher.Implement.Repositories.Interface;
-using ClientLancher.Implement.Services;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.UnitOfWork;
-using ClientLancher.Implement.ViewModels;
+﻿using ClientLauncher.Common.ApiClient;
+using ClientLauncher.Common.MemoryCache;
+using ClientLauncher.Common.SystemConfiguration;
+using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.Repositories;
+using ClientLauncher.Implement.Repositories.Interface;
+using ClientLauncher.Implement.Services;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.UnitOfWork;
+using ClientLauncher.Implement.ViewModels;
 using ClientLauncherAPI.WindowHelpers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -103,7 +103,7 @@ try
         });
 
     // Database
-    builder.Services.AddDbContext<ClientLancherDbContext>(options =>
+    builder.Services.AddDbContext<DeploymentManagerDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpClient<IApiClient, ApiClient>();
@@ -214,7 +214,7 @@ try
     // Seed database
     using (var scope = app.Services.CreateScope())
     {
-        var context = scope.ServiceProvider.GetRequiredService<ClientLancherDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<DeploymentManagerDbContext>();
         await context.Database.MigrateAsync();
         await DbSeeder.SeedAsync(context);
     }

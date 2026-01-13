@@ -1,11 +1,11 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.ApplicationDbContext
+namespace ClientLauncher.Implement.ApplicationDbContext
 {
     public static class DbSeeder
     {
-        public static async Task SeedAsync(ClientLancherDbContext context)
+        public static async Task SeedAsync(DeploymentManagerDbContext context)
         {
             // Seed Categories
             if (!await context.ApplicationCategories.AnyAsync())

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 
-namespace ClientLancher.Common.MemoryCache
+namespace ClientLauncher.Common.MemoryCache
 {
     public class MemoryCacheService : ICacheService
     {

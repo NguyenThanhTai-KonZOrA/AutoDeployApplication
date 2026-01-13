@@ -22,6 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ClientLancher.Common\ClientLancher.Common.csproj" />
+    <ProjectReference Include="..\ClientLancher.Common\ClientLauncher.Common.csproj" />
   </ItemGroup>
 </Project>

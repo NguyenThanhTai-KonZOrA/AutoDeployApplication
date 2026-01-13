@@ -1,6 +1,6 @@
-﻿using ClientLancher.Common.Constants;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Common.Constants;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
 using ClientLauncherAPI.WindowHelpers;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -41,7 +41,7 @@ namespace ClientLauncherAPI.Controllers
                 var result = await _packageService.UploadPackageAsync(request);
 
                 // Audit log
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "UploadPackage",
                     EntityType = "PackageVersion",
@@ -64,7 +64,7 @@ namespace ClientLauncherAPI.Controllers
             {
                 _logger.LogError(ex, "Error uploading package");
                 // Audit log for failure
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "UploadPackage",
                     EntityType = "PackageVersion",
@@ -96,7 +96,7 @@ namespace ClientLauncherAPI.Controllers
                 var result = await _packageService.UpdatePackageAsync(request);
 
                 // Audit log
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "UpdatePackage",
                     EntityType = "PackageVersion",
@@ -119,7 +119,7 @@ namespace ClientLauncherAPI.Controllers
             {
                 _logger.LogError(ex, "Error updating package ID: {Id}", request.Id);
                 // Audit log for failure
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "UpdatePackage",
                     EntityType = "PackageVersion",
@@ -155,7 +155,7 @@ namespace ClientLauncherAPI.Controllers
                 }
 
                 // Audit log
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "DeletePackage",
                     EntityType = "PackageVersion",
@@ -178,7 +178,7 @@ namespace ClientLauncherAPI.Controllers
             {
                 _logger.LogError(ex, "Error deleting package ID: {Id}", id);
                 // Audit log for failure
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "DeletePackage",
                     EntityType = "PackageVersion",
@@ -336,7 +336,7 @@ namespace ClientLauncherAPI.Controllers
                 await _packageService.RecordDownloadStatisticAsync(
                     id, machineName, userName, ipAddress, true, fileData.Length, 0);
                 // Audit log
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "DownloadPackage",
                     EntityType = "PackageVersion",
@@ -359,7 +359,7 @@ namespace ClientLauncherAPI.Controllers
             {
                 _logger.LogError(ex, "Error downloading package ID: {Id}", id);
                 // Audit log for failure
-                await _auditLogService.LogActionAsync(new ClientLancher.Implement.ViewModels.Request.CreateAuditLogRequest
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
                 {
                     Action = "DownloadPackage",
                     EntityType = "PackageVersion",

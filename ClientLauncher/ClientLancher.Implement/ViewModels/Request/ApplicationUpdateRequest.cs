@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Implement.ViewModels.Request
+﻿namespace ClientLauncher.Implement.ViewModels.Request
 {
     public class ApplicationUpdateRequest
     {

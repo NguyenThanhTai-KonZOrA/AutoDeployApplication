@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.ApiClient
+﻿namespace ClientLauncher.Common.ApiClient
 {
     public interface IApiClient
     {

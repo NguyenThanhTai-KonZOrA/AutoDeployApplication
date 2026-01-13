@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.ViewModels.Response;
 
-namespace ClientLancher.Implement.Services.Interface
+namespace ClientLauncher.Implement.Services.Interface
 {
     public interface IAnalyticsService
     {

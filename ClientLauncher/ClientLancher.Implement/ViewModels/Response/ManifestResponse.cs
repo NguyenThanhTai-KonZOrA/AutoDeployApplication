@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace ClientLancher.Implement.ViewModels.Response
+namespace ClientLauncher.Implement.ViewModels.Response
 {
     public class ManifestResponse
     {

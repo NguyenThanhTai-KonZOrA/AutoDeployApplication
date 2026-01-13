@@ -1,14 +1,14 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class EmployeeRepository : GenericRepository<Employee>, IEmployeeRepository
     {
-        private readonly ClientLancherDbContext _context;
-        public EmployeeRepository(ClientLancherDbContext context) : base(context)
+        private readonly DeploymentManagerDbContext _context;
+        public EmployeeRepository(DeploymentManagerDbContext context) : base(context)
         {
             _context = context;
         }

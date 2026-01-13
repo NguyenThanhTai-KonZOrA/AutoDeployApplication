@@ -1,13 +1,13 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class ApplicationRepository : GenericRepository<Application>, IApplicationRepository
     {
-        public ApplicationRepository(ClientLancherDbContext context) : base(context)
+        public ApplicationRepository(DeploymentManagerDbContext context) : base(context)
         {
         }
 

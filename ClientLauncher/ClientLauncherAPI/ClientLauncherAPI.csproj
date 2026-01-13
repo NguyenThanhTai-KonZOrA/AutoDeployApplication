@@ -36,7 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\ClientLancher.Implement\ClientLancher.Implement.csproj" />
+	  <ProjectReference Include="..\ClientLancher.Implement\ClientLauncher.Implement.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

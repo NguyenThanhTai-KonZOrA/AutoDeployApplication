@@ -1,7 +1,7 @@
-﻿using ClientLancher.Common.BaseEntity;
+﻿using ClientLauncher.Common.BaseEntity;
 using System.ComponentModel.DataAnnotations;
 
-namespace ClientLancher.Implement.EntityModels
+namespace ClientLauncher.Implement.EntityModels
 {
     public class Employee : BaseEntity
     {
@@ -28,5 +28,8 @@ namespace ClientLancher.Implement.EntityModels
 
         [StringLength(100)]
         public string? Position { get; set; }
+
+        // Navigation properties
+        public virtual ICollection<EmployeeRole>? EmployeeRoles { get; set; }
     }
 }

@@ -1,7 +1,7 @@
-﻿using ClientLancher.Common.PagedResult;
+﻿using ClientLauncher.Common.PagedResult;
 using System.Linq.Expressions;
 
-namespace ClientLancher.Common.Repository
+namespace ClientLauncher.Common.Repository
 {
     public interface IGenericRepository<T> where T : class
     {

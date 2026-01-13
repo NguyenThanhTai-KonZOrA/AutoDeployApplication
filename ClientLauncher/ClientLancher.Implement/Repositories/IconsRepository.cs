@@ -1,12 +1,12 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class IconsRepository : GenericRepository<Icons>, IIconsRepository
     {
-        public IconsRepository(ApplicationDbContext.ClientLancherDbContext context) : base(context)
+        public IconsRepository(ApplicationDbContext.DeploymentManagerDbContext context) : base(context)
         {
         }
 

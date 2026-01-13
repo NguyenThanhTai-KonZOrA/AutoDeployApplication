@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.ViewModels.Response;
 
-namespace ClientLancher.Implement.ViewModels.Request
+namespace ClientLauncher.Implement.ViewModels.Request
 {
     public class AppManifest
     {

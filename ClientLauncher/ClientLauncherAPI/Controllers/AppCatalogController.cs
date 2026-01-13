@@ -1,5 +1,5 @@
-﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Response;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers

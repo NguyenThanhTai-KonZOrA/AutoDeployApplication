@@ -1,8 +1,8 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.ViewModels.Request;
+using ClientLauncher.Implement.ViewModels.Response;
 
-namespace ClientLancher.Implement.Services.Interface
+namespace ClientLauncher.Implement.Services.Interface
 {
     public interface IInstallationLogService
     {

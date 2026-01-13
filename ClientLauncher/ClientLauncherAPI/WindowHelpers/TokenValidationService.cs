@@ -1,11 +1,11 @@
-﻿using ClientLancher.Common.JwtAuthen;
-using ClientLancher.Common.SystemConfiguration;
-using ClientLancher.Implement.ViewModels;
+﻿using ClientLauncher.Common.JwtAuthen;
+using ClientLauncher.Common.SystemConfiguration;
+using ClientLauncher.Implement.ViewModels;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using TokenValidationResult = ClientLancher.Implement.ViewModels.TokenValidationResult;
+using TokenValidationResult = ClientLauncher.Implement.ViewModels.TokenValidationResult;
 
 namespace ClientLauncherAPI.WindowHelpers
 {

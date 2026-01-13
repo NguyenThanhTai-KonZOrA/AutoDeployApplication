@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Implement.ViewModels
+﻿namespace ClientLauncher.Implement.ViewModels
 {
     public class DeploymentSettings
     {

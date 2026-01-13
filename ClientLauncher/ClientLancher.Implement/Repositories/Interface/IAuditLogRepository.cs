@@ -1,7 +1,7 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.ViewModels.Request;
 
-namespace ClientLancher.Implement.Repositories.Interface
+namespace ClientLauncher.Implement.Repositories.Interface
 {
     public interface IAuditLogRepository
     {

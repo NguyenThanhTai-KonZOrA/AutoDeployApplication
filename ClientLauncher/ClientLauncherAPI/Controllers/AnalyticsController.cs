@@ -1,4 +1,4 @@
-﻿using ClientLancher.Implement.Services.Interface;
+﻿using ClientLauncher.Implement.Services.Interface;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers

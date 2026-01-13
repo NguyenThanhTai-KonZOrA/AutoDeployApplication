@@ -1,11 +1,11 @@
-﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class UpdateService : IUpdateService
     {

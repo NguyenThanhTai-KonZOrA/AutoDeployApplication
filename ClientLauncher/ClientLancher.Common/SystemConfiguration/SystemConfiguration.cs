@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace ClientLancher.Common.SystemConfiguration
+namespace ClientLauncher.Common.SystemConfiguration
 {
     public class SystemConfiguration : ISystemConfiguration
     {

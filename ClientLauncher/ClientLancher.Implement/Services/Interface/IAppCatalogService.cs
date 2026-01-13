@@ -1,6 +1,6 @@
-﻿using ClientLancher.Implement.EntityModels;
+﻿using ClientLauncher.Implement.EntityModels;
 
-namespace ClientLancher.Implement.Services.Interface
+namespace ClientLauncher.Implement.Services.Interface
 {
     public interface IAppCatalogService
     {
