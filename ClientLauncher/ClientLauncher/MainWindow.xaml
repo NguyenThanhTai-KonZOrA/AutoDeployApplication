@@ -641,12 +641,13 @@
                                     </StackPanel>
                                     <!-- Uninstall Button -->
                                     <Button Grid.Column="3"
-          Content="🗑️ Uninstall"
-          Command="{Binding DataContext.UninstallCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-          Style="{StaticResource DangerButton}"
-          VerticalAlignment="Center"
-          FontSize="13"
-          Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            Content="🗑️ Uninstall"
+                                            Command="{Binding DataContext.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                            Style="{StaticResource DangerButton}"
+                                            VerticalAlignment="Center"
+                                            FontSize="13"/>
 
                                 </Grid>
                             </Border>
@@ -790,19 +791,19 @@
 
                                         <!-- ✅ FIX: Uninstall Button với command mới -->
                                         <Button Grid.Row="4"
-        Content="🗑️ Uninstall"
-        Command="{Binding DataContext.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-        CommandParameter="{Binding}"
-        Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
-        Background="#E74C3C"
-        Foreground="White"
-        BorderThickness="0"
-        Padding="12,8"
-        FontSize="12"
-        FontWeight="SemiBold"
-        Cursor="Hand"
-        HorizontalAlignment="Stretch"
-        VerticalAlignment="Bottom">
+                                                Content="🗑️ Uninstall"
+                                                Command="{Binding DataContext.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}"
+                                                Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                Background="#E74C3C"
+                                                Foreground="White"
+                                                BorderThickness="0"
+                                                Padding="12,8"
+                                                FontSize="12"
+                                                FontWeight="SemiBold"
+                                                Cursor="Hand"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Bottom">
                                             <Button.Style>
                                                 <Style TargetType="Button">
                                                     <Setter Property="Template">

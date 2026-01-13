@@ -190,6 +190,52 @@ namespace ClientLauncher.ViewModels
                     {
                         Logger.Info("Update available for {AppCode}. Force={IsForce}", AppCode, isForceUpdate);
 
+                        // Check if application is running
+                        var runningProcesses = ProcessHelper.GetRunningProcessesForApp(AppCode);
+
+                        if (runningProcesses.Any())
+                        {
+                            Logger.Warn("Application {AppCode} has running processes: {Processes}",
+                                AppCode, string.Join(", ", runningProcesses));
+
+                            var processNames = string.Join("\n  • ", runningProcesses);
+                            var result = MessageBox.Show(
+                                $"❌ Cannot update new binary version for '{AppCode}'\n\n" +
+                                $"The following processes are currently running:\n  • {processNames}\n\n" +
+                                $"Please close the application and try again.\n\n" +
+                                $"Do you want to force close these processes and continue the update?\n" +
+                                $"⚠️ WARNING: This may cause data loss if the application has unsaved work.",
+                                "Application Running",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Warning
+                            );
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                if (ProcessHelper.TryKillApplicationProcesses(AppCode, out var failedProcesses))
+                                {
+                                    Logger.Info("Successfully killed running processes for {AppCode}", AppCode);
+                                }
+                                else
+                                {
+                                    Logger.Error("Failed to kill some processes for {AppCode}: {Processes}",
+                                        AppCode, string.Join(", ", failedProcesses));
+                                    MessageBox.Show(
+                                        $"❌ Failed to close the following processes:\n  • {string.Join("\n  • ", failedProcesses)}\n\n" +
+                                        $"Please close them manually and try again.",
+                                        "Failed to Close Processes",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                Logger.Info("User cancelled update due to running processes for {AppCode}", AppCode);
+                                return;
+                            }
+                        }
+
                         bool shouldUpdate = isForceUpdate;
 
                         if (!isForceUpdate)
@@ -245,6 +291,52 @@ namespace ClientLauncher.ViewModels
                         Logger.Info("Update available for {AppCode}. Force={IsForce}", AppCode, isForceUpdate);
 
                         bool shouldUpdate = isForceUpdate;
+
+                        // Check if application is running
+                        var runningProcesses = ProcessHelper.GetRunningProcessesForApp(AppCode);
+
+                        if (runningProcesses.Any())
+                        {
+                            Logger.Warn("Application {AppCode} has running processes: {Processes}",
+                                AppCode, string.Join(", ", runningProcesses));
+
+                            var processNames = string.Join("\n  • ", runningProcesses);
+                            var result = MessageBox.Show(
+                                $"❌ Cannot update new config version for '{AppCode}'\n\n" +
+                                $"The following processes are currently running:\n  • {processNames}\n\n" +
+                                $"Please close the application and try again.\n\n" +
+                                $"Do you want to force close these processes and continue the update?\n" +
+                                $"⚠️ WARNING: This may cause data loss if the application has unsaved work.",
+                                "Application Running",
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Warning
+                            );
+
+                            if (result == MessageBoxResult.Yes)
+                            {
+                                if (ProcessHelper.TryKillApplicationProcesses(AppCode, out var failedProcesses))
+                                {
+                                    Logger.Info("Successfully killed running processes for {AppCode}", AppCode);
+                                }
+                                else
+                                {
+                                    Logger.Error("Failed to kill some processes for {AppCode}: {Processes}",
+                                        AppCode, string.Join(", ", failedProcesses));
+                                    MessageBox.Show(
+                                        $"❌ Failed to close the following processes:\n  • {string.Join("\n  • ", failedProcesses)}\n\n" +
+                                        $"Please close them manually and try again.",
+                                        "Failed to Close Processes",
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                Logger.Info("User cancelled update due to running processes for {AppCode}", AppCode);
+                                return;
+                            }
+                        }
 
                         if (!isForceUpdate)
                         {
