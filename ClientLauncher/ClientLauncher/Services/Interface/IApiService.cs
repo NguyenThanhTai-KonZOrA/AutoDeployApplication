@@ -6,6 +6,11 @@ namespace ClientLauncher.Services.Interface
     public interface IApiService
     {
         /// <summary>
+        /// IsAdminRole
+        /// </summary>
+        /// <returns></returns>
+        Task<bool> IsAdminRole();
+        /// <summary>
         /// GetApplicationByCodeAsync
         /// </summary>
         /// <param name="appCode"></param>

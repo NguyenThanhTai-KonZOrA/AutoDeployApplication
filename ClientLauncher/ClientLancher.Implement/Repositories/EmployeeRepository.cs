@@ -24,7 +24,8 @@ namespace ClientLauncher.Implement.Repositories
         {
             return await _context.Employees
                 .Where(e => e.IsActive)
-                .OrderBy(e => e.FullName)
+                .OrderBy(e => e.Id)
+                .ThenBy(e => e.FullName)
                 .ToListAsync();
         }
     }

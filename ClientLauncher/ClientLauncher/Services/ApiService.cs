@@ -47,6 +47,21 @@ namespace ClientLauncher.Services
             return default;
         }
 
+        public async Task<bool> IsAdminRole()
+        {
+            try
+            {
+                // Logger.Info("Fetching all applications from API");
+                var isAdmin = await GetApiDataAsync<bool>($"/api/Auth/roles/check/{Environment.UserName}");
+                // Logger.Info("Successfully fetched {Count} applications", apps?.Count ?? 0);
+                return isAdmin;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to fetch applications from API");
+                throw new Exception($"Failed to fetch applications: {ex.Message}", ex);
+            }
+        }
         public async Task<List<ApplicationDto>> GetAllApplicationsAsync()
         {
             try

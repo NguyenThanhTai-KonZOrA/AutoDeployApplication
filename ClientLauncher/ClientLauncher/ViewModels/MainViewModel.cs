@@ -115,6 +115,13 @@ namespace ClientLauncher.ViewModels
             set { _currentDate = value; OnPropertyChanged(); }
         }
 
+        private bool _isAdmin = false;
+        public bool IsAdmin
+        {
+            get => _isAdmin;
+            set { _isAdmin = value; OnPropertyChanged(); }
+        }
+
         // Search and filter properties
         private string _searchText = string.Empty;
         public string SearchText
@@ -190,9 +197,8 @@ namespace ClientLauncher.ViewModels
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
             _iconService = new IconService();
-
             CurrentVersion = "Version: Loading...";
-
+            IsAdmin = false;
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
 
             InstallCommand = new AsyncRelayCommand(
@@ -217,6 +223,7 @@ namespace ClientLauncher.ViewModels
             SwitchToListViewCommand = new RelayCommand(_ => IsTabView = false);
             SwitchToTabViewCommand = new RelayCommand(_ => IsTabView = true);
 
+            _ = LoadAdminRole();
             _ = LoadVersionAsync();
 
             _ = LoadApplicationsAsync();
@@ -244,6 +251,21 @@ namespace ClientLauncher.ViewModels
         }
 
         public bool IsListView => !IsTabView;
+
+        private async Task LoadAdminRole()
+        {
+            try
+            {
+                _logger.Info("Checking admin role for user {UserName}", Environment.UserName);
+                IsAdmin = await _apiService.IsAdminRole();
+                _logger.Info("User {UserName} admin status: {IsAdmin}", Environment.UserName, _isAdmin);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to check admin role for user {UserName}", Environment.UserName);
+                IsAdmin = false;
+            }
+        }
 
         private async Task LoadVersionAsync()
         {
@@ -400,6 +422,9 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
+                _allApplications = new ObservableCollection<ApplicationDto>();
+                Applications = new ObservableCollection<ApplicationDto>();
+                ApplicationsView = CollectionViewSource.GetDefaultView(Applications);
                 _logger.Error(ex, "Failed to load applications for user {UserName}", Environment.UserName);
                 StatusMessage = $"Error: Hi {Environment.UserName}! You don't have permission to view this resource. Please contact ITer for support.";
             }
@@ -568,6 +593,13 @@ namespace ClientLauncher.ViewModels
         /// </summary>
         private async Task InstallSelectedApplicationsAsync()
         {
+            // Double check admin role
+            await LoadAdminRole();
+            if (!IsAdmin)
+            {
+                MessageBox.Show("You do not have permission to install applications. Please contact ITer for assistance.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Error); return;
+            }
+
             var selectedApps = Applications.Where(a => a.IsSelected).ToList();
             if (!selectedApps.Any()) return;
 
@@ -739,6 +771,13 @@ namespace ClientLauncher.ViewModels
         /// <summary>
         private async Task UninstallApplicationAsync()
         {
+            // Double check admin role
+            await LoadAdminRole();
+            if (!IsAdmin)
+            {
+                MessageBox.Show("You do not have permission to uninstall applications. Please contact ITer for assistance.", "Access Denied", MessageBoxButton.OK, MessageBoxImage.Error); return;
+            }
+
             var stopwatch = Stopwatch.StartNew();
             if (SelectedApplication == null || !SelectedApplication.IsInstalled) return;
 

@@ -285,6 +285,18 @@ namespace ClientLauncherAPI.Controllers
             });
         }
 
+        [HttpGet("roles/check/{userName}")]
+        public async Task<IActionResult> CheckUserRole(string userName)
+        {
+            if (string.IsNullOrEmpty(userName))
+            {
+                return Unauthorized();
+            }
+
+            var isAdmin = await _employeeService.IsUserAdminAsync(userName);
+            return Ok(isAdmin);
+        }
+
         [HttpGet("server-info")]
         [AllowAnonymous]
         public IActionResult GetServerInfo()
