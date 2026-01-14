@@ -37,11 +37,10 @@ else
 {
     Console.WriteLine($"NLog configuration loaded. Targets: {string.Join(", ", config.AllTargets.Select(t => t.Name))}");
 }
+logger.Info("============> Deployment Manager API initializing... <============");
 
 try
 {
-
-    logger.Info("🟢 Deployment Manager API initializing...");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -101,7 +100,7 @@ try
                 RoleClaimType = ClaimTypes.Role
             };
         });
-
+    logger.Info("============> Regsiter services initializing... <============");
     // Database
     builder.Services.AddDbContext<DeploymentManagerDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -152,7 +151,7 @@ try
     builder.Services.AddScoped<IRoleService, RoleService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
-
+    logger.Info("============> Regsitered services end! <============");
     // Add CORS if needed
     builder.Services.AddCors(options =>
     {
@@ -219,12 +218,14 @@ try
     app.UseAuthorization();
 
     // Seed database
+    logger.Info("============> Check and run migration initializing... <============");
     using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<DeploymentManagerDbContext>();
         await context.Database.MigrateAsync();
         await DbSeeder.SeedAsync(context);
     }
+    logger.Info("============> Check and run migration end! <============");
 
     //if (app.Environment.IsDevelopment())
     //{
