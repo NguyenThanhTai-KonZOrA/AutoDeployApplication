@@ -1,0 +1,233 @@
+===============================================
+===============================================
+{
+  "version": "1.5.0",
+  "binaryVersion": "2.0.0",                       // KHÔNG ĐỔI
+  "binaryPackage": "HTCasinoEntry_v2.0.0.zip",    // KHÔNG ĐỔI
+  "configVersion": "1.5.0",                       // ✅ CONFIG MỚI
+  "configPackage": "HTCasinoEntry_config_v1.5.0.zip", // ✅ CONFIG PACKAGE
+  "configMergeStrategy": "selective",             // ✅ CHIẾN LƯỢC
+  "configFiles": [                                // ✅ FILE POLICIES
+    {
+      "name": "appsettings.json",
+      "updatePolicy": "merge",
+      "priority": "server"
+    },
+    {
+      "name": "database.config",
+      "updatePolicy": "preserve",
+      "priority": "local"
+    },
+    {
+      "name": "logging.config",
+      "updatePolicy": "replace",
+      "priority": "server"
+    }
+  ],
+  "updateType": "config",                         // ✅ CHỈ UPDATE CONFIG
+  "forceUpdate": false,
+  "notifyUser": true,
+  "allowSkip": true,
+  "updateDescription": "Updated API endpoints and configurations",
+  "releaseNotes": "- New API endpoints\n- Updated timeout settings",
+  "isStable": true
+}
+
+===============================================
+===============================================
+{
+  "status": 200,
+  "success": true,
+  "data": {
+    "appCode": "HTCasinoEntry",
+    "binary": {
+      "version": "2.0.0",
+      "package": "HTCasinoEntry_v2.0.0.zip",
+      "files": []
+    },
+    "config": {
+      "version": "1.5.0",                    // ✅ NEW VERSION
+      "package": "HTCasinoEntry_config_v1.5.0.zip",
+      "mergeStrategy": "selective",
+      "files": [
+        {
+          "name": "appsettings.json",
+          "updatePolicy": "merge",
+          "priority": "server"
+        },
+        {
+          "name": "database.config",
+          "updatePolicy": "preserve",
+          "priority": "local"
+        }
+      ]
+    },
+    "updatePolicy": {
+      "type": "config",                      // ✅ CHỈ CONFIG
+      "force": false,
+      "notifyUser": true,
+      "allowSkip": true,
+      "description": "Updated API endpoints"
+    }
+  }
+}
+
+===============================================
+===============================================
+C:\CompanyApps\HTCasinoEntry\
+├── App\
+│   ├── HTCasinoEntry.exe      (KHÔNG ĐỔI)
+│   ├── HTCasinoEntry.dll      (KHÔNG ĐỔI)
+│   └── version.txt            (2.0.0 - KHÔNG ĐỔI)
+├── Config\
+│   ├── appsettings.json       (✅ MERGED - có key mới)
+│   ├── database.config        (✅ PRESERVED - giữ nguyên)
+│   ├── logging.config         (✅ REPLACED - file mới)
+│   ├── features.json          (✅ ADDED - file mới)
+│   └── version.txt            (✅ 1.5.0 - UPDATED)
+└── manifest.json              (✅ UPDATED)
+
+===============================================
+===============================================
+using ClientLauncher.Services;
+
+public class ConfigUpdateTester
+{
+    private readonly IManifestService _manifestService;
+    private readonly ISelectiveUpdateService _selectiveUpdateService;
+    
+    public async Task TestConfigOnlyUpdate()
+    {
+        var appCode = "HTCasinoEntry";
+        
+        // 1. Get manifest
+        Console.WriteLine("=== Step 1: Fetch Manifest ===");
+        var manifest = await _manifestService.GetManifestFromServerAsync(appCode);
+        Console.WriteLine($"Update Type: {manifest.UpdatePolicy.Type}");
+        Console.WriteLine($"Binary Version: {manifest.Binary.Version}");
+        Console.WriteLine($"Config Version: {manifest.Config.Version}");
+        
+        // 2. Check local versions
+        Console.WriteLine("\n=== Step 2: Check Local Versions ===");
+        var localBinaryVersion = ReadVersion($@"C:\CompanyApps\{appCode}\App\version.txt");
+        var localConfigVersion = ReadVersion($@"C:\CompanyApps\{appCode}\Config\version.txt");
+        Console.WriteLine($"Local Binary: {localBinaryVersion}");
+        Console.WriteLine($"Local Config: {localConfigVersion}");
+        
+        // 3. Determine update type
+        Console.WriteLine("\n=== Step 3: Determine Update ===");
+        var needBinaryUpdate = IsNewer(manifest.Binary.Version, localBinaryVersion);
+        var needConfigUpdate = IsNewer(manifest.Config.Version, localConfigVersion);
+        
+        Console.WriteLine($"Need Binary Update: {needBinaryUpdate}");
+        Console.WriteLine($"Need Config Update: {needConfigUpdate}");
+        
+        // 4. Apply config update only
+        if (needConfigUpdate && !needBinaryUpdate)
+        {
+            Console.WriteLine("\n=== Step 4: Applying Config Update ===");
+            
+            // Download config package
+            var configPath = await DownloadConfig(appCode, manifest.Config.Package);
+            Console.WriteLine($"Downloaded: {configPath}");
+            
+            // Apply selective update
+            var result = await _selectiveUpdateService.ApplySelectiveConfigUpdateAsync(
+                appCode, 
+                manifest, 
+                configPath
+            );
+            
+            if (result)
+            {
+                Console.WriteLine("✅ Config updated successfully!");
+                
+                // Update version.txt
+                File.WriteAllText(
+                    $@"C:\CompanyApps\{appCode}\Config\version.txt",
+                    manifest.Config.Version
+                );
+                
+                Console.WriteLine($"✅ Config version.txt updated to {manifest.Config.Version}");
+            }
+            else
+            {
+                Console.WriteLine("❌ Config update failed!");
+            }
+        }
+        
+        // 5. Verify
+        Console.WriteLine("\n=== Step 5: Verification ===");
+        VerifyConfigFiles(appCode);
+    }
+    
+    private void VerifyConfigFiles(string appCode)
+    {
+        var configPath = $@"C:\CompanyApps\{appCode}\Config";
+        
+        Console.WriteLine("\nConfig Files:");
+        foreach (var file in Directory.GetFiles(configPath))
+        {
+            var fileName = Path.GetFileName(file);
+            var lastModified = File.GetLastWriteTime(file);
+            Console.WriteLine($"  - {fileName} (Modified: {lastModified})");
+        }
+        
+        // Check merged content
+        var appSettingsPath = Path.Combine(configPath, "appsettings.json");
+        if (File.Exists(appSettingsPath))
+        {
+            Console.WriteLine("\nMerged appsettings.json:");
+            var content = File.ReadAllText(appSettingsPath);
+            Console.WriteLine(content);
+        }
+    }
+    
+    private string ReadVersion(string path)
+    {
+        return File.Exists(path) ? File.ReadAllText(path).Trim() : "0.0.0";
+    }
+    
+    private bool IsNewer(string serverVer, string localVer)
+    {
+        try
+        {
+            return new Version(serverVer) > new Version(localVer);
+        }
+        catch
+        {
+            return serverVer != localVer;
+        }
+    }
+    
+    private async Task<string> DownloadConfig(string appCode, string packageName)
+    {
+        var url = $"https://localhost:7102/api/apps/{appCode}/download/{packageName}";
+        var tempPath = Path.Combine(Path.GetTempPath(), packageName);
+        
+        using var client = new HttpClient();
+        var data = await client.GetByteArrayAsync(url);
+        await File.WriteAllBytesAsync(tempPath, data);
+        
+        return tempPath;
+    }
+}
+===============================================
+===============================================
+🎯 TÓM TẮT QUY TRÌNH
+✅ Upload Config:
+1.	Đóng gói config files vào .zip
+2.	POST /api/PackageManagement/upload với PackageType="Config"
+3.	Server lưu vào Packages/{AppCode}/config_vX.X.X.zip
+✅ Create Manifest:
+1.	POST /api/ApplicationManagement/{id}/manifest
+2.	Set updateType="config"
+3.	Chỉ định configPackage và configMergeStrategy
+✅ Client Update:
+1.	GET manifest → check updateType
+2.	Nếu type="config" → chỉ download config package
+3.	Apply selective update theo merge strategy
+4.	Update Config/version.txt
+5.	Restart app (không cần update binary)
+===============================================
+===============================================

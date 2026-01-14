@@ -1,4 +1,4 @@
-﻿using ClientLancher.Common.ApiClient;
+﻿using ClientLauncher.Common.ApiClient;
 using Newtonsoft.Json;
 using System.Text;
 

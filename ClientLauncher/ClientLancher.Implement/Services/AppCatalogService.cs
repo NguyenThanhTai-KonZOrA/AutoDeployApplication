@@ -1,9 +1,9 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.UnitOfWork;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.UnitOfWork;
 using Microsoft.Extensions.Logging;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class AppCatalogService : IAppCatalogService
     {

@@ -1,7 +1,7 @@
-﻿using ClientLancher.Implement.EntityModels;
-using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.UnitOfWork;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.EntityModels;
+using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.UnitOfWork;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClientLauncherAPI.Controllers

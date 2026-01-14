@@ -1,24 +1,25 @@
-﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Text.Json;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class UpdateService : IUpdateService
     {
         private readonly HttpClient _httpClient;
         private readonly IVersionService _versionService;
         private readonly ILogger<UpdateService> _logger;
-        private readonly string _serverUrl;
+        private readonly DeploymentSettings _deploymentSettings;
 
-        public UpdateService(HttpClient httpClient, IVersionService versionService, ILogger<UpdateService> logger)
+        public UpdateService(HttpClient httpClient, IVersionService versionService, ILogger<UpdateService> logger, DeploymentSettings deploymentSettings)
         {
             _httpClient = httpClient;
             _versionService = versionService;
             _logger = logger;
-            _serverUrl = "http://10.21.10.1:8102"; // Load from config
+            _deploymentSettings = deploymentSettings;
         }
 
         public async Task<bool> CheckAndApplyUpdatesAsync(string appCode)
@@ -28,7 +29,7 @@ namespace ClientLancher.Implement.Services
                 _logger.LogInformation($"Checking updates for {appCode}");
 
                 // Fetch manifest
-                var manifestUrl = $"{_serverUrl}/api/apps/{appCode}/manifest";
+                var manifestUrl = $"{_deploymentSettings.ServerBaseUrl}/api/apps/{appCode}/manifest";
                 var response = await _httpClient.GetAsync(manifestUrl);
 
                 if (!response.IsSuccessStatusCode)
@@ -82,7 +83,7 @@ namespace ClientLancher.Implement.Services
 
         private async Task ApplyBinaryUpdateAsync(string appCode, AppManifest manifest)
         {
-            var packageUrl = $"{_serverUrl}/apps/{appCode}/{manifest.binary.package}";
+            var packageUrl = $"{_deploymentSettings.ServerBaseUrl}/apps/{appCode}/{manifest.binary.package}";
             var appPath = $@"C:\CompanyApps\{appCode}\App";
             var tempZip = Path.Combine(Path.GetTempPath(), $"{appCode}_update.zip");
 
@@ -117,7 +118,7 @@ namespace ClientLancher.Implement.Services
 
         private async Task ApplyConfigUpdateAsync(string appCode, AppManifest manifest)
         {
-            var packageUrl = $"{_serverUrl}/apps/{appCode}/{manifest.config.package}";
+            var packageUrl = $"{_deploymentSettings.ServerBaseUrl}/apps/{appCode}/{manifest.config.package}";
             var configPath = $@"C:\CompanyApps\{appCode}\Config\config.json";
 
             try

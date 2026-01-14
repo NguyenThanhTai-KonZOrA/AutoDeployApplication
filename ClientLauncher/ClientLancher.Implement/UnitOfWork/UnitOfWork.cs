@@ -1,37 +1,49 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.Repositories;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.Repositories;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace ClientLancher.Implement.UnitOfWork
+namespace ClientLauncher.Implement.UnitOfWork
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly ClientLancherDbContext _context;
+        private readonly DeploymentManagerDbContext _context;
         private IDbContextTransaction? _transaction;
 
-        // Lazy initialization for repositories
-        private IApplicationRepository? _applications;
-        private IInstallationLogRepository? _installationLogs;
+        public IApplicationRepository Applications { get; }
+        public IInstallationLogRepository InstallationLogs { get; }
 
-        public UnitOfWork(ClientLancherDbContext context)
+        // NEW
+        public IPackageVersionRepository PackageVersions { get; }
+        public IDeploymentHistoryRepository DeploymentHistories { get; }
+        public IApplicationCategoryRepository ApplicationCategories { get; }
+        public IDownloadStatisticRepository DownloadStatistics { get; }
+        public IApplicationManifestRepository ApplicationManifests { get; }
+
+        public UnitOfWork(
+            DeploymentManagerDbContext context,
+            IApplicationRepository applications,
+            IInstallationLogRepository installationLogs,
+            IPackageVersionRepository packageVersions,
+            IDeploymentHistoryRepository deploymentHistories,
+            IApplicationCategoryRepository applicationCategories,
+            IDownloadStatisticRepository downloadStatistics,
+            IApplicationManifestRepository applicationManifests)
         {
             _context = context;
+            Applications = applications;
+            InstallationLogs = installationLogs;
+            PackageVersions = packageVersions;
+            DeploymentHistories = deploymentHistories;
+            ApplicationCategories = applicationCategories;
+            DownloadStatistics = downloadStatistics;
+            ApplicationManifests = applicationManifests;
         }
-
-        // Repository properties with lazy initialization
-        public IApplicationRepository Applications =>
-            _applications ??= new ApplicationRepository(_context);
-
-        public IInstallationLogRepository InstallationLogs =>
-            _installationLogs ??= new InstallationLogRepository(_context);
 
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
         }
-
-        public async Task<int> CompleteAsync() => await SaveChangesAsync();
 
         public async Task BeginTransactionAsync()
         {

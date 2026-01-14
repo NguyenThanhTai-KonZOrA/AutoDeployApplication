@@ -1,7 +1,7 @@
-﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
+﻿using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels.Request;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class VersionService : IVersionService
     {

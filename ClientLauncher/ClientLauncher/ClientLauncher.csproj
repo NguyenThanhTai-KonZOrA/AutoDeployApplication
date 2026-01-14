@@ -1,40 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWPF>true</UseWPF>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
 		<ApplicationIcon>Assets\Icons\app_default.ico</ApplicationIcon>
-		<!--<ApplicationIcon>Assets\Images\app.png</ApplicationIcon>-->
-    <!-- ClickOnce Settings -->
-    <PublishUrl>publish\</PublishUrl>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
-    <UpdateEnabled>true</UpdateEnabled>
-    <UpdateMode>Foreground</UpdateMode>
-    <UpdateInterval>7</UpdateInterval>
-    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
-    <UpdatePeriodically>false</UpdatePeriodically>
-    <UpdateRequired>false</UpdateRequired>
-    <MinimumRequiredVersion>1.0.0.0</MinimumRequiredVersion>
-    <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
-    <WebPage>publish.htm</WebPage>
-    <ApplicationRevision>1</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <UseApplicationTrust>false</UseApplicationTrust>
-    <PublishWizardCompleted>true</PublishWizardCompleted>
-    <BootstrapperEnabled>true</BootstrapperEnabled>
-  </PropertyGroup>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Remove="Assets\Icons\ClientLauncherApplogo.ico" />
+		<None Remove="Assets\Icons\EntryAutoImage.ico" />
+		<None Remove="Assets\Icons\HTCasinoEntrylogo.ico" />
+		<None Remove="Assets\Icons\LevyManualActiveticket.ico" />
+		<None Remove="Assets\Icons\LevyNotifyRemainingTimeLogo.ico" />
+		<None Remove="Assets\Icons\LEVYPOSlogo.ico" />
+		<None Remove="Assets\Icons\LEVYTICKETMONITORlogo.ico" />
+		<None Remove="Assets\Icons\QUEUEDISP.ico" />
+		<None Remove="Assets\Icons\QUEUkiosklogo.ico" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Resource Include="Assets\Images\app.png" />
 		<Resource Include="Assets\Images\NewLogo-01.png" />
-		<Resource Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
-    
+		<Content Include="Assets\Icons\app_default.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
 
-	<!-- Add COM Reference for Shortcut Creation -->
 	<ItemGroup>
 		<COMReference Include="IWshRuntimeLibrary">
 			<WrapperTool>tlbimp</WrapperTool>
@@ -46,17 +39,75 @@
 			<EmbedInteropTypes>true</EmbedInteropTypes>
 		</COMReference>
 	</ItemGroup>
+
 	<ItemGroup>
-	  <Content Include="Assets\Icons\app_cage.ico" /> <!-- Added cage icon -->
-	  <Content Include="Assets\Icons\app_htr.ico" /> <!-- Added HTR icon -->
-	  <Content Include="Assets\Icons\app_finance.ico" /> <!-- Added finance icon -->
-	  <Content Include="Assets\Icons\app_default.ico" /> <!-- Default app icon re-added -->
+		<Content Include="Assets\Icons\ClientLauncherApplogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\EntryAutoImage.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\HTCasinoEntrylogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\LevyManualActiveticket.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\LevyNotifyRemainingTimeLogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\LEVYPOSlogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\LEVYTICKETMONITORlogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\QUEUEDISP.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
+
 	<ItemGroup>
-	  <Folder Include="Models\Request\" />
+		<Content Include="Assets\Icons\app_cage.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\app_htr.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\app_finance.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Assets\Icons\QUEUkiosklogo.ico">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
 	</ItemGroup>
+
 	<ItemGroup>
-	  <PackageReference Include="NLog" Version="6.0.5" />
+		<Folder Include="Models\Request\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NLog" Version="5.3.4" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="App.config">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="app.manifest">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="NLog.config">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Page Update="XamlStyles\Styles.xaml">
+			<CustomToolNamespace>XamlIntelliSenseFileGenerator</CustomToolNamespace>
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</Page>
 	</ItemGroup>
 
 </Project>

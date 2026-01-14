@@ -1,0 +1,16 @@
+{
+  "appCode": "ClientLauncher",
+  "binary": {
+    "version": "v1.0.2",
+    "package": "ClientLauncher.zip"
+  },
+  "config": {
+    "version": "v1.0.2",
+    "package": "ClientLauncher.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

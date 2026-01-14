@@ -1,16 +1,16 @@
-﻿using ClientLancher.Implement.ApplicationDbContext;
-using ClientLancher.Implement.Repositories.Interface;
+﻿using ClientLauncher.Implement.ApplicationDbContext;
+using ClientLauncher.Implement.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
-namespace ClientLancher.Implement.Repositories
+namespace ClientLauncher.Implement.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected readonly ClientLancherDbContext _context;
+        protected readonly DeploymentManagerDbContext _context;
         protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(ClientLancherDbContext context)
+        public GenericRepository(DeploymentManagerDbContext context)
         {
             _context = context;
             _dbSet = context.Set<T>();

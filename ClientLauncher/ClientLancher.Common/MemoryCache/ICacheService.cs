@@ -1,4 +1,4 @@
-﻿namespace ClientLancher.Common.MemoryCache
+﻿namespace ClientLauncher.Common.MemoryCache
 {
     public interface ICacheService
     {

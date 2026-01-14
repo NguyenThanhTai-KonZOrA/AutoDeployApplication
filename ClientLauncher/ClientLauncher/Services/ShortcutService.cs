@@ -1,6 +1,7 @@
 ﻿using ClientLauncher.Services.Interface;
 using IWshRuntimeLibrary;
 using System.IO;
+using System.Security;
 
 namespace ClientLauncher.Services
 {
@@ -10,7 +11,8 @@ namespace ClientLauncher.Services
 
         public ShortcutService()
         {
-            _desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            // This points to %public%\Desktop (e.g., C:\Users\Public\Desktop)
+            _desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory);
         }
 
         public bool CreateDesktopShortcut(string appCode, string appName, string launcherPath, string? iconPath = null)
@@ -45,6 +47,16 @@ namespace ClientLauncher.Services
 
                 return System.IO.File.Exists(shortcutPath);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                Console.WriteLine($"Failed to create shortcut: Access denied. Administrator privileges required. {ex.Message}");
+                return false;
+            }
+            catch (SecurityException ex)
+            {
+                Console.WriteLine($"Failed to create shortcut: Security exception. {ex.Message}");
+                return false;
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to create shortcut: {ex.Message}");
@@ -66,8 +78,14 @@ namespace ClientLauncher.Services
 
                 return false;
             }
-            catch
+            catch (UnauthorizedAccessException ex)
             {
+                Console.WriteLine($"Failed to delete shortcut: Access denied. Administrator privileges required. {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to delete shortcut: {ex.Message}");
                 return false;
             }
         }

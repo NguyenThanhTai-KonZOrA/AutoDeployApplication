@@ -4,27 +4,41 @@ using ClientLauncher.Services;
 using ClientLauncher.Services.Interface;
 using NLog;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Threading;
 
 namespace ClientLauncher.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
+        #region Init Contructor and Services
         private readonly IApiService _apiService;
         private readonly IShortcutService _shortcutService;
         private readonly IManifestService _manifestService;
+        private readonly IIconService _iconService;
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
-        // Properties
         private ObservableCollection<ApplicationDto> _applications = new();
-        private DispatcherTimer _clockTimer;
+        // Store all apps for filtering
+        private ObservableCollection<ApplicationDto> _allApplications = new();
+        private DispatcherTimer? _clockTimer;
+
         public ObservableCollection<ApplicationDto> Applications
         {
             get => _applications;
             set => SetProperty(ref _applications, value);
+        }
+
+        private ICollectionView? _applicationsView;
+        public ICollectionView? ApplicationsView
+        {
+            get => _applicationsView;
+            set => SetProperty(ref _applicationsView, value);
         }
 
         private ApplicationDto? _selectedApplication;
@@ -82,19 +96,53 @@ namespace ClientLauncher.ViewModels
             set => SetProperty(ref _installationSuccess, value);
         }
 
-        private string _currentTime;
-        private string _currentDate;
+        private string _currentTime = string.Empty;
+        private string _currentDate = string.Empty;
+        private string _currentVersion;
         public string CurrentTime
         {
             get => _currentTime;
             set { _currentTime = value; OnPropertyChanged(); }
         }
-
+        public string CurrentVersion
+        {
+            get => _currentVersion;
+            set { _currentVersion = value; OnPropertyChanged(); }
+        }
         public string CurrentDate
         {
             get => DateTime.Now.ToString("dddd, dd MMMM yyyy");
             set { _currentDate = value; OnPropertyChanged(); }
         }
+
+        // Search and filter properties
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (SetProperty(ref _searchText, value))
+                {
+                    ApplyFilter();
+                }
+            }
+        }
+
+        private string _selectedSortOption = "Name";
+        public string SelectedSortOption
+        {
+            get => _selectedSortOption;
+            set
+            {
+                if (SetProperty(ref _selectedSortOption, value))
+                {
+                    ApplySorting();
+                }
+            }
+        }
+
+        public List<string> SortOptions { get; } = new List<string> { "Name", "Category", "Status" };
 
         private void InitializeClockTimer()
         {
@@ -115,6 +163,7 @@ namespace ClientLauncher.ViewModels
             }
             catch (Exception ex)
             {
+                ////_logger.Error(ex, "Failed to initialize clock timer");
             }
         }
 
@@ -127,23 +176,105 @@ namespace ClientLauncher.ViewModels
         public AsyncRelayCommand LoadApplicationsCommand { get; }
         public AsyncRelayCommand InstallCommand { get; }
         public AsyncRelayCommand UninstallCommand { get; }
+        public AsyncRelayCommand<ApplicationDto> UninstallAppCommand { get; }
         public RelayCommand BackToListCommand { get; }
+        public RelayCommand SelectAllCommand { get; }
+        public RelayCommand SelectNoneCommand { get; }
+        public RelayCommand ClearSearchCommand { get; }
+        public RelayCommand SwitchToListViewCommand { get; }
+        public RelayCommand SwitchToTabViewCommand { get; }
 
         public MainViewModel()
         {
             _apiService = new ApiService();
             _shortcutService = new ShortcutService();
             _manifestService = new ManifestService();
+            _iconService = new IconService();
+
+            CurrentVersion = "Version: Loading...";
 
             LoadApplicationsCommand = new AsyncRelayCommand(async _ => await LoadApplicationsAsync());
+
             InstallCommand = new AsyncRelayCommand(
-                async _ => await InstallApplicationAsync(),
-                _ => SelectedApplication != null && !IsProcessing
+                async _ => await InstallSelectedApplicationsAsync(),
+                _ => HasSelectedApplications && !IsProcessing
             );
+
+            UninstallCommand = new AsyncRelayCommand(
+                async _ => await UninstallApplicationAsync(),
+                _ => SelectedApplication != null && !IsProcessing && SelectedApplication.IsInstalled
+            );
+
+            UninstallAppCommand = new AsyncRelayCommand<ApplicationDto>(
+                async app => await UninstallSpecificApplicationAsync(app),
+                app => app != null && !IsProcessing && app.IsInstalled
+            );
+
             BackToListCommand = new RelayCommand(_ => BackToList());
+            SelectAllCommand = new RelayCommand(_ => SelectAll());
+            SelectNoneCommand = new RelayCommand(_ => SelectNone());
+            ClearSearchCommand = new RelayCommand(_ => ClearSearch());
+            SwitchToListViewCommand = new RelayCommand(_ => IsTabView = false);
+            SwitchToTabViewCommand = new RelayCommand(_ => IsTabView = true);
+
+            _ = LoadVersionAsync();
 
             _ = LoadApplicationsAsync();
             InitializeClockTimer();
+        }
+        #endregion
+
+        private async Task UninstallSpecificApplicationAsync(ApplicationDto? app)
+        {
+            if (app == null) return;
+
+            // Set as selected application temporarily
+            SelectedApplication = app;
+
+            // Execute uninstall
+            await UninstallApplicationAsync();
+        }
+
+        #region Application Loading and Management
+        private bool _isTabView = false;
+        public bool IsTabView
+        {
+            get => _isTabView;
+            set => SetProperty(ref _isTabView, value);
+        }
+
+        public bool IsListView => !IsTabView;
+
+        private async Task LoadVersionAsync()
+        {
+            try
+            {
+                _logger.Info("Loading ClientLauncher version from API...");
+
+                var versionResponse = await _apiService.GetApplicationByCodeAsync("ClientApplication");
+
+                if (versionResponse != null && !string.IsNullOrEmpty(versionResponse.Version))
+                {
+                    CurrentVersion = $"Version: {versionResponse.Version}";
+                    _logger.Info("Loaded version: {Version}", versionResponse.Version);
+                }
+                else
+                {
+                    // Fallback to config if API returns null/empty
+                    string configVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
+                    CurrentVersion = $"Version: {configVersion}";
+                    _logger.Warn("API returned null/empty version, using config: {Version}", configVersion);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to load version from API");
+
+                // Fallback to App.config if API call failed
+                string configVersion = ConfigurationManager.AppSettings["ApplicationVersion"] ?? "1.1.0";
+                CurrentVersion = $"Version: {configVersion}";
+                _logger.Warn("Using fallback version: {Version}", configVersion);
+            }
         }
 
         /// <summary>
@@ -153,7 +284,6 @@ namespace ClientLauncher.ViewModels
         {
             try
             {
-                _logger.Info("Loading applications list");
                 StatusMessage = "Loading applications...";
                 IsProcessing = true;
 
@@ -161,15 +291,14 @@ namespace ClientLauncher.ViewModels
 
                 foreach (var app in apps)
                 {
-                    _logger.Debug("Checking status for application: {AppCode}", app.AppCode);
-
                     // Check LOCAL installation (no API call)
                     app.IsInstalled = await _apiService.IsApplicationInstalledAsync(app.AppCode);
 
                     if (app.IsInstalled)
                     {
-                        // Get LOCAL installed version
-                        app.InstalledVersion = await _apiService.GetInstalledVersionAsync(app.AppCode);
+                        // Get LOCAL installed versions
+                        app.InstalledBinaryVersion = await _apiService.GetInstalledBinaryVersionAsync(app.AppCode);
+                        app.InstalledConfigVersion = await _apiService.GetInstalledConfigVersionAsync(app.AppCode);
 
                         // Get server version to check for updates
                         var serverVersionInfo = await _apiService.GetServerVersionAsync(app.AppCode);
@@ -178,22 +307,53 @@ namespace ClientLauncher.ViewModels
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
 
-                            if (!string.IsNullOrEmpty(app.InstalledVersion) &&
+                            bool binaryUpdate = false;
+                            bool configUpdate = false;
+
+                            // Check binary update
+                            if (!string.IsNullOrEmpty(app.InstalledBinaryVersion) &&
                                 !string.IsNullOrEmpty(app.ServerVersion))
                             {
-                                app.HasUpdate = IsNewerVersion(app.ServerVersion, app.InstalledVersion);
+                                binaryUpdate = IsNewerVersion(app.ServerVersion, app.InstalledBinaryVersion);
+                            }
 
-                                if (app.HasUpdate)
-                                {
-                                    _logger.Info("Update available for {AppCode}: {InstalledVersion} -> {ServerVersion}",
-                                        app.AppCode, app.InstalledVersion, app.ServerVersion);
-                                }
+                            // ✅ NEW: Check config update
+                            if (!string.IsNullOrEmpty(app.InstalledConfigVersion) &&
+                                !string.IsNullOrEmpty(serverVersionInfo.ConfigVersion))
+                            {
+                                configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, app.InstalledConfigVersion);
+                            }
+
+                            // ✅ Update available if EITHER binary OR config has update
+                            app.HasUpdate = binaryUpdate || configUpdate;
+                            if (binaryUpdate && configUpdate)
+                            {
+                                var updateParts = new List<string>();
+                                updateParts.Add("Binary and Config have new version. Please run shortcut application to update!");
+                                app.StatusText = $"{string.Join("  ", updateParts)}";
+                            }
+                            else if (binaryUpdate)
+                            {
+                                // ✅ Show what type of update is available
+                                var updateParts = new List<string>();
+                                if (binaryUpdate)
+                                    updateParts.Add($"Binary: {app.ServerVersion}");
+
+
+                                app.StatusText = $"Binary Installed {app.InstalledBinaryVersion} → 🆕 {string.Join(" & ", updateParts)} available";
+                            }
+                            else if (configUpdate)
+                            {
+                                var updateParts = new List<string>();
+                                updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
+                                app.StatusText = $"Config Installed {app.InstalledConfigVersion} → 🆕 {string.Join(" & ", updateParts)} available";
+                            }
+                            else
+                            {
+                                string configVersionDisplay = app.InstalledConfigVersion == "0.0.0" ? "None" : app.InstalledConfigVersion;
+                                app.StatusText = $"Installed Binary: {app.InstalledBinaryVersion} & Config: {configVersionDisplay}";
                             }
                         }
-
-                        app.StatusText = app.HasUpdate
-                            ? $"Installed v{app.InstalledVersion} → 🆕 v{app.ServerVersion} available"
-                            : $"Installed v{app.InstalledVersion}";
                     }
                     else
                     {
@@ -204,29 +364,139 @@ namespace ClientLauncher.ViewModels
                         if (serverVersionInfo != null)
                         {
                             app.ServerVersion = serverVersionInfo.BinaryVersion;
-                            app.StatusText = $"❌ Not Installed (Latest: v{app.ServerVersion})";
+                            app.StatusText = $"❌ Not Installed (Latest: {app.ServerVersion})";
                         }
                     }
 
-                    _logger.Debug("App {AppCode}: IsInstalled={IsInstalled}, Version={Version}, HasUpdate={HasUpdate}",
-                        app.AppCode, app.IsInstalled, app.InstalledVersion, app.HasUpdate);
+                    //_logger.Debug("App {AppCode}: IsInstalled={IsInstalled}, Version={Version}, HasUpdate={HasUpdate}",
+                    //  app.AppCode, app.IsInstalled, app.InstalledVersion, app.HasUpdate);
                 }
 
+                _allApplications = new ObservableCollection<ApplicationDto>(apps);
                 Applications = new ObservableCollection<ApplicationDto>(apps);
+
+                // Subscribe to selection changes
+                foreach (var app in Applications)
+                {
+                    app.SelectionChanged += (s, e) =>
+                    {
+                        OnPropertyChanged(nameof(HasSelectedApplications));
+                        InstallCommand?.RaiseCanExecuteChanged();
+                    };
+                }
+
+                // Setup CollectionView for grouping and filtering
+                ApplicationsView = CollectionViewSource.GetDefaultView(Applications);
+                if (ApplicationsView != null)
+                {
+                    ApplicationsView.GroupDescriptions.Add(new PropertyGroupDescription("Category"));
+                    ApplicationsView.Filter = FilterApplications;
+                }
+
+                ApplySorting();
+
                 StatusMessage = $"Loaded {apps.Count} applications";
-                _logger.Info("Successfully loaded {Count} applications", apps.Count);
+                // _logger.Info("Successfully loaded {Count} applications", apps.Count);
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Failed to load applications");
-                StatusMessage = $"Error: {ex.Message}";
-                MessageBox.Show($"Failed to load applications: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _logger.Error(ex, "Failed to load applications for user {UserName}", Environment.UserName);
+                StatusMessage = $"Error: Hi {Environment.UserName}! You don't have permission to view this resource. Please contact ITer for support.";
             }
             finally
             {
                 IsProcessing = false;
             }
+        }
+
+        /// <summary>
+        /// Filter applications based on search text
+        /// </summary>
+        private bool FilterApplications(object obj)
+        {
+            if (obj is not ApplicationDto app)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(SearchText))
+                return true;
+
+            var searchLower = SearchText.ToLower();
+            return app.Name.ToLower().Contains(searchLower) ||
+                   app.AppCode.ToLower().Contains(searchLower) ||
+                   app.Description.ToLower().Contains(searchLower) ||
+                   app.Category.ToLower().Contains(searchLower);
+        }
+
+        /// <summary>
+        /// Apply filter to collection view
+        /// </summary>
+        private void ApplyFilter()
+        {
+            ApplicationsView?.Refresh();
+
+            var filteredCount = Applications.Count(FilterApplications);
+            StatusMessage = string.IsNullOrWhiteSpace(SearchText)
+                ? $"Loaded {Applications.Count} applications"
+                : $"Found {filteredCount} of {Applications.Count} applications";
+        }
+
+        /// <summary>
+        /// Apply sorting to collection view
+        /// </summary>
+        private void ApplySorting()
+        {
+            if (ApplicationsView == null) return;
+
+            ApplicationsView.SortDescriptions.Clear();
+
+            switch (SelectedSortOption)
+            {
+                case "Name":
+                    ApplicationsView.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+                    break;
+                case "Category":
+                    ApplicationsView.SortDescriptions.Add(new SortDescription("Category", ListSortDirection.Ascending));
+                    ApplicationsView.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+                    break;
+                case "Status":
+                    ApplicationsView.SortDescriptions.Add(new SortDescription("IsInstalled", ListSortDirection.Descending));
+                    ApplicationsView.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+                    break;
+            }
+
+            ApplicationsView.Refresh();
+        }
+
+        /// <summary>
+        /// Select all applications
+        /// </summary>
+        private void SelectAll()
+        {
+            foreach (var app in Applications)
+            {
+                app.IsSelected = true;
+            }
+            // _logger.Info("Selected all applications");
+        }
+
+        /// <summary>
+        /// Deselect all applications
+        /// </summary>
+        private void SelectNone()
+        {
+            foreach (var app in Applications)
+            {
+                app.IsSelected = false;
+            }
+            // _logger.Info("Deselected all applications");
+        }
+
+        /// <summary>
+        /// Clear search text
+        /// </summary>
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
         }
 
         /// <summary>
@@ -247,15 +517,63 @@ namespace ClientLauncher.ViewModels
         }
 
         /// <summary>
-        /// NEW INSTALL FLOW: Download manifest → Create shortcut (NO package download yet)
+        /// Check if there are any updates available (binary OR config)
         /// </summary>
-        private async Task InstallApplicationAsync()
+        private (bool, bool) HasAnyUpdate(VersionInfoDto serverVersionInfo, string installedVersion)
         {
-            if (SelectedApplication == null) return;
+            try
+            {
+                // Check binary version update
+                bool binaryUpdate = false;
+                if (!string.IsNullOrEmpty(serverVersionInfo.BinaryVersion))
+                {
+                    binaryUpdate = IsNewerVersion(serverVersionInfo.BinaryVersion, installedVersion);
+                }
+
+                // Check config version update
+                bool configUpdate = false;
+                if (!string.IsNullOrEmpty(serverVersionInfo.ConfigVersion))
+                {
+                    // Get local config version from manifest
+                    var localManifest = _manifestService.GetLocalManifestAsync(serverVersionInfo.AppCode).Result;
+                    if (localManifest != null && !string.IsNullOrEmpty(localManifest.Config?.Version))
+                    {
+                        configUpdate = IsNewerVersion(serverVersionInfo.ConfigVersion, localManifest.Config.Version);
+                    }
+                }
+
+                // Return true if either binary or config has update
+                bool hasUpdate = binaryUpdate || configUpdate;
+
+                if (hasUpdate)
+                {
+                    var updateParts = new List<string>();
+                    if (binaryUpdate) updateParts.Add($"Binary: {serverVersionInfo.BinaryVersion}");
+                    if (configUpdate) updateParts.Add($"Config: {serverVersionInfo.ConfigVersion}");
+
+                    // _logger.Info("Update available - {Updates}", string.Join(", ", updateParts));
+                }
+
+                return (binaryUpdate, configUpdate);
+            }
+            catch (Exception ex)
+            {
+                //_logger.Error(ex, "Error checking for updates");
+                return (false, false);
+            }
+        }
+
+        /// <summary>
+        /// Install multiple selected applications
+        /// </summary>
+        private async Task InstallSelectedApplicationsAsync()
+        {
+            var selectedApps = Applications.Where(a => a.IsSelected).ToList();
+            if (!selectedApps.Any()) return;
 
             try
             {
-                _logger.Info($"Starting installation setup for {SelectedApplication.Name} ({SelectedApplication.AppCode})");
+                // _logger.Info($"Starting installation for {selectedApps.Count} application(s)");
 
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -263,88 +581,97 @@ namespace ClientLauncher.ViewModels
                 OnPropertyChanged(nameof(IsStep3Visible));
 
                 IsProcessing = true;
-                ProgressValue = 0;
-                StatusMessage = "Preparing installation...";
+                var successCount = 0;
+                var failedApps = new List<string>();
 
-                await Task.Delay(500);
-                ProgressValue = 20;
-
-                // STEP 1: Check if manifest exists locally
-                StatusMessage = "Checking manifest...";
-                var localManifest = await _manifestService.GetLocalManifestAsync(SelectedApplication.AppCode);
-
-                if (localManifest == null)
+                for (int i = 0; i < selectedApps.Count; i++)
                 {
-                    _logger.Info($"No local manifest found, downloading from server for {SelectedApplication.AppCode}");
+                    var app = selectedApps[i];
+                    ProgressValue = (i * 100.0 / selectedApps.Count);
+                    StatusMessage = $"Installing {app.Name} ({i + 1}/{selectedApps.Count})...";
 
-                    ProgressValue = 40;
-                    StatusMessage = "Downloading manifest from server...";
-
-                    // Download manifest from server
-                    var serverManifest = await _manifestService.DownloadManifestFromServerAsync(SelectedApplication.AppCode);
-
-                    if (serverManifest == null)
+                    try
                     {
-                        throw new Exception("Failed to download manifest from server");
+                        var localManifest = await _manifestService.GetLocalManifestAsync(app.AppCode);
+
+                        if (localManifest == null)
+                        {
+                            var serverManifest = await _manifestService.DownloadManifestFromServerAsync(app.AppCode);
+                            if (serverManifest == null)
+                            {
+                                throw new Exception("Failed to download manifest");
+                            }
+                            await _manifestService.SaveManifestAsync(app.AppCode, serverManifest);
+                            localManifest = serverManifest;
+                        }
+
+                        var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+
+                        // UPDATED: Use IconService to get file path for shortcut
+                        var iconPath = _iconService.GetIconFilePath(app.IconUrl, app.Category);
+
+                        if (iconPath != null)
+                        {
+                            // _logger.Info("Using icon: {IconPath} for {AppName}", iconPath, app.Name);
+                        }
+                        else
+                        {
+                            _logger.Warn("No icon found for {AppName}, shortcut will use default", app.Name);
+                        }
+
+                        var shortcutCreated = _shortcutService.CreateDesktopShortcut(
+                            app.AppCode,
+                            app.Name,
+                            launcherPath,
+                            iconPath
+                        );
+
+                        if (shortcutCreated)
+                        {
+                            successCount++;
+                            // _logger.Info($"Successfully installed {app.Name}");
+                        }
+                        else
+                        {
+                            failedApps.Add(app.Name);
+                        }
                     }
-
-                    // Save manifest locally
-                    await _manifestService.SaveManifestAsync(SelectedApplication.AppCode, serverManifest);
-                    localManifest = serverManifest;
-
-                    _logger.Info($"Manifest downloaded and saved for {SelectedApplication.AppCode}");
+                    catch (Exception ex)
+                    {
+                        //_logger.Error(ex, $"Failed to install {app.Name}");
+                        failedApps.Add(app.Name);
+                    }
                 }
-                else
-                {
-                    _logger.Info($"Using existing local manifest for {SelectedApplication.AppCode}");
-                }
-
-                ProgressValue = 60;
-
-                // STEP 2: Create desktop shortcut
-                StatusMessage = "Creating desktop shortcut...";
-
-                var launcherPath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
-                var iconPath = GetIconPathForCategory(SelectedApplication.Category);
-
-                var shortcutCreated = _shortcutService.CreateDesktopShortcut(
-                    SelectedApplication.AppCode,
-                    SelectedApplication.Name,
-                    launcherPath,
-                    iconPath
-                );
-
-                if (!shortcutCreated)
-                {
-                    _logger.Warn("Failed to create desktop shortcut");
-                    throw new Exception("Failed to create desktop shortcut");
-                }
-
-                _logger.Info($"Desktop shortcut created for {SelectedApplication.AppCode}");
-
-                ProgressValue = 90;
-                StatusMessage = "Finalizing...";
-                await Task.Delay(300);
 
                 ProgressValue = 100;
+                StatusMessage = "Installation completed";
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
                 OnPropertyChanged(nameof(IsStep3Visible));
 
-                InstallationSuccess = true;
-                InstallationResult = $"✓ {SelectedApplication.Name} setup completed!\n\n" +
-                      $"Version: {localManifest.Binary?.Version}\n" +
-                      $"📦 The application package will be downloaded when you first run it.\n\n" +
-                      $"Desktop shortcut created!\n\n" +
-                      $"Click the desktop icon to download and launch the application.";
+                InstallationSuccess = failedApps.Count == 0;
 
-                _logger.Info($"Installation setup completed for {SelectedApplication.AppCode}");
+                if (InstallationSuccess)
+                {
+                    InstallationResult = $"✓ Successfully installed {successCount} application(s)!\n\n" +
+                                         $"Applications:\n" +
+                                         string.Join("\n", selectedApps.Select(a => $"  • {a.Name}")) +
+                                         $"\n\nDesktop shortcuts created!";
+                }
+                else
+                {
+                    InstallationResult = $"⚠ Partially completed:\n\n" +
+                                         $"✓ Success: {successCount}\n" +
+                                         $"✗ Failed: {failedApps.Count}\n\n" +
+                                         $"Failed applications:\n" +
+                                         string.Join("\n", failedApps.Select(f => $"  • {f}"));
+                }
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "Installation setup failed");
+                //_logger.Error(ex, "Batch installation failed");
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
@@ -352,7 +679,7 @@ namespace ClientLauncher.ViewModels
                 OnPropertyChanged(nameof(IsStep3Visible));
 
                 InstallationSuccess = false;
-                InstallationResult = $"✗ Installation setup failed\n\n{ex.Message}";
+                InstallationResult = $"✗ Installation failed\n\n{ex.Message}";
             }
             finally
             {
@@ -362,6 +689,9 @@ namespace ClientLauncher.ViewModels
 
         /// <summary>
         /// Get icon path based on category
+        /// </summary>
+        /// <summary>
+        /// Get icon path based on category (returns actual file path, not pack URI)
         /// </summary>
         private string? GetIconPathForCategory(string category)
         {
@@ -377,7 +707,27 @@ namespace ClientLauncher.ViewModels
             if (iconMap.TryGetValue(category, out var iconPath))
             {
                 var fullPath = Path.Combine(basePath ?? string.Empty, iconPath);
-                return File.Exists(fullPath) ? fullPath : null;
+                if (File.Exists(fullPath))
+                {
+                    //_logger.Debug("Found icon for category {Category}: {IconPath}", category, fullPath);
+                    return fullPath;
+                }
+                else
+                {
+                    _logger.Warn("Icon file not found: {IconPath}", fullPath);
+                }
+            }
+            else
+            {
+                _logger.Warn("No icon mapping for category: {Category}", category);
+            }
+
+            // Try default icon
+            var defaultIconPath = Path.Combine(basePath ?? string.Empty, "Assets\\Icons\\app_default.ico");
+            if (File.Exists(defaultIconPath))
+            {
+                //_logger.Debug("Using default icon: {IconPath}", defaultIconPath);
+                return defaultIconPath;
             }
 
             return null;
@@ -386,22 +736,100 @@ namespace ClientLauncher.ViewModels
         /// <summary>
         /// Uninstall application
         /// </summary>
+        /// <summary>
         private async Task UninstallApplicationAsync()
         {
+            var stopwatch = Stopwatch.StartNew();
             if (SelectedApplication == null || !SelectedApplication.IsInstalled) return;
-
-            var result = MessageBox.Show(
-                $"Are you sure you want to uninstall '{SelectedApplication.Name}'?",
-                "Confirm Uninstall",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning
-            );
-
-            if (result != MessageBoxResult.Yes)
-                return;
 
             try
             {
+                // _logger.Info("Checking if {AppCode} is currently running", SelectedApplication.AppCode);
+
+                // Check if application is running
+                var runningProcesses = ProcessHelper.GetRunningProcessesForApp(SelectedApplication.AppCode);
+
+                if (runningProcesses.Any())
+                {
+                    _logger.Warn("Application {AppCode} has running processes: {Processes}",
+                        SelectedApplication.AppCode, string.Join(", ", runningProcesses));
+
+                    var processNames = string.Join("\n  • ", runningProcesses);
+                    var result = MessageBox.Show(
+                        $"❌ Cannot uninstall '{SelectedApplication.Name}'\n\n" +
+                        $"The following processes are currently running:\n  • {processNames}\n\n" +
+                        $"Please close the application and try again.\n\n" +
+                        $"Do you want to force close these processes and continue uninstallation?\n" +
+                        $"⚠️ WARNING: This may cause data loss if the application has unsaved work.",
+                        "Application Running",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning
+                    );
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        // _logger.Info("User chose to force close processes for {AppCode}", SelectedApplication.AppCode);
+
+                        StatusMessage = "Force closing application processes...";
+
+                        if (!ProcessHelper.TryKillApplicationProcesses(SelectedApplication.AppCode, out var failedProcesses))
+                        {
+                            MessageBox.Show(
+                                $"❌ Failed to close some processes:\n  • {string.Join("\n  • ", failedProcesses)}\n\n" +
+                                $"Please close these processes manually and try again.",
+                                "Force Close Failed",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                            );
+                            StatusMessage = "Uninstallation cancelled - processes still running";
+                            return;
+                        }
+
+                        // Wait a bit for processes to fully terminate
+                        await Task.Delay(2000);
+
+                        // Double check if processes are really terminated
+                        runningProcesses = ProcessHelper.GetRunningProcessesForApp(SelectedApplication.AppCode);
+                        if (runningProcesses.Any())
+                        {
+                            MessageBox.Show(
+                                $"❌ Some processes are still running:\n  • {string.Join("\n  • ", runningProcesses)}\n\n" +
+                                $"Please close these processes manually and try again.",
+                                "Processes Still Running",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error
+                            );
+                            StatusMessage = "Uninstallation cancelled - processes still running";
+                            return;
+                        }
+
+                        // _logger.Info("Successfully closed all processes for {AppCode}", SelectedApplication.AppCode);
+                    }
+                    else
+                    {
+                        // _logger.Info("User cancelled uninstallation for {AppCode}", SelectedApplication.AppCode);
+                        StatusMessage = "Uninstallation cancelled by user";
+                        return;
+                    }
+                }
+
+                // Confirm uninstallation
+                var confirmResult = MessageBox.Show(
+                    $"Are you sure you want to uninstall '{SelectedApplication.Name}'?\n\n" +
+                    $"This will remove all application files from C:\\CompanyApps\\{SelectedApplication.AppCode}",
+                    "Confirm Uninstall",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning
+                );
+
+                if (confirmResult != MessageBoxResult.Yes)
+                {
+                    StatusMessage = "Uninstallation cancelled by user";
+                    return;
+                }
+
+                // _logger.Info("Starting uninstallation for {AppCode}", SelectedApplication.AppCode);
+
                 CurrentStep = 2;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -410,43 +838,134 @@ namespace ClientLauncher.ViewModels
                 IsProcessing = true;
                 ProgressValue = 0;
                 StatusMessage = "Preparing uninstallation...";
-
                 await Task.Delay(500);
-                ProgressValue = 30;
 
-                StatusMessage = "Removing application files...";
-                var userName = Environment.UserName;
-                var uninstallResult = await _apiService.UninstallApplicationAsync(
+                ProgressValue = 20;
+                StatusMessage = "Removing application files from C:\\CompanyApps...";
+                await Task.Delay(300);
+
+                // Use InstallationService to uninstall
+                var installationService = new InstallationService();
+                var uninstallResult = await installationService.UninstallApplicationAsync(
                     SelectedApplication.AppCode,
-                    userName
-                );
+                    Environment.UserName);
 
-                ProgressValue = 80;
+                ProgressValue = 70;
 
-                // Remove desktop shortcut
                 if (uninstallResult.Success)
                 {
                     StatusMessage = "Removing desktop shortcut...";
                     _shortcutService.RemoveDesktopShortcut(SelectedApplication.Name);
                     ProgressValue = 90;
+                    await Task.Delay(300);
+
+                    StatusMessage = "Finalizing uninstallation...";
+                    ProgressValue = 95;
+                    await Task.Delay(200);
+
+                    // _logger.Info("Successfully uninstalled {AppCode}", SelectedApplication.AppCode);
+                }
+                else
+                {
+                    StatusMessage = "Uninstallation failed";
+                    InstallationResult = $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
+                    CurrentStep = 3;
+                    OnPropertyChanged(nameof(IsStep1Visible));
+                    OnPropertyChanged(nameof(IsStep2Visible));
+                    OnPropertyChanged(nameof(IsStep3Visible));
+
+                    InstallationSuccess = false;
+                    return;
                 }
 
-                StatusMessage = "Finalizing...";
+                StatusMessage = "Uninstallation completed successfully";
                 ProgressValue = 100;
+                await Task.Delay(300);
 
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
                 OnPropertyChanged(nameof(IsStep3Visible));
 
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
+                    true,
+                    stopwatch.Elapsed,
+                    null,
+                    SelectedApplication.InstalledBinaryVersion,
+                    "Uninstall");
+
                 InstallationSuccess = uninstallResult.Success;
-                InstallationResult = uninstallResult.Success
-                    ? $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
-                      $"Uninstalled by: {userName}"
-                    : $"✗ Uninstallation failed\n\n{uninstallResult.Message}\n{uninstallResult.ErrorDetails}";
+                InstallationResult = $"✓ {SelectedApplication.Name} uninstalled successfully!\n\n" +
+                                   $"All files removed from C:\\CompanyApps\\{SelectedApplication.AppCode}\n" +
+                                   $"Desktop shortcut removed\n\n" +
+                                   $"Uninstalled by: {Environment.UserName}";
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                //_logger.Error(uaEx, "Access denied during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+
+                StatusMessage = "Uninstallation failed - Access Denied";
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Uninstallation failed - Access Denied\n\n" +
+                                   $"Some files are in use or you don't have permission to delete them.\n\n" +
+                                   $"Please make sure:\n" +
+                                   $"  • The application is completely closed\n" +
+                                   $"  • No files are open in other programs\n" +
+                                   $"  • You have administrator permissions\n\n" +
+                                   $"Error: {uaEx.Message}";
+
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    $"Access Denied: {uaEx.Message}",
+                    SelectedApplication.InstalledBinaryVersion,
+                    "Uninstall");
+            }
+            catch (IOException ioEx)
+            {
+                //_logger.Error(ioEx, "IO error during uninstallation for {AppCode}", SelectedApplication?.AppCode);
+
+                StatusMessage = "Uninstallation failed - File Access Error";
+                CurrentStep = 3;
+                OnPropertyChanged(nameof(IsStep1Visible));
+                OnPropertyChanged(nameof(IsStep2Visible));
+                OnPropertyChanged(nameof(IsStep3Visible));
+
+                InstallationSuccess = false;
+                InstallationResult = $"✗ Uninstallation failed - File Access Error\n\n" +
+                                   $"Some files are currently in use.\n\n" +
+                                   $"Please close all applications and try again.\n\n" +
+                                   $"Error: {ioEx.Message}";
+
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    $"File in use: {ioEx.Message}",
+                    SelectedApplication.InstalledBinaryVersion,
+                    "Uninstall");
             }
             catch (Exception ex)
             {
+                //_logger.Error(ex, "Uninstallation failed for {AppCode}", SelectedApplication?.AppCode);
+
+                StatusMessage = "Uninstallation failed - Unexpected Error";
                 CurrentStep = 3;
                 OnPropertyChanged(nameof(IsStep1Visible));
                 OnPropertyChanged(nameof(IsStep2Visible));
@@ -454,6 +973,17 @@ namespace ClientLauncher.ViewModels
 
                 InstallationSuccess = false;
                 InstallationResult = $"✗ Uninstallation failed\n\n{ex.Message}";
+
+                // Write Log
+                stopwatch.Stop();
+                await _apiService.NotifyInstallationAsync(
+                    SelectedApplication.AppCode,
+                    SelectedApplication.InstalledBinaryVersion ?? string.Empty,
+                    false,
+                    stopwatch.Elapsed,
+                    ex.Message,
+                    SelectedApplication.InstalledBinaryVersion,
+                    "Uninstall");
             }
             finally
             {
@@ -469,12 +999,22 @@ namespace ClientLauncher.ViewModels
             ProgressValue = 0;
             InstallationResult = string.Empty;
 
+            // Clear all selections
+            foreach (var app in Applications)
+            {
+                app.IsSelected = false;
+            }
+
             OnPropertyChanged(nameof(IsStep1Visible));
             OnPropertyChanged(nameof(IsStep2Visible));
             OnPropertyChanged(nameof(IsStep3Visible));
+            OnPropertyChanged(nameof(HasSelectedApplications));
 
             // Reload applications
             _ = LoadApplicationsAsync();
         }
+
+        public bool HasSelectedApplications => Applications?.Any(a => a.IsSelected) ?? false;
+        #endregion
     }
 }

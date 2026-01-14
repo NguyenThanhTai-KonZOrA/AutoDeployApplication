@@ -1,32 +1,61 @@
-﻿using ClientLauncher.Services;
-
-namespace ClientLauncher.Models
+﻿namespace ClientLauncher.Models
 {
-    // DTOs
     public class ManifestDto
     {
         public string AppCode { get; set; } = string.Empty;
-        public BinaryDto? Binary { get; set; }
-        public ConfigDto? Config { get; set; }
-        public UpdatePolicyDto? UpdatePolicy { get; set; }
-    }
+        public BinaryInfo Binary { get; set; } = new();
+        public ConfigInfo Config { get; set; } = new();
+        public UpdatePolicyInfo UpdatePolicy { get; set; } = new();
 
-    public class BinaryDto
-    {
-        public string Version { get; set; } = string.Empty;
-        public string Package { get; set; } = string.Empty;
-    }
+        public class BinaryInfo
+        {
+            public string Version { get; set; } = string.Empty;
+            public string Package { get; set; } = string.Empty;
+            public List<string> Files { get; set; } = new(); //  Specific files to update
+        }
 
-    public class ConfigDto
-    {
-        public string Version { get; set; } = string.Empty;
-        public string Package { get; set; } = string.Empty;
-        public string MergeStrategy { get; set; } = "preserveLocal";
-    }
+        public class ConfigInfo
+        {
+            public string Version { get; set; } = string.Empty;
+            public string Package { get; set; } = string.Empty;
 
-    public class UpdatePolicyDto
-    {
-        public string Type { get; set; } = "both";
-        public bool Force { get; set; }
+            /// <summary>
+            /// Strategy: "preserveLocal" | "replaceAll" | "selective" | "merge"
+            /// </summary>
+            public string MergeStrategy { get; set; } = "preserveLocal";
+
+            //  Selective file update configuration
+            public List<ConfigFilePolicy> Files { get; set; } = new();
+        }
+
+        public class ConfigFilePolicy
+        {
+            public string Name { get; set; } = string.Empty;
+
+            /// <summary>
+            /// "merge" | "preserve" | "replace"
+            /// </summary>
+            public string UpdatePolicy { get; set; } = "preserve";
+
+            /// <summary>
+            /// "server" | "local" - Which takes priority in merge
+            /// </summary>
+            public string Priority { get; set; } = "local";
+        }
+
+        public class UpdatePolicyInfo
+        {
+            /// <summary>
+            /// "both" | "binary" | "config" | "none"
+            /// </summary>
+            public string Type { get; set; } = "both";
+
+            public bool Force { get; set; }
+
+            //  Additional flags
+            public bool NotifyUser { get; set; } = true;
+            public bool AllowSkip { get; set; } = true;
+            public string Description { get; set; } = string.Empty;
+        }
     }
 }

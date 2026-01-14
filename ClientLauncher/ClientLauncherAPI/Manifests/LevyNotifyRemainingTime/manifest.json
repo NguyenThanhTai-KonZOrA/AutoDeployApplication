@@ -1,0 +1,16 @@
+{
+  "appCode": "LevyNotifyRemainingTime",
+  "binary": {
+    "version": "1.0.2",
+    "package": "LevyNotifyRemainingTime_1.0.2.zip"
+  },
+  "config": {
+    "version": "1.0.2",
+    "package": "LevyNotifyRemainingTime_1.0.2.zip",
+    "mergeStrategy": "preserveLocal"
+  },
+  "updatePolicy": {
+    "type": "both",
+    "force": false
+  }
+}

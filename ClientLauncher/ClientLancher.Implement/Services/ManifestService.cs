@@ -1,27 +1,36 @@
-﻿using ClientLancher.Implement.Services.Interface;
-using ClientLancher.Implement.ViewModels.Request;
-using ClientLancher.Implement.ViewModels.Response;
+﻿using ClientLauncher.Implement.Services.Interface;
+using ClientLauncher.Implement.ViewModels;
+using ClientLauncher.Implement.ViewModels.Request;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
-namespace ClientLancher.Implement.Services
+namespace ClientLauncher.Implement.Services
 {
     public class ManifestService : IManifestService
     {
+        #region Init Constructor
         private readonly string _appsBasePath;
         private readonly ILogger<ManifestService> _logger;
         private readonly HttpClient _httpClient;
-        private readonly string _serverUrl;
+        private readonly DeploymentSettings _deploymentSettings;
 
-        public ManifestService(ILogger<ManifestService> logger, HttpClient httpClient)
+        public ManifestService(ILogger<ManifestService> logger, HttpClient httpClient, DeploymentSettings deploymentSettings)
         {
             _appsBasePath = "C:\\CompanyApps";
             _logger = logger;
             _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _serverUrl = "http://10.21.10.1:8102"; // Load from config
+            _deploymentSettings = deploymentSettings;
         }
+        #endregion
 
+        #region Main Methods
+
+        /// <summary>
+        /// GetManifestAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
         public async Task<AppManifest?> GetManifestAsync(string appCode)
         {
             var appFolder = Path.Combine(_appsBasePath, appCode);
@@ -189,6 +198,12 @@ namespace ClientLancher.Implement.Services
             }
         }
 
+        /// <summary>
+        /// UpdateManifestAsync
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <param name="manifest"></param>
+        /// <returns></returns>
         public async Task UpdateManifestAsync(string appCode, AppManifest manifest)
         {
             var appFolder = Path.Combine(_appsBasePath, appCode);
@@ -217,7 +232,7 @@ namespace ClientLancher.Implement.Services
 
             try
             {
-                var downloadUrl = $"{_serverUrl}/api/apps/{appCode}/manifest/download";
+                var downloadUrl = $"{_deploymentSettings.ServerBaseUrl}/api/apps/{appCode}/manifest/download";
                 _logger.LogInformation("Downloading manifest from {Url} (Attempt {Attempt}/{MaxRetries})",
                     downloadUrl, retryCount + 1, maxRetries);
 
@@ -317,6 +332,11 @@ namespace ClientLancher.Implement.Services
             }
         }
 
+        /// <summary>
+        /// CreateDefaultManifest
+        /// </summary>
+        /// <param name="appCode"></param>
+        /// <returns></returns>
         private AppManifest CreateDefaultManifest(string appCode)
         {
             _logger.LogInformation("Creating default manifest for {AppCode}", appCode);
@@ -342,5 +362,6 @@ namespace ClientLancher.Implement.Services
                 }
             };
         }
+        #endregion
     }
 }

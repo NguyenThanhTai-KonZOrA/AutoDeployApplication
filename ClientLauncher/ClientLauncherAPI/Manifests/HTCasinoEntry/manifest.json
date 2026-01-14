@@ -1,12 +1,12 @@
 {
   "appCode": "HTCasinoEntry",
   "binary": {
-    "version": "v1.2.0",
-    "package": "HTCasinoEntry_v1.2.0.zip"
+    "version": "1.0.0",
+    "package": "HTCasinoEntry_1.0.0.zip"
   },
   "config": {
-    "version": "v1.2.0",
-    "package": "HTCasinoEntry_v1.2.0.zip",
+    "version": "1.0.0",
+    "package": "HTCasinoEntry_1.0.0.zip",
     "mergeStrategy": "preserveLocal"
   },
   "updatePolicy": {
