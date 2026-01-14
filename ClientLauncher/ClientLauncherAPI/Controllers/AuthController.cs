@@ -123,14 +123,7 @@ namespace ClientLauncherAPI.Controllers
                     loginRequest.Username,
                     TokenValidationService.ServerStartTime);
 
-                return Ok(
-                    new
-                    {
-                        status = 200,
-                        success = true,
-                        data = tokenResponse
-                    }
-                );
+                return Ok(tokenResponse);
             }
             catch (Exception ex)
             {
@@ -207,14 +200,7 @@ namespace ClientLauncherAPI.Controllers
 
                 _logger.LogInformation("✅ Token refreshed for {Username}", username);
 
-                return Ok(
-                    new
-                    {
-                        status = 200,
-                        success = true,
-                        data = tokenResponse
-                    }
-                );
+                return Ok(tokenResponse);
             }
             catch (Exception ex)
             {
