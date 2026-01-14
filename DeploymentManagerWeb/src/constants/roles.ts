@@ -13,16 +13,18 @@ export const Permission = {
     // Admin Registration permissions
     VIEW_ADMIN_DASHBOARD: 'view_admin_dashboard',
     VIEW_ADMIN_CALL: 'view_admin_call',
-
-    // Future permissions can be added here
-    VIEW_REPORTS: 'view_reports',
+    VIEW_APPLICATION_MANAGEMENT: 'view_application_management',
+    VIEW_CATEGORY_MANAGEMENT: 'view_category_management',
+    VIEW_INSTALLATION_LOGS: 'view_installation_logs',
+    VIEW_PACKAGE_MANAGEMENT: 'view_package_management',
+    VIEW_ICON_MANAGEMENT: 'view_icon_management',
+    VIEW_INSTALLATION_REPORTS: 'view_reports',
     VIEW_ROLE_MANAGEMENT: 'view_role_management',
     VIEW_AUDIT_LOGS: 'view_audit_logs',
     VIEW_SYSTEM_SETTINGS: 'view_system_settings',
     VIEW_TICKET_ARCHIVE: 'view_ticket_archive',
     VIEW_EMPLOYEE_MANAGEMENT: 'view_employee_management',
-    // MANAGE_USERS: 'manage_users',
-    // etc.
+    VIEW_PERMISSION_MANAGEMENT: 'permission_management',
 } as const;
 
 export type Permission = typeof Permission[keyof typeof Permission];
@@ -34,23 +36,31 @@ export type Permission = typeof Permission[keyof typeof Permission];
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     [UserRole.ADMIN]: [
         Permission.VIEW_ADMIN_DASHBOARD,
-        Permission.VIEW_ADMIN_CALL,
-        Permission.VIEW_REPORTS,
-        Permission.VIEW_ROLE_MANAGEMENT,
+        Permission.VIEW_APPLICATION_MANAGEMENT,
+        Permission.VIEW_CATEGORY_MANAGEMENT,
+        Permission.VIEW_PACKAGE_MANAGEMENT,
+        Permission.VIEW_ICON_MANAGEMENT,
+        Permission.VIEW_INSTALLATION_LOGS,
+        Permission.VIEW_INSTALLATION_REPORTS,
         Permission.VIEW_AUDIT_LOGS,
-        Permission.VIEW_SYSTEM_SETTINGS,
-        Permission.VIEW_TICKET_ARCHIVE,
+        Permission.VIEW_ROLE_MANAGEMENT,
+        Permission.VIEW_PERMISSION_MANAGEMENT,
         Permission.VIEW_EMPLOYEE_MANAGEMENT,
-
+        Permission.VIEW_SYSTEM_SETTINGS,
     ],
     [UserRole.USER]: [
         Permission.VIEW_ADMIN_CALL,
-        // User does not have permission for device mapping
+        Permission.VIEW_ADMIN_DASHBOARD,
     ],
     [UserRole.MANAGER]: [
         Permission.VIEW_ADMIN_DASHBOARD,
-        Permission.VIEW_REPORTS,
-        Permission.VIEW_EMPLOYEE_MANAGEMENT,
+        Permission.VIEW_APPLICATION_MANAGEMENT,
+        Permission.VIEW_CATEGORY_MANAGEMENT,
+        Permission.VIEW_PACKAGE_MANAGEMENT,
+        Permission.VIEW_ICON_MANAGEMENT,
+        Permission.VIEW_INSTALLATION_LOGS,
+        Permission.VIEW_INSTALLATION_REPORTS,
+        Permission.VIEW_AUDIT_LOGS,
     ],
     [UserRole.COUNTERSTAFF]: [
         Permission.VIEW_ADMIN_CALL,

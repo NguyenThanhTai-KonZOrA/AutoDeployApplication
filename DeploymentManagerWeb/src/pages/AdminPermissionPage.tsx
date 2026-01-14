@@ -42,10 +42,10 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { permissionService } from "../services/rolePermissionService";
-import type { PermissionResponse, CreatePermissionRequest, UpdatePermissionRequest } from "../rolePermissionType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import type { PermissionResponse, CreatePermissionRequest, UpdatePermissionRequest } from "../type/rolePermissionType";
 
 export default function AdminPermissionPage() {
     useSetPageTitle(PAGE_TITLES.PERMISSIONS);

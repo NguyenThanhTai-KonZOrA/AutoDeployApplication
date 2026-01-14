@@ -45,10 +45,10 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { roleService, permissionService } from "../services/rolePermissionService";
-import type { RoleResponse, PermissionResponse, CreateRoleRequest, UpdateRoleRequest } from "../rolePermissionType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
+import type { RoleResponse, PermissionResponse, CreateRoleRequest, UpdateRoleRequest } from "../type/rolePermissionType";
 
 export default function AdminRolePage() {
     useSetPageTitle(PAGE_TITLES.ROLES);

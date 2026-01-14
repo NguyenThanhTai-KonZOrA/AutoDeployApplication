@@ -48,9 +48,9 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
 import { employeeRoleService, roleService } from "../services/rolePermissionService";
-import type { EmployeeResponse, EmployeeWithRoles, RoleResponse, AssignRoleRequest } from "../rolePermissionType";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
+import type { EmployeeResponse, RoleResponse, EmployeeWithRoles, AssignRoleRequest } from "../type/rolePermissionType";
 
 export default function AdminEmployeePage() {
     useSetPageTitle(PAGE_TITLES.EMPLOYEES);

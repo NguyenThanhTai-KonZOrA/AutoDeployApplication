@@ -8,8 +8,6 @@ import { useNetworkStatus } from './hooks/useNetworkStatus'
 import Login from './components/Login'
 import './App.css'
 import AdminDashboard from './pages/AdminDashboard'
-import EmployeeReportPage from './pages/EmployeeReportPage'
-import AdminSettingsPage from './pages/AdminSettingsPage'
 import { AppLoadingProvider } from './contexts/AppLoadingContext'
 import RoleBasedRoute from './components/RoleBasedRoute'
 import { Permission } from './constants/roles'
@@ -49,49 +47,97 @@ function AppContent() {
 
         <Route path="/admin-dashboard" element={
           <ProtectedRoute>
-            <AdminDashboard />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_ADMIN_DASHBOARD}
+              fallbackPath="/admin-dashboard"
+              showAccessDenied={true}
+            >
+              <AdminDashboard />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-application" element={
           <ProtectedRoute>
-            <AdminApplicationPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_APPLICATION_MANAGEMENT}
+              fallbackPath="/admin-application"
+              showAccessDenied={true}
+            >
+              <AdminApplicationPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-category" element={
           <ProtectedRoute>
-            <AdminCategoryPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_CATEGORY_MANAGEMENT}
+              fallbackPath="/admin-category"
+              showAccessDenied={true}
+            >
+              <AdminCategoryPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-installation" element={
           <ProtectedRoute>
-            <AdminInstallationLogPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_INSTALLATION_LOGS}
+              fallbackPath="/admin-installation"
+              showAccessDenied={true}
+            >
+              <AdminInstallationLogPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-package" element={
           <ProtectedRoute>
-            <AdminPackagesPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_PACKAGE_MANAGEMENT}
+              fallbackPath="/admin-package"
+              showAccessDenied={true}
+            >
+              <AdminPackagesPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-report-by-application" element={
           <ProtectedRoute>
-            <AdminReportByApplicationPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_INSTALLATION_REPORTS}
+              fallbackPath="/admin-report-by-application"
+              showAccessDenied={true}
+            >
+              <AdminReportByApplicationPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-icons" element={
           <ProtectedRoute>
-            <AdminIconsPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_ICON_MANAGEMENT}
+              fallbackPath="/admin-icons"
+              showAccessDenied={true}
+            >
+              <AdminIconsPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
         <Route path="/admin-audit-logs" element={
           <ProtectedRoute>
-            <AdminAuditLogsPage />
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_AUDIT_LOGS}
+              fallbackPath="/admin-audit-logs"
+              showAccessDenied={true}
+            >
+              <AdminAuditLogsPage />
+            </RoleBasedRoute>
           </ProtectedRoute>
         } />
 
