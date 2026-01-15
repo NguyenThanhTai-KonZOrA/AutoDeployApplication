@@ -1,7 +1,6 @@
 ﻿using ClientLauncher.Common.Constants;
 using ClientLauncher.Implement.Services.Interface;
 using ClientLauncher.Implement.ViewModels.Response;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -13,11 +12,13 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IEmployeeRoleService _employeeRoleService;
         private readonly ILogger<EmployeeRoleController> _logger;
+        private readonly IAuditLogService _auditLogService;
 
-        public EmployeeRoleController(IEmployeeRoleService employeeRoleService, ILogger<EmployeeRoleController> logger)
+        public EmployeeRoleController(IEmployeeRoleService employeeRoleService, ILogger<EmployeeRoleController> logger, IAuditLogService auditLogService)
         {
             _employeeRoleService = employeeRoleService;
             _logger = logger;
+            _auditLogService = auditLogService;
         }
 
         /// <summary>
@@ -62,9 +63,45 @@ namespace ClientLauncherAPI.Controllers
 
                 if (result)
                 {
+                    // Audit log entry
+                    await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                    {
+                        EntityId = request.EmployeeId,
+                        EntityType = "Employee",
+                        UserName = userName,
+                        HttpMethod = "POST",
+                        RequestPath = HttpContext.Request.Path,
+                        IsSuccess = true,
+                        StatusCode = 200,
+                        ErrorMessage = null,
+                        IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                        Action = "AssignRoles",
+                        DurationMs = null,
+                        Details = $"Assigned roles [{string.Join(", ", request.RoleIds)}] to employee ID {request.EmployeeId} by {userName}"
+                    });
+
                     _logger.LogInformation("[AssignRolesToEmployee]: Roles assigned successfully to employee {EmployeeId}", request.EmployeeId);
                     return Ok(new { message = "Roles assigned successfully", success = true });
                 }
+
+                // Audit log entry for failure
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    EntityId = request.EmployeeId,
+                    EntityType = "Employee",
+                    UserName = userName,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    ErrorMessage = "Failed to assign roles",
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    Action = "AssignRoles",
+                    DurationMs = null,
+                    Details = $"Failed to assign roles [{string.Join(", ", request.RoleIds)}] to employee ID {request.EmployeeId} by {userName}"
+                });
 
                 return BadRequest(new { message = "Failed to assign roles", success = false });
             }
@@ -75,6 +112,23 @@ namespace ClientLauncherAPI.Controllers
             }
             catch (Exception ex)
             {
+                string userName = User.FindFirst(ClaimTypes.Name)?.Value ?? CommonConstants.UnknownUser;
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    EntityId = request.EmployeeId,
+                    EntityType = "Employee",
+                    UserName = userName,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    IsSuccess = false,
+                    StatusCode = 400,
+                    ErrorMessage = "Failed to assign roles",
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    Action = "AssignRoles",
+                    DurationMs = null,
+                    Details = $"Failed to assign roles [{string.Join(", ", request.RoleIds)}] to employee ID {request.EmployeeId} by {userName}"
+                });
                 _logger.LogError(ex, "[AssignRolesToEmployee]: Error assigning roles to employee {EmployeeId}", request.EmployeeId);
                 return StatusCode(500, new { message = "An error occurred while assigning roles", error = ex.Message });
             }

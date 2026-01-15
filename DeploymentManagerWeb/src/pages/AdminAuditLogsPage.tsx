@@ -65,7 +65,8 @@ const ACTIONS = [
     'CreateManifest',
     'UploadPackage',
     'UpdatePackage',
-    'DeletePackage'
+    'DeletePackage',
+    'AssignRoles'
 ];
 
 const AdminAuditLogsPage: React.FC = () => {
