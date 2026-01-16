@@ -2,6 +2,7 @@ import axios from "axios";
 import { showSessionExpiredNotification } from "../utils/showSessionExpiredNotification";
 import type { ApiEnvelope } from "../type/commonType";
 import type { AssignRoleRequest, CreatePermissionRequest, CreateRoleRequest, EmployeeResponse, EmployeeWithRoles, PermissionResponse, RoleResponse, UpdatePermissionRequest, UpdateRoleRequest } from "../type/rolePermissionType";
+import type { CreateEmployeeRequest } from "../type/employeeType";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
@@ -161,4 +162,14 @@ export const employeeRoleService = {
         const response = await api.get(`/api/Employee/list`);
         return unwrapApiEnvelope(response);
     },
+
+    createEmployee: async (data: CreateEmployeeRequest): Promise<EmployeeResponse> => {
+        const response = await api.post(`/api/Employee/create`, data);
+        return unwrapApiEnvelope(response);
+    },
+
+    deleteEmployee: async (id: number): Promise<boolean> => {
+        const response = await api.post(`/api/Employee/delete/${id}`);
+        return unwrapApiEnvelope(response);
+    }
 };

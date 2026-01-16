@@ -291,6 +291,15 @@ const AdminAuditLogsPage: React.FC = () => {
                                             size="small"
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
+                                            inputProps={{
+                                                max: FormatUtcTime.getTodayWithTimeString(),
+                                            }}
+                                            onFocus={(e) => {
+                                                const input = e.target as HTMLInputElement;
+                                                if (input.showPicker) {
+                                                    input.showPicker();
+                                                }
+                                            }}
                                         />
                                     </Box>
 
@@ -304,6 +313,16 @@ const AdminAuditLogsPage: React.FC = () => {
                                             size="small"
                                             fullWidth
                                             InputLabelProps={{ shrink: true }}
+                                            inputProps={{
+                                                max: FormatUtcTime.getTodayWithTimeString(),
+                                                min: fromDate
+                                            }}
+                                            onFocus={(e) => {
+                                                const input = e.target as HTMLInputElement;
+                                                if (input.showPicker) {
+                                                    input.showPicker();
+                                                }
+                                            }}
                                         />
                                     </Box>
 

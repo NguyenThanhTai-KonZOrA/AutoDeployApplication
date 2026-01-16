@@ -44,6 +44,8 @@ import {
     Visibility as ViewIcon,
     Close as CloseIcon,
     Save as SaveIcon,
+    Add as AddIcon,
+    Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -51,6 +53,7 @@ import { employeeRoleService, roleService } from "../services/rolePermissionServ
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import type { EmployeeResponse, RoleResponse, EmployeeWithRoles, AssignRoleRequest } from "../type/rolePermissionType";
+import type { CreateEmployeeRequest } from "../type/employeeType";
 
 export default function AdminEmployeePage() {
     useSetPageTitle(PAGE_TITLES.EMPLOYEES);
@@ -75,6 +78,17 @@ export default function AdminEmployeePage() {
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
     const [detailDialogLoading, setDetailDialogLoading] = useState(false);
     const [employeeDetails, setEmployeeDetails] = useState<EmployeeWithRoles | null>(null);
+
+    // Create Employee Dialog states
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [createDialogLoading, setCreateDialogLoading] = useState(false);
+    const [newEmployeeUserName, setNewEmployeeUserName] = useState("");
+    const [userNameError, setUserNameError] = useState("");
+
+    // Delete confirmation states
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [deleteDialogLoading, setDeleteDialogLoading] = useState(false);
+    const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeResponse | null>(null);
 
     const showSnackbar = (message: string, severity: "success" | "error") => {
         setSnackbar({ open: true, message, severity });
@@ -217,6 +231,98 @@ export default function AdminEmployeePage() {
         setEmployeeDetails(null);
     };
 
+    // Handle Create Employee Dialog
+    const handleOpenCreateDialog = () => {
+        setCreateDialogOpen(true);
+        setNewEmployeeUserName("");
+        setUserNameError("");
+    };
+
+    const handleCloseCreateDialog = () => {
+        setCreateDialogOpen(false);
+        setNewEmployeeUserName("");
+        setUserNameError("");
+    };
+
+    const handleCreateEmployee = async () => {
+        // Validate username
+        if (!newEmployeeUserName.trim()) {
+            setUserNameError("Username is required");
+            return;
+        }
+
+        try {
+            setCreateDialogLoading(true);
+
+            const request: CreateEmployeeRequest = {
+                EmployeeUserName: newEmployeeUserName.trim(),
+            };
+
+            const result = await employeeRoleService.createEmployee(request);
+
+            if (result) {
+                showSnackbar(`Employee "${newEmployeeUserName}" created successfully!`, "success");
+                handleCloseCreateDialog();
+                // Reload employees list
+                loadEmployees();
+            } else {
+                showSnackbar("Failed to create employee", "error");
+            }
+        } catch (error: any) {
+            console.error("Error creating employee:", error);
+            let errorMessage = "Error creating employee";
+            if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+            showSnackbar(errorMessage, "error");
+        } finally {
+            setCreateDialogLoading(false);
+        }
+    };
+
+    // Handle Delete Employee
+    const handleOpenDeleteDialog = (employee: EmployeeResponse) => {
+        setEmployeeToDelete(employee);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setDeleteDialogOpen(false);
+        setEmployeeToDelete(null);
+    };
+
+    const handleDeleteEmployee = async () => {
+        if (!employeeToDelete) return;
+
+        try {
+            setDeleteDialogLoading(true);
+
+            const result = await employeeRoleService.deleteEmployee(employeeToDelete.id);
+
+            if (result) {
+                showSnackbar(`Employee "${employeeToDelete.fullName}" deleted successfully!`, "success");
+                handleCloseDeleteDialog();
+                // Reload employees list
+                loadEmployees();
+            } else {
+                showSnackbar("Failed to delete employee", "error");
+            }
+        } catch (error: any) {
+            console.error("Error deleting employee:", error);
+            let errorMessage = "Error deleting employee";
+            if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+            showSnackbar(errorMessage, "error");
+        } finally {
+            setDeleteDialogLoading(false);
+        }
+    };
+
     // Auto load data on component mount
     useEffect(() => {
         loadEmployees();
@@ -333,7 +439,20 @@ export default function AdminEmployeePage() {
                                 </Button>
                             </Grid>
 
-                            <Grid size={{ xs: 12, md: 4 }}>
+                            <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+                                <Button
+                                    variant="contained"
+                                    color="success"
+                                    fullWidth
+                                    startIcon={<AddIcon />}
+                                    onClick={handleOpenCreateDialog}
+                                    disabled={loading}
+                                >
+                                    Create
+                                </Button>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 2 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                                     Total: {filteredEmployees.length} employees
                                     {searchTerm && ` (filtered from ${employees.length})`}
@@ -462,6 +581,15 @@ export default function AdminEmployeePage() {
                                                                 onClick={() => handleOpenDetailDialog(employee)}
                                                             >
                                                                 <ViewIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title="Delete Employee">
+                                                            <IconButton
+                                                                size="small"
+                                                                color="error"
+                                                                onClick={() => handleOpenDeleteDialog(employee)}
+                                                            >
+                                                                <DeleteIcon />
                                                             </IconButton>
                                                         </Tooltip>
                                                     </Box>
@@ -770,6 +898,127 @@ export default function AdminEmployeePage() {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+
+            {/* Create Employee Dialog */}
+            <Dialog
+                open={createDialogOpen}
+                onClose={handleCloseCreateDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6">
+                            Create New Employee
+                        </Typography>
+                        <IconButton onClick={handleCloseCreateDialog} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mt: 2 }}>
+                        <TextField
+                            fullWidth
+                            label="Username"
+                            value={newEmployeeUserName}
+                            onChange={(e) => {
+                                setNewEmployeeUserName(e.target.value);
+                                if (userNameError) setUserNameError("");
+                            }}
+                            error={!!userNameError}
+                            helperText={userNameError || "Enter the username for the new employee (required)"}
+                            disabled={createDialogLoading}
+                            required
+                            autoFocus
+                            placeholder="e.g., john.doe"
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={handleCloseCreateDialog}
+                        disabled={createDialogLoading}
+                        sx={{ border: 1 }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleCreateEmployee}
+                        variant="contained"
+                        color="success"
+                        disabled={createDialogLoading || !newEmployeeUserName.trim()}
+                        startIcon={<AddIcon />}
+                    >
+                        {createDialogLoading ? "Creating..." : "Create"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Employee Confirmation Dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleCloseDeleteDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="h6" color="error">
+                            Delete Employee
+                        </Typography>
+                        <IconButton onClick={handleCloseDeleteDialog} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ mt: 2 }}>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            This action cannot be undone!
+                        </Alert>
+                        <Typography variant="body1">
+                            Are you sure you want to delete this employee?
+                        </Typography>
+                        {employeeToDelete && (
+                            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                                <Grid container spacing={1}>
+                                    <Grid size={{ xs: 12 }}>
+                                        <Typography variant="body2" color="text.secondary">Employee Code:</Typography>
+                                        <Typography variant="body1" fontWeight={500}>{employeeToDelete.employeeCode}</Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12 }}>
+                                        <Typography variant="body2" color="text.secondary">Full Name:</Typography>
+                                        <Typography variant="body1" fontWeight={500}>{employeeToDelete.fullName}</Typography>
+                                    </Grid>
+                                    <Grid size={{ xs: 12 }}>
+                                        <Typography variant="body2" color="text.secondary">Department:</Typography>
+                                        <Typography variant="body1">{employeeToDelete.department || '-'}</Typography>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+                        )}
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={handleCloseDeleteDialog}
+                        disabled={deleteDialogLoading}
+                        sx={{ border: 1 }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDeleteEmployee}
+                        variant="contained"
+                        color="error"
+                        disabled={deleteDialogLoading}
+                        startIcon={<DeleteIcon />}
+                    >
+                        {deleteDialogLoading ? "Deleting..." : "Delete"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </AdminLayout>
     );
 }
