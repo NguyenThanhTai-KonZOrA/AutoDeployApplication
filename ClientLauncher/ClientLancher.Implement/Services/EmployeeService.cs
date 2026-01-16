@@ -74,13 +74,69 @@ namespace ClientLauncher.Implement.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation("New employee created: {EmployeeCode} (ID: {EmployeeId})",
-                    theGrandEmployee.employeeID, employee.Id);
+                    employee.EmployeeCode, employee.Id);
                 return employee;
             }
             else
             {
                 throw new ArgumentException("Username cannot found", nameof(username));
             }
+        }
+
+        public async Task<Employee> GetOrCreateDefaultEmployeeAsync(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new ArgumentException("Username cannot be empty", nameof(username));
+            }
+
+            var employee = await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(username);
+            if (employee != null)
+            {
+                _logger.LogInformation("Employee found: {EmployeeCode}", employee.EmployeeCode);
+                return employee;
+            }
+            else
+            {
+                // Create new employee from Windows account
+                employee = new Employee
+                {
+                    EmployeeCode = username,
+                    WindowAccount = username,
+                    Department = "Information Technology",
+                    Position = "Default PC",
+                    FullName = username,
+                    Email = $"{username}@thegrandhotram.com",
+                    CreatedBy = CommonConstants.SystemUser,
+                    UpdatedBy = CommonConstants.SystemUser,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    IsDelete = false
+                };
+                await _employeeRepository.AddAsync(employee);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("New employee created: {EmployeeCode} (ID: {EmployeeId})",
+                    employee.EmployeeCode, employee.Id);
+                return employee;
+            }
+        }
+
+        public async Task<bool> DeleteEmployeeAsync(int id)
+        {
+            _logger.LogInformation("Fetching active employees");
+            var employee = await _employeeRepository.GetByIdAsync(id);
+            if (employee != null)
+            {
+                employee.IsDelete = true;
+                employee.IsActive = false;
+                employee.UpdatedAt = DateTime.UtcNow;
+                _employeeRepository.Update(employee);
+                await _unitOfWork.SaveChangesAsync();
+                return true;
+            }
+            return false;
         }
 
         public async Task<TheGrandEmployeeResponse> GetTheGrandEmployeeByUserNameAsync(string userName)
@@ -120,6 +176,12 @@ namespace ClientLauncher.Implement.Services
             _logger.LogInformation("User {UserName} admin status: {IsAdmin}", userName, isAdmin);
 
             return isAdmin;
+        }
+
+        public async Task<List<Employee>> GetActiveEmployeesAsync()
+        {
+            var employees = await _employeeRepository.GetActiveEmployeesAsync();
+            return employees;
         }
     }
 }
