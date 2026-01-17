@@ -73,7 +73,18 @@ namespace ClientLauncherAPI.Controllers
                     Id = 1,
                     EmployeeCode = "ADMIN",
                     FullName = "Administrator",
-                    WindowAccount = loginRequest.Username
+                    WindowAccount = loginRequest.Username,
+                    EmployeeRoles = new List<EmployeeRole>
+                    {
+                        new EmployeeRole
+                        {
+                            RoleId = 1,
+                            Role = new Role
+                            {
+                                RoleName = CommonConstants.AdminRole
+                            }
+                        }
+                    }
                 };
 #elif RELEASE
                 var employee = await _employeeService.GetOrCreateEmployeeFromWindowsAccountAsync(loginRequest.Username);

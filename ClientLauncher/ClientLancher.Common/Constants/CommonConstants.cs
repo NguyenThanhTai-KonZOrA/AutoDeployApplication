@@ -10,5 +10,9 @@
         public const string AdminPassword = "admin@123";
         public const string AdminRole = "Administrator";
         public const string UserRole = "user";
+
+        // Application Settings Keys
+        public const string CacheExpirationMinutesKey = "CacheExpiration";
+        public const string EnableCheckAdministratorKey = "EnableCheckAdministrator";
     }
 }

@@ -1,4 +1,5 @@
-﻿using ClientLauncher.Implement.ApplicationDbContext.SeedData;
+﻿using ClientLauncher.Implement.ApplicationDbContext.Initalizer;
+using ClientLauncher.Implement.ApplicationDbContext.SeedData;
 using ClientLauncher.Implement.EntityModels;
 using Microsoft.EntityFrameworkCore;
 using QueueSystem.Implement.ApplicationDbContext.SeedData;
@@ -29,6 +30,7 @@ namespace ClientLauncher.Implement.ApplicationDbContext
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<EmployeeRole> EmployeeRoles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<ApplicationSettings> ApplicationSettings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -272,12 +274,19 @@ namespace ClientLauncher.Implement.ApplicationDbContext
                 modelBuilder.Entity<RolePermission>()
                     .HasQueryFilter(x => !x.IsDelete);
 
+                modelBuilder.Entity<ApplicationSettings>().HasQueryFilter(x => !x.IsDelete);
+
+                modelBuilder.Entity<ApplicationSettings>()
+                    .HasIndex(e => e.Key)
+                    .IsUnique();
+
 
                 RoleSeed.Seed(modelBuilder.Entity<Role>());
                 //PermissionSeed.Seed(modelBuilder.Entity<Permission>());
                 //RolePermissionSeed.Seed(modelBuilder.Entity<RolePermission>());
                 EmployeeSeed.Seed(modelBuilder.Entity<Employee>());
                 EmployeeRoleSeed.Seed(modelBuilder.Entity<EmployeeRole>());
+                ApplicationSettingsSeed.Seed(modelBuilder.Entity<ApplicationSettings>());
             });
         }
     }

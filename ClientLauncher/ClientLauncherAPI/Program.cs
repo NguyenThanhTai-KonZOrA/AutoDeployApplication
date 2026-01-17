@@ -126,6 +126,7 @@ try
     builder.Services.AddScoped<IPermissionRepository, PermissionRepository>();
     builder.Services.AddScoped<IEmployeeRoleRepository, EmployeeRoleRepository>();
     builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+    builder.Services.AddScoped<IApplicationSettingsRepository, ApplicationSettingsRepository>();
     // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -151,6 +152,8 @@ try
     builder.Services.AddScoped<IRoleService, RoleService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
+    builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
+
     logger.Info("============> Regsitered services end! <============");
     // Add CORS if needed
     builder.Services.AddCors(options =>

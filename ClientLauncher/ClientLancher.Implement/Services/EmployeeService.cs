@@ -18,6 +18,7 @@ namespace ClientLauncher.Implement.Services
         private readonly IApiClient _apiClient;
         private readonly IConfiguration _configuration;
         private readonly IRoleService _roleService;
+        private readonly IApplicationSettingsService _applicationSettingsService;
 
         public EmployeeService(
             IEmployeeRepository employeeRepository,
@@ -25,7 +26,8 @@ namespace ClientLauncher.Implement.Services
             ILogger<EmployeeService> logger,
             IApiClient apiClient,
             IConfiguration configuration,
-            IRoleService roleService)
+            IRoleService roleService,
+            IApplicationSettingsService applicationSettingsService)
         {
             _employeeRepository = employeeRepository;
             _unitOfWork = unitOfWork;
@@ -33,6 +35,7 @@ namespace ClientLauncher.Implement.Services
             _apiClient = apiClient;
             _configuration = configuration;
             _roleService = roleService;
+            _applicationSettingsService = applicationSettingsService;
         }
 
         public async Task<Employee> GetOrCreateEmployeeFromWindowsAccountAsync(string username)
@@ -162,6 +165,14 @@ namespace ClientLauncher.Implement.Services
 
         public async Task<bool> IsUserAdminAsync(string userName)
         {
+            bool checkAdminSetting = _applicationSettingsService.GetSettingValue<bool>(CommonConstants.EnableCheckAdministratorKey);
+
+            if (!checkAdminSetting)
+            {
+                _logger.LogInformation("Admin role check is disabled.");
+                return true;
+            }
+
             var employee = await _employeeRepository.GetByEmployeeByCodeOrUserNameAsync(userName);
             if (employee == null)
             {
