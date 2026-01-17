@@ -113,6 +113,13 @@ const navItems: NavItem[] = [
         icon: PeopleIcon,
         requiredPermission: Permission.VIEW_EMPLOYEE_MANAGEMENT
     },
+    {
+        key: 'admin-settings',
+        title: 'System Settings',
+        href: '/admin-settings',
+        icon: SettingsIcon,
+        requiredPermission: Permission.VIEW_SYSTEM_SETTINGS
+    },
 ];
 
 interface MobileNavProps {
