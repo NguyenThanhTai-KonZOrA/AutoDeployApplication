@@ -15,6 +15,7 @@ namespace ClientLauncherAPI.Controllers
     {
         private readonly IApplicationSettingsService _settingsService;
         private readonly ILogger<SettingsController> _logger;
+        private readonly IAuditLogService _auditLogService;
         private static readonly HashSet<string> RestartRequiredSettings = new()
         {
             "Jwt:Key",
@@ -25,10 +26,12 @@ namespace ClientLauncherAPI.Controllers
 
         public SettingsController(
             IApplicationSettingsService settingsService,
-            ILogger<SettingsController> logger)
+            ILogger<SettingsController> logger,
+            IAuditLogService auditLogService)
         {
             _settingsService = settingsService;
             _logger = logger;
+            _auditLogService = auditLogService;
         }
 
         [HttpGet("all")]
@@ -129,6 +132,24 @@ namespace ClientLauncherAPI.Controllers
                 var requiresRestart = RestartRequiredSettings.Contains(request.Key);
                 _logger.LogInformation("[AddSetting]: Setting {Key} requires restart: {RequiresRestart}", request.Key, requiresRestart);
 
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "CreateSetting",
+                    EntityType = "Setting",
+                    EntityId = null,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    UserName = userName,
+                    IsSuccess = true,
+                    StatusCode = StatusCodes.Status201Created,
+                    Details = $"Created setting '{request.Key}' with value '{request.Value}'",
+                    DurationMs = null,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    ErrorMessage = null
+                });
+
                 return CreatedAtAction(
                     nameof(GetSettingByKey),
                     new { key = request.Key },
@@ -148,6 +169,24 @@ namespace ClientLauncherAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[AddSetting]: Error adding setting: {Key}", request.Key);
+                // Audit log for failure
+                var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? CommonConstants.UnknownUser;
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "CreateSetting",
+                    EntityType = "Setting",
+                    EntityId = null,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    UserName = userName,
+                    IsSuccess = false,
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    Details = $"Failed to create setting '{request.Key}'",
+                    DurationMs = null,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    ErrorMessage = ex.Message
+                });
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
@@ -168,6 +207,24 @@ namespace ClientLauncherAPI.Controllers
                 // ✅ Check if restart required
                 var requiresRestart = RestartRequiredSettings.Contains(key);
 
+                // Audit log
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UpdateSetting",
+                    EntityType = "Setting",
+                    EntityId = null,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    UserName = userName,
+                    IsSuccess = true,
+                    StatusCode = StatusCodes.Status200OK,
+                    Details = $"Updated setting '{key}' to '{request.Value}'. Requires restart.",
+                    DurationMs = null,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    ErrorMessage = null
+                });
+
                 return Ok(new
                 {
                     success = true,
@@ -184,6 +241,24 @@ namespace ClientLauncherAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating setting: {Key}", key);
+                // Audit log for failure
+                var userName = User.FindFirst(ClaimTypes.Name)?.Value ?? CommonConstants.UnknownUser;
+                await _auditLogService.LogActionAsync(new ClientLauncher.Implement.ViewModels.Request.CreateAuditLogRequest
+                {
+                    Action = "UpdateSetting",
+                    EntityType = "Setting",
+                    EntityId = null,
+                    HttpMethod = "POST",
+                    RequestPath = HttpContext.Request.Path,
+                    UserName = userName,
+                    IsSuccess = false,
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    Details = $"Failed to update setting '{key}'",
+                    DurationMs = null,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = HttpContext.Request.Headers["User-Agent"].ToString(),
+                    ErrorMessage = ex.Message
+                });
                 return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
