@@ -53,7 +53,8 @@ const ENTITY_TYPES = [
     'Manifest',
     'Category',
     'Icons',
-    'PackageVersion'
+    'PackageVersion',
+    'Setting'
 ];
 
 // Actions
