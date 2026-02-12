@@ -1,4 +1,5 @@
-﻿using ClientLauncher.Windows;
+﻿using ClientLauncher.Services;
+using ClientLauncher.Windows;
 using NLog;
 using System.IO;
 using System.Windows;
@@ -8,6 +9,7 @@ namespace ClientLauncher
     public partial class App : Application
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private RemoteDeploymentBackgroundService? _backgroundService;
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -66,6 +68,9 @@ namespace ClientLauncher
                 DispatcherUnhandledException += OnDispatcherUnhandledException;
                 TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
+                // Start Remote Deployment Background Service
+                StartBackgroundService();
+
                 // Check if launched with --app argument
                 if (e.Args.Length > 0)
                 {
@@ -99,11 +104,38 @@ namespace ClientLauncher
             }
         }
 
+        private async void StartBackgroundService()
+        {
+            try
+            {
+                Logger.Info("Initializing Remote Deployment Background Service...");
+
+                var registrationService = new ClientRegistrationService();
+                var installationService = new InstallationService();
+                var shortcutService = new ShortcutService();
+                var iconService = new IconService();
+                var pollingService = new DeploymentPollingService(registrationService, installationService, shortcutService, iconService);
+
+                _backgroundService = new RemoteDeploymentBackgroundService(registrationService, pollingService);
+                await _backgroundService.StartAsync();
+
+                Logger.Info("Remote Deployment Background Service started successfully");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to start Remote Deployment Background Service");
+            }
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
             Logger.Info("===============================================");
             Logger.Info($"ClientLauncher Application Exiting with code: {e.ApplicationExitCode}");
             Logger.Info("===============================================");
+
+            // Stop background service
+            _backgroundService?.Stop();
+            _backgroundService?.Dispose();
 
             LogManager.Shutdown();
             base.OnExit(e);

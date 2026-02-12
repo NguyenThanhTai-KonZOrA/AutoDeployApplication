@@ -28,8 +28,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.CreateDeploymentAsync(request);
-                return CreatedAtAction(nameof(GetDeployment), new { id = result.Id },
-                    new { success = true, data = result, message = "Deployment created successfully" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -51,7 +50,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Deployment not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -69,7 +68,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.GetAllDeploymentsAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -87,7 +86,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.GetPendingDeploymentsAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -105,7 +104,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.GetDeploymentsByEnvironmentAsync(environment);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -123,7 +122,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.StartDeploymentAsync(id);
-                return Ok(new { success = true, data = result, message = "Deployment started" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -141,7 +140,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.ApproveDeploymentAsync(id, request.ApprovedBy);
-                return Ok(new { success = true, data = result, message = "Deployment approved" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -158,9 +157,8 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
-                var result = await _deploymentService.RejectDeploymentAsync(
-                    id, request.ApprovedBy, request.Comments ?? "No reason provided");
-                return Ok(new { success = true, data = result, message = "Deployment rejected" });
+                var result = await _deploymentService.RejectDeploymentAsync(id, request.ApprovedBy, request.Comments ?? "No reason provided");
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -182,7 +180,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Deployment not found" });
                 }
-                return Ok(new { success = true, message = "Deployment cancelled" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -200,7 +198,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.GetDeploymentProgressAsync(id);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -221,7 +219,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 await _deploymentService.UpdateDeploymentProgressAsync(id, success, errorMessage);
-                return Ok(new { success = true, message = "Progress updated" });
+                return Ok(new { message = "Progress updated" });
             }
             catch (Exception ex)
             {
@@ -239,7 +237,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentService.GetDeploymentsByPackageVersionAsync(packageVersionId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -261,7 +259,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "No deployments found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {

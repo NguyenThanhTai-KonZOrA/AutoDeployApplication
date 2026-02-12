@@ -28,7 +28,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentTaskService.GetPendingTasksForMachineAsync(machineId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -50,7 +50,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Task not found" });
                 }
-                return Ok(new { success = true, message = "Task status updated" });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -72,7 +72,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Task not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -90,7 +90,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentTaskService.GetTasksByDeploymentIdAsync(deploymentId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -108,7 +108,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _deploymentTaskService.GetTaskStatisticsAsync(deploymentId);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -126,7 +126,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var count = await _deploymentTaskService.RetryFailedTasksAsync();
-                return Ok(new { success = true, data = new { retriedCount = count }, message = $"Retried {count} failed tasks" });
+                return Ok(count);
             }
             catch (Exception ex)
             {

@@ -33,24 +33,50 @@ namespace ClientLauncher.Implement.Services
                     throw new Exception($"Package version with ID {request.PackageVersionId} not found");
                 }
 
-                // Calculate total targets
-                int totalTargets = 0;
+                // Get target machines
+                var targetMachines = new List<ClientMachine>();
+
                 if (request.IsGlobalDeployment)
                 {
-                    // TODO: Get total number of registered clients from database
-                    totalTargets = 0; // Will be updated when clients check in
+                    // Get all online machines
+                    var onlineMachines = await _unitOfWork.ClientMachines.GetOnlineMachinesAsync();
+                    targetMachines.AddRange(onlineMachines);
                 }
                 else
                 {
-                    totalTargets = (request.TargetMachines?.Count ?? 0) + (request.TargetUsers?.Count ?? 0);
+                    // Get specific machines by ID or username
+                    if (request.TargetMachines != null && request.TargetMachines.Any())
+                    {
+                        foreach (var machineId in request.TargetMachines)
+                        {
+                            var machine = await _unitOfWork.ClientMachines.GetByMachineIdAsync(machineId);
+                            if (machine != null)
+                            {
+                                targetMachines.Add(machine);
+                            }
+                        }
+                    }
+
+                    if (request.TargetUsers != null && request.TargetUsers.Any())
+                    {
+                        foreach (var userName in request.TargetUsers)
+                        {
+                            var machines = await _unitOfWork.ClientMachines.GetByUserNameAsync(userName);
+                            targetMachines.AddRange(machines);
+                        }
+                    }
                 }
+
+                // Remove duplicates
+                targetMachines = targetMachines.DistinctBy(m => m.Id).ToList();
+                int totalTargets = targetMachines.Count;
 
                 var deployment = new DeploymentHistory
                 {
                     PackageVersionId = request.PackageVersionId,
                     Environment = request.Environment,
                     DeploymentType = request.DeploymentType,
-                    Status = request.RequiresApproval ? "Pending Approval" : "Pending",
+                    Status = request.RequiresApproval ? "Pending Approval" : "Queued",
                     IsGlobalDeployment = request.IsGlobalDeployment,
                     TargetMachines = request.TargetMachines != null ? JsonSerializer.Serialize(request.TargetMachines) : null,
                     TargetUsers = request.TargetUsers != null ? JsonSerializer.Serialize(request.TargetUsers) : null,
@@ -66,7 +92,14 @@ namespace ClientLauncher.Implement.Services
                 await _unitOfWork.DeploymentHistories.AddAsync(deployment);
                 await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("Deployment created successfully: ID {Id}", deployment.Id);
+                // Create deployment tasks for each target machine (if not requiring approval)
+                if (!request.RequiresApproval)
+                {
+                    await CreateDeploymentTasksAsync(deployment.Id, packageVersion, targetMachines, request.ScheduledFor);
+                }
+
+                _logger.LogInformation("Deployment created successfully: ID {Id} with {Count} target machines", 
+                    deployment.Id, totalTargets);
 
                 return MapToResponse(deployment, packageVersion);
             }
@@ -74,6 +107,44 @@ namespace ClientLauncher.Implement.Services
             {
                 _logger.LogError(ex, "Error creating deployment");
                 throw;
+            }
+        }
+
+        private async Task CreateDeploymentTasksAsync(int deploymentHistoryId, PackageVersion packageVersion, 
+            List<ClientMachine> targetMachines, DateTime? scheduledFor = null)
+        {
+            var tasks = new List<DeploymentTask>();
+
+            foreach (var machine in targetMachines)
+            {
+                var task = new DeploymentTask
+                {
+                    DeploymentHistoryId = deploymentHistoryId,
+                    TargetMachineId = machine.Id,
+                    PackageVersionId = packageVersion.Id,
+                    AppCode = packageVersion.Application.AppCode,
+                    AppName = packageVersion.Application.Name,
+                    Version = packageVersion.Version,
+                    Status = "Queued",
+                    Priority = 0,
+                    ScheduledFor = scheduledFor,
+                    MaxRetries = 3,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                tasks.Add(task);
+            }
+
+            if (tasks.Any())
+            {
+                foreach (var task in tasks)
+                {
+                    await _unitOfWork.DeploymentTasks.AddAsync(task);
+                }
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation("Created {Count} deployment tasks for deployment {DeploymentId}", 
+                    tasks.Count, deploymentHistoryId);
             }
         }
 
@@ -192,14 +263,58 @@ namespace ClientLauncher.Implement.Services
 
                 deployment.ApprovedBy = approvedBy;
                 deployment.ApprovedAt = DateTime.UtcNow;
-                deployment.Status = "Approved"; // Ready to deploy
+                deployment.Status = "Queued"; // Ready to deploy
 
                 _unitOfWork.DeploymentHistories.Update(deployment);
                 await _unitOfWork.SaveChangesAsync();
 
-                _logger.LogInformation("Deployment {Id} approved by {User}", id, approvedBy);
-
+                // Create deployment tasks after approval
                 var packageVersion = await _unitOfWork.PackageVersions.GetByIdWithDetailsAsync(deployment.PackageVersionId);
+                if (packageVersion != null)
+                {
+                    var targetMachines = new List<ClientMachine>();
+
+                    if (deployment.IsGlobalDeployment)
+                    {
+                        var onlineMachines = await _unitOfWork.ClientMachines.GetOnlineMachinesAsync();
+                        targetMachines.AddRange(onlineMachines);
+                    }
+                    else
+                    {
+                        // Parse target machines from JSON
+                        if (!string.IsNullOrEmpty(deployment.TargetMachines))
+                        {
+                            var machineIds = JsonSerializer.Deserialize<List<string>>(deployment.TargetMachines);
+                            if (machineIds != null)
+                            {
+                                foreach (var machineId in machineIds)
+                                {
+                                    var machine = await _unitOfWork.ClientMachines.GetByMachineIdAsync(machineId);
+                                    if (machine != null) targetMachines.Add(machine);
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(deployment.TargetUsers))
+                        {
+                            var userNames = JsonSerializer.Deserialize<List<string>>(deployment.TargetUsers);
+                            if (userNames != null)
+                            {
+                                foreach (var userName in userNames)
+                                {
+                                    var machines = await _unitOfWork.ClientMachines.GetByUserNameAsync(userName);
+                                    targetMachines.AddRange(machines);
+                                }
+                            }
+                        }
+                    }
+
+                    targetMachines = targetMachines.DistinctBy(m => m.Id).ToList();
+                    await CreateDeploymentTasksAsync(deployment.Id, packageVersion, targetMachines);
+                }
+
+                _logger.LogInformation("Deployment {Id} approved by {User} and tasks created", id, approvedBy);
+
                 return MapToResponse(deployment, packageVersion!);
             }
             catch (Exception ex)

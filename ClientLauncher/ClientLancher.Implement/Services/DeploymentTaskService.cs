@@ -58,8 +58,8 @@ namespace ClientLauncher.Implement.Services
                 else if (request.Status == "Completed" || request.Status == "Failed")
                 {
                     await _unitOfWork.DeploymentTasks.MarkAsCompletedAsync(
-                        request.TaskId, 
-                        request.IsSuccess, 
+                        request.TaskId,
+                        request.IsSuccess,
                         request.ErrorMessage);
 
                     // Update deployment history counters
@@ -69,8 +69,8 @@ namespace ClientLauncher.Implement.Services
                 {
                     // Update progress
                     await _unitOfWork.DeploymentTasks.UpdateProgressAsync(
-                        request.TaskId, 
-                        request.ProgressPercentage, 
+                        request.TaskId,
+                        request.ProgressPercentage,
                         request.CurrentStep ?? "");
                 }
 
@@ -223,6 +223,8 @@ namespace ClientLauncher.Implement.Services
                 AppCode = task.AppCode,
                 AppName = task.AppName,
                 Version = task.Version,
+                IconUrl = task.PackageVersion?.Application?.IconUrl ?? "",
+                Category = task.PackageVersion?.Application?.Category?.Name ?? "",
                 Status = task.Status,
                 Priority = task.Priority,
                 ProgressPercentage = task.ProgressPercentage,

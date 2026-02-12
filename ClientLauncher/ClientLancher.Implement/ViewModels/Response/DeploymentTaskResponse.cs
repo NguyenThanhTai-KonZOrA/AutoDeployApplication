@@ -9,6 +9,8 @@ namespace ClientLauncher.Implement.ViewModels.Response
         public string AppCode { get; set; } = string.Empty;
         public string AppName { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
+        public string IconUrl { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
         public int Priority { get; set; }
         public int ProgressPercentage { get; set; }

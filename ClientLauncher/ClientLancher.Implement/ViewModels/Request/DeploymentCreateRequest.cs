@@ -10,5 +10,6 @@
         public List<string>? TargetUsers { get; set; }
         public bool RequiresApproval { get; set; }
         public string DeployedBy { get; set; } = string.Empty;
+        public DateTime? ScheduledFor { get; set; } // Schedule deployment for later
     }
 }
