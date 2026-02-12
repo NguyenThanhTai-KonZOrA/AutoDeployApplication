@@ -34,6 +34,8 @@ import {
     Tab,
     FormControlLabel,
     Checkbox,
+    Slide,
+    Zoom,
 } from "@mui/material";
 import {
     Search as SearchIcon,
@@ -47,6 +49,9 @@ import {
     AttachFile as AttachFileIcon,
     FilterListOff as FilterListOffIcon,
     FilterList as FilterListIcon,
+    CloudUploadTwoTone as BackupIcon,
+    BorderColorTwoTone as BorderColorTwoToneIcon,
+    GridViewTwoTone as GridViewRoundedIcon
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -60,6 +65,8 @@ import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
 import { FormatUtcTime } from "../utils/formatUtcTime";
 import { extractErrorMessage } from "../utils/errorHandler";
+import React from "react";
+import type { TransitionProps } from "@mui/material/transitions";
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -76,8 +83,25 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
+const Transition = React.forwardRef(function Transition(
+    props: TransitionProps & {
+        children: React.ReactElement<any, any>;
+    },
+    ref: React.Ref<unknown>,
+) {
+    return <Zoom
+        timeout={{
+            appear: 5000,
+            enter: 1000,
+            exit: 500,
+        }}
+
+        ref={ref} {...props} />;
+});
+
 export default function AdminApplicationPage() {
     useSetPageTitle(PAGE_TITLES.APPLICATIONS);
+
     const API_BASE = (window as any)._env_?.API_BASE;
     const [applications, setApplications] = useState<ApplicationResponse[]>([]);
     const [categories, setCategories] = useState<CategoryResponse[]>([]);
@@ -1454,6 +1478,11 @@ export default function AdminApplicationPage() {
                 open={dialogOpen}
                 onClose={handleCloseDialog}
                 maxWidth="md"
+                slots={{
+                    transition: Transition,
+                }}
+                keepMounted
+                aria-describedby="alert-dialog-slide-description"
                 fullWidth
             >
                 <DialogTitle>
@@ -1461,9 +1490,9 @@ export default function AdminApplicationPage() {
                 </DialogTitle>
                 <DialogContent>
                     <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                        <Tab label="Application Info" />
-                        <Tab label={`Manifest ${dialogMode === "create" ? "(Mandatory)" : ""}`} />
-                        <Tab label={`Upload Package ${dialogMode === "create" ? "(Mandatory)" : ""}`} />
+                        <Tab label="Application Info" icon={<GridViewRoundedIcon />} />
+                        <Tab label={`Manifest ${dialogMode === "create" ? "(Mandatory)" : ""}`} icon={<BorderColorTwoToneIcon />} />
+                        <Tab label={`Upload Package ${dialogMode === "create" ? "(Mandatory)" : ""}`} icon={<BackupIcon />} />
                     </Tabs>
 
                     <TabPanel value={tabValue} index={0}>

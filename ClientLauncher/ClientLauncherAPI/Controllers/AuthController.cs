@@ -73,7 +73,18 @@ namespace ClientLauncherAPI.Controllers
                     Id = 1,
                     EmployeeCode = "ADMIN",
                     FullName = "Administrator",
-                    WindowAccount = loginRequest.Username
+                    WindowAccount = loginRequest.Username,
+                    EmployeeRoles = new List<EmployeeRole>
+                    {
+                        new EmployeeRole
+                        {
+                            RoleId = 1,
+                            Role = new Role
+                            {
+                                RoleName = CommonConstants.AdminRole
+                            }
+                        }
+                    }
                 };
 #elif RELEASE
                 var employee = await _employeeService.GetOrCreateEmployeeFromWindowsAccountAsync(loginRequest.Username);
@@ -283,6 +294,18 @@ namespace ClientLauncherAPI.Controllers
                 employeeId = employeeId != null ? int.Parse(employeeId) : (int?)null,
                 employeeCode = employeeCode
             });
+        }
+
+        [HttpGet("roles/check/{userName}")]
+        public async Task<IActionResult> CheckUserRole(string userName)
+        {
+            if (string.IsNullOrEmpty(userName))
+            {
+                return Unauthorized();
+            }
+
+            var isAdmin = await _employeeService.IsUserAdminAsync(userName);
+            return Ok(isAdmin);
         }
 
         [HttpGet("server-info")]

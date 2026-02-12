@@ -22,6 +22,7 @@ import AdminInstallationLogPage from './pages/AdminInstallationLogPage'
 import AdminPackagesPage from './pages/AdminPackagesPage'
 import AdminReportByApplicationPage from './pages/AdminReportByApplicationPage'
 import AdminIconsPage from './pages/AdminIconsPage'
+import AdminSettingsPage from './pages/AdminSettingsPage'
 
 function AppContent() {
   const networkStatus = useNetworkStatus();
@@ -173,6 +174,18 @@ function AppContent() {
               showAccessDenied={true}
             >
               <AdminEmployeePage />
+            </RoleBasedRoute>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/admin-settings" element={
+          <ProtectedRoute>
+            <RoleBasedRoute
+              requiredPermission={Permission.VIEW_SYSTEM_SETTINGS}
+              fallbackPath="/admin-settings"
+              showAccessDenied={true}
+            >
+              <AdminSettingsPage />
             </RoleBasedRoute>
           </ProtectedRoute>
         } />

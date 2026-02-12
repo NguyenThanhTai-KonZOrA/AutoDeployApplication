@@ -517,11 +517,15 @@ namespace ClientLauncherAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("Getting latest manifest for application code: {AppCode}", appCode);
                 var result = await _manifestService.GetLatestManifestByAppCodeSmallAsync(appCode);
                 if (result == null)
                 {
+                    _logger.LogInformation("No active manifest found for application code: {AppCode}", appCode);
                     return NotFound(new { success = false, message = "No active manifest found" });
                 }
+
+                _logger.LogInformation("Latest manifest found for application code: {AppCode}, Version: {Version}", appCode, result.Version);
                 return Ok(result);
             }
             catch (Exception ex)
