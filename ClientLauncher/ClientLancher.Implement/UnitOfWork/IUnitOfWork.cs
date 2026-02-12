@@ -11,6 +11,8 @@ namespace ClientLauncher.Implement.UnitOfWork
         IApplicationCategoryRepository ApplicationCategories { get; }
         IDownloadStatisticRepository DownloadStatistics { get; }
         IApplicationManifestRepository ApplicationManifests { get; }
+        IClientMachineRepository ClientMachines { get; }
+        IDeploymentTaskRepository DeploymentTasks { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

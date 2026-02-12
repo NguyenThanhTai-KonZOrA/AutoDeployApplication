@@ -13,12 +13,13 @@ namespace ClientLauncher.Implement.UnitOfWork
         public IApplicationRepository Applications { get; }
         public IInstallationLogRepository InstallationLogs { get; }
 
-        // NEW
         public IPackageVersionRepository PackageVersions { get; }
         public IDeploymentHistoryRepository DeploymentHistories { get; }
         public IApplicationCategoryRepository ApplicationCategories { get; }
         public IDownloadStatisticRepository DownloadStatistics { get; }
         public IApplicationManifestRepository ApplicationManifests { get; }
+        public IClientMachineRepository ClientMachines { get; }
+        public IDeploymentTaskRepository DeploymentTasks { get; }
 
         public UnitOfWork(
             DeploymentManagerDbContext context,
@@ -28,7 +29,9 @@ namespace ClientLauncher.Implement.UnitOfWork
             IDeploymentHistoryRepository deploymentHistories,
             IApplicationCategoryRepository applicationCategories,
             IDownloadStatisticRepository downloadStatistics,
-            IApplicationManifestRepository applicationManifests)
+            IApplicationManifestRepository applicationManifests,
+            IClientMachineRepository clientMachines,
+            IDeploymentTaskRepository deploymentTasks)
         {
             _context = context;
             Applications = applications;
@@ -38,6 +41,8 @@ namespace ClientLauncher.Implement.UnitOfWork
             ApplicationCategories = applicationCategories;
             DownloadStatistics = downloadStatistics;
             ApplicationManifests = applicationManifests;
+            ClientMachines = clientMachines;
+            DeploymentTasks = deploymentTasks;
         }
 
         public async Task<int> SaveChangesAsync()

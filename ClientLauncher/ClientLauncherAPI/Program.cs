@@ -127,6 +127,8 @@ try
     builder.Services.AddScoped<IEmployeeRoleRepository, EmployeeRoleRepository>();
     builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
     builder.Services.AddScoped<IApplicationSettingsRepository, ApplicationSettingsRepository>();
+    builder.Services.AddScoped<IClientMachineRepository, ClientMachineRepository>();
+    builder.Services.AddScoped<IDeploymentTaskRepository, DeploymentTaskRepository>();
     // UNIT OF WORK
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -148,6 +150,8 @@ try
     builder.Services.AddScoped<IInstallationLogService, InstallationLogService>();
     builder.Services.AddScoped<IIconsService, IconsService>();
     builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+    builder.Services.AddScoped<IClientMachineService, ClientMachineService>();
+    builder.Services.AddScoped<IDeploymentTaskService, DeploymentTaskService>();
     builder.Services.AddTransient<IEmployeeService, EmployeeService>();
     builder.Services.AddScoped<IRoleService, RoleService>();
     builder.Services.AddScoped<IPermissionService, PermissionService>();

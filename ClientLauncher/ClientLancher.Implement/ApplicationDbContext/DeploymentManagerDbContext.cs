@@ -32,6 +32,10 @@ namespace ClientLauncher.Implement.ApplicationDbContext
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<ApplicationSettings> ApplicationSettings { get; set; }
 
+        // Remote Deployment tables
+        public DbSet<ClientMachine> ClientMachines { get; set; }
+        public DbSet<DeploymentTask> DeploymentTasks { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -280,6 +284,56 @@ namespace ClientLauncher.Implement.ApplicationDbContext
                     .HasIndex(e => e.Key)
                     .IsUnique();
 
+                // ClientMachine Configuration
+                modelBuilder.Entity<ClientMachine>(entity =>
+                {
+                    entity.HasKey(e => e.Id);
+                    entity.HasIndex(e => e.MachineId).IsUnique();
+                    entity.HasIndex(e => e.MachineName);
+                    entity.HasIndex(e => e.UserName);
+                    entity.HasIndex(e => e.Status);
+                    entity.HasIndex(e => e.LastHeartbeat);
+
+                    entity.Property(e => e.MachineId).IsRequired().HasMaxLength(200);
+                    entity.Property(e => e.MachineName).IsRequired().HasMaxLength(200);
+                    entity.Property(e => e.UserName).IsRequired().HasMaxLength(200);
+                    entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+
+                    entity.HasQueryFilter(x => !x.IsDelete);
+                });
+
+                // DeploymentTask Configuration
+                modelBuilder.Entity<DeploymentTask>(entity =>
+                {
+                    entity.HasKey(e => e.Id);
+                    entity.HasIndex(e => e.DeploymentHistoryId);
+                    entity.HasIndex(e => e.TargetMachineId);
+                    entity.HasIndex(e => e.Status);
+                    entity.HasIndex(e => new { e.TargetMachineId, e.Status });
+                    entity.HasIndex(e => e.ScheduledFor);
+
+                    entity.Property(e => e.AppCode).IsRequired().HasMaxLength(50);
+                    entity.Property(e => e.AppName).IsRequired().HasMaxLength(200);
+                    entity.Property(e => e.Version).IsRequired().HasMaxLength(50);
+                    entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+
+                    entity.HasOne(e => e.DeploymentHistory)
+                        .WithMany()
+                        .HasForeignKey(e => e.DeploymentHistoryId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasOne(e => e.TargetMachine)
+                        .WithMany(m => m.DeploymentTasks)
+                        .HasForeignKey(e => e.TargetMachineId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    entity.HasOne(e => e.PackageVersion)
+                        .WithMany()
+                        .HasForeignKey(e => e.PackageVersionId)
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    entity.HasQueryFilter(x => !x.IsDelete);
+                });
 
                 RoleSeed.Seed(modelBuilder.Entity<Role>());
                 //PermissionSeed.Seed(modelBuilder.Entity<Permission>());
