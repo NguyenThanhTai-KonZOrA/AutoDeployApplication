@@ -68,7 +68,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _clientMachineService.GetOnlineMachinesAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -86,7 +86,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _clientMachineService.GetAllMachinesAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -108,7 +108,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Machine not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -130,7 +130,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Machine not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -148,7 +148,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _clientMachineService.GetMachinesWithAppAsync(appCode);
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -166,7 +166,7 @@ namespace ClientLauncherAPI.Controllers
             try
             {
                 var result = await _clientMachineService.GetStatisticsAsync();
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {

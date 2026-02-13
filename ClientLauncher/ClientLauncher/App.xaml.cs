@@ -110,6 +110,9 @@ namespace ClientLauncher
             {
                 Logger.Info("Initializing Remote Deployment Background Service...");
 
+                // Check for ClientLauncher updates first
+                await CheckForSelfUpdatesAsync();
+
                 var registrationService = new ClientRegistrationService();
                 var installationService = new InstallationService();
                 var shortcutService = new ShortcutService();
@@ -124,6 +127,27 @@ namespace ClientLauncher
             catch (Exception ex)
             {
                 Logger.Error(ex, "Failed to start Remote Deployment Background Service");
+            }
+        }
+
+        private async Task CheckForSelfUpdatesAsync()
+        {
+            try
+            {
+                Logger.Info("Checking for ClientLauncher updates...");
+
+                var updateService = new AutoUpdateService();
+                var hasUpdate = await updateService.AutoCheckAndUpdateAsync(silent: true);
+
+                if (hasUpdate)
+                {
+                    Logger.Info("Update found and will be installed. Application will restart.");
+                    // App will be closed and restarted by updater script
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error checking for self-updates");
             }
         }
 

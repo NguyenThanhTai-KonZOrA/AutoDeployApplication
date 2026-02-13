@@ -21,7 +21,7 @@ namespace ClientLauncher.Implement.Repositories
         public async Task<IEnumerable<ClientMachine>> GetOnlineMachinesAsync(int heartbeatThresholdMinutes = 2)
         {
             var thresholdTime = DateTime.UtcNow.AddMinutes(-heartbeatThresholdMinutes);
-            
+
             return await _dbSet
                 .Where(c => c.LastHeartbeat != null && c.LastHeartbeat >= thresholdTime)
                 .OrderByDescending(c => c.LastHeartbeat)
@@ -47,7 +47,7 @@ namespace ClientLauncher.Implement.Repositories
         public async Task<IEnumerable<ClientMachine>> GetMachinesWithAppInstalledAsync(string appCode)
         {
             return await _dbSet
-                .Where(c => c.InstalledApplications != null && 
+                .Where(c => c.InstalledApplications != null &&
                            c.InstalledApplications.Contains($"\"{appCode}\""))
                 .ToListAsync();
         }
@@ -69,9 +69,9 @@ namespace ClientLauncher.Implement.Repositories
         public async Task<int> MarkOfflineMachinesAsync(int heartbeatThresholdMinutes = 2)
         {
             var thresholdTime = DateTime.UtcNow.AddMinutes(-heartbeatThresholdMinutes);
-            
+
             var offlineMachines = await _dbSet
-                .Where(c => c.Status == "Online" && 
+                .Where(c => c.Status == "Online" &&
                            (c.LastHeartbeat == null || c.LastHeartbeat < thresholdTime))
                 .ToListAsync();
 
@@ -93,9 +93,9 @@ namespace ClientLauncher.Implement.Repositories
         public async Task<ClientMachineStatistics> GetStatisticsAsync()
         {
             var thresholdTime = DateTime.UtcNow.AddMinutes(-2);
-            
+
             var machines = await _dbSet.ToListAsync();
-            
+
             return new ClientMachineStatistics
             {
                 TotalMachines = machines.Count,
