@@ -8,6 +8,9 @@ import type { InstallationLogRequest, InstallationLogPaginationResponse, Install
 import type { ApplicationPackageHistoryResponse, ApplicationPackageResponse, PackageUploadRequest, PackageVersionResponse } from "../type/packageManagementType";
 import type { AnalyticDashboardResponse } from "../type/dashboardType";
 import type { CreateIconRequest, IconResponse, UpdateIconRequest } from "../type/iconType";
+import type { ClientMachineResponse } from "../type/clientMachineType";
+import type { DeploymentResponse } from "../type/deploymentManagerTypes";
+import type { DeploymentCreateRequest } from "../type/deploymentManagerTypes";
 
 const API_BASE = (window as any)._env_?.API_BASE;
 const api = axios.create({
@@ -273,3 +276,64 @@ export const iconService = {
         return unwrapApiEnvelope(response);
     }
 };
+
+export const clientMachineService = {
+    getClientMachineById: async (id: string): Promise<ClientMachineResponse> => {
+        const response = await api.get(`/api/ClientMachines/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getAllClientMachines: async (): Promise<ClientMachineResponse[]> => {
+        const response = await api.get(`/api/ClientMachines/all`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getOnlineClientMachines: async (): Promise<ClientMachineResponse[]> => {
+        const response = await api.get(`/api/ClientMachines/online`);
+        return unwrapApiEnvelope(response);
+    }
+};
+
+export const deploymentManagerService = {
+    createDeployment: async (request: DeploymentCreateRequest): Promise<DeploymentResponse> => {
+        const response = await api.post('/api/DeploymentManager/create', request);
+        return unwrapApiEnvelope(response);
+    },
+
+    getDeploymentById: async (id: number): Promise<DeploymentResponse> => {
+        const response = await api.get(`/api/DeploymentManager/${id}`);
+        return unwrapApiEnvelope(response);
+    },
+
+    getAllDeployments: async (): Promise<DeploymentResponse[]> => {
+        const response = await api.get(`/api/DeploymentManager/all`);
+        return unwrapApiEnvelope(response);
+    },
+
+    approveDeployment: async (id: number): Promise<any> => {
+        const response = await api.post(`/api/DeploymentManager/${id}/approve`);
+        return unwrapApiEnvelope(response);
+    },
+
+    rejectDeployment: async (id: number): Promise<any> => {
+        const response = await api.post(`/api/DeploymentManager/${id}/reject`);
+        return unwrapApiEnvelope(response);
+    },
+
+    cancelDeployment: async (id: number): Promise<any> => {
+        const response = await api.post(`/api/DeploymentManager/${id}/cancel`);
+        return unwrapApiEnvelope(response);
+    },
+
+    retryFailedDeployment: async (id: number): Promise<any> => {
+        const response = await api.post(`/api/DeploymentManager/${id}/retry`);
+        return unwrapApiEnvelope(response);
+    },
+
+    retryAllFailedDeployments: async (): Promise<any> => {
+        const response = await api.post(`/api/DeploymentManager/retry-all`);
+        return unwrapApiEnvelope(response);
+    }
+
+};
+

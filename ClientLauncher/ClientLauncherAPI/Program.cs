@@ -158,6 +158,7 @@ try
     builder.Services.AddScoped<IEmployeeRoleService, EmployeeRoleService>();
     builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
     builder.Services.AddScoped<IUpdateService, UpdateService>();
+    builder.Services.AddScoped<IActiveDirectoryService, ActiveDirectoryService>();
 
     logger.Info("============> Regsitered services end! <============");
     // Add CORS if needed

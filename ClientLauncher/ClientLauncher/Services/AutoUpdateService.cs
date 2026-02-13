@@ -1,3 +1,4 @@
+using ClientLauncher.Models.Response;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -13,23 +14,32 @@ namespace ClientLauncher.Services
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
         private readonly string _currentVersion;
+        private readonly string _versionFilePath;
+        private const string APP_CODE = "ClientApplication";
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public AutoUpdateService()
         {
-            _baseUrl = System.Configuration.ConfigurationManager.AppSettings["ClientLauncherBaseUrl"] 
+            _baseUrl = System.Configuration.ConfigurationManager.AppSettings["ClientLauncherBaseUrl"]
                 ?? "http://10.21.10.1:8102";
             _httpClient = new HttpClient { BaseAddress = new Uri(_baseUrl) };
             _currentVersion = GetCurrentVersion();
+
+            // Đường dẫn file lưu version đã cài đặt
+            var installDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName ?? "") ?? "";
+            _versionFilePath = Path.Combine(installDir, "version.txt");
         }
 
         public async Task<UpdateInfo?> CheckForUpdatesAsync()
         {
             try
             {
-                Logger.Info("Checking for ClientLauncher updates... Current version: {0}", _currentVersion);
+                // Đọc version đã cài đặt từ file local
+                var installedVersion = GetInstalledVersion();
+                Logger.Info("Checking for ClientLauncher updates... Installed version: {0}", installedVersion);
 
-                var response = await _httpClient.GetAsync("/api/update/clientlauncher/check");
+                // Call API mới để lấy thông tin application
+                var response = await _httpClient.GetAsync($"/api/ApplicationManagement/code/{APP_CODE}");
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.Warn("Update check failed: {0}", response.StatusCode);
@@ -37,22 +47,31 @@ namespace ClientLauncher.Services
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                var result = JsonSerializer.Deserialize<ApiResponse<UpdateInfo>>(json, 
+                var appDetail = JsonSerializer.Deserialize<ApiBaseResponse<ApplicationDetailResponse>>(json,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                if (result?.Success == true && result.Data != null)
+                if (appDetail != null && !string.IsNullOrEmpty(appDetail.Data.LatestVersion))
                 {
-                    var updateInfo = result.Data;
-                    Logger.Info("Latest version available: {0}", updateInfo.Version);
+                    Logger.Info("Latest version available: {0}", appDetail.Data.LatestVersion);
 
-                    if (IsNewerVersion(updateInfo.Version, _currentVersion))
+                    if (IsNewerVersion(appDetail.Data.LatestVersion, installedVersion))
                     {
-                        Logger.Info("✅ New version available: {0} -> {1}", _currentVersion, updateInfo.Version);
-                        return updateInfo;
+                        Logger.Info("✅ New version available: {0} -> {1}", installedVersion, appDetail.Data.LatestVersion);
+
+                        return new UpdateInfo
+                        {
+                            Version = appDetail.Data.LatestVersion,
+                            PackageId = appDetail.Data.PackageId ?? 0,
+                            DownloadUrl = appDetail.Data.PackageUrl ?? string.Empty,
+                            ReleaseNotes = appDetail.Data.ReleaseNotes ?? "No release notes available",
+                            ReleasedAt = appDetail.Data.LatestVersionDate ?? DateTime.Now,
+                            FileSizeBytes = 0,
+                            IsCritical = false
+                        };
                     }
                     else
                     {
-                        Logger.Info("✅ Already on latest version: {0}", _currentVersion);
+                        Logger.Info("✅ Already on latest version: {0}", installedVersion);
                     }
                 }
 
@@ -73,7 +92,7 @@ namespace ClientLauncher.Services
 
                 var updateFilePath = Path.Combine(Path.GetTempPath(), "ClientLauncher_Update.zip");
 
-                using (var response = await _httpClient.GetAsync(updateInfo.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                using (var response = await _httpClient.GetAsync($"api/PackageManagement/{updateInfo.PackageId}/download", HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
 
@@ -101,6 +120,10 @@ namespace ClientLauncher.Services
                 }
 
                 Logger.Info("Download completed: {0}", updateFilePath);
+
+                // Lưu version mới vào file trước khi update
+                SaveInstalledVersion(updateInfo.Version);
+                Logger.Info("Saved new version to file: {0}", updateInfo.Version);
 
                 // Create updater script
                 var updaterScript = CreateUpdaterScript(updateFilePath, updateInfo.Version);
@@ -201,17 +224,63 @@ del ""%~f0""
             }
         }
 
+        /// <summary>
+        /// Đọc version đã cài đặt từ file local
+        /// </summary>
+        private string GetInstalledVersion()
+        {
+            try
+            {
+                if (File.Exists(_versionFilePath))
+                {
+                    var version = File.ReadAllText(_versionFilePath).Trim();
+                    if (!string.IsNullOrEmpty(version))
+                    {
+                        Logger.Debug("Installed version from file: {0}", version);
+                        return version;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to read installed version from file, using assembly version");
+            }
+
+            // Fallback: sử dụng version từ assembly và lưu vào file
+            var assemblyVersion = _currentVersion;
+            SaveInstalledVersion(assemblyVersion);
+            return assemblyVersion;
+        }
+
+        /// <summary>
+        /// Lưu version đã cài đặt vào file local
+        /// </summary>
+        private void SaveInstalledVersion(string version)
+        {
+            try
+            {
+                File.WriteAllText(_versionFilePath, version);
+                Logger.Debug("Saved installed version to file: {0}", version);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Failed to save installed version to file");
+            }
+        }
+
         public async Task<bool> AutoCheckAndUpdateAsync(bool silent = true)
         {
             var updateInfo = await CheckForUpdatesAsync();
             if (updateInfo == null)
                 return false;
 
+            var installedVersion = GetInstalledVersion();
+
             if (!silent)
             {
                 var result = MessageBox.Show(
                     $"A new version of ClientLauncher is available!\n\n" +
-                    $"Current: {_currentVersion}\n" +
+                    $"Installed: {installedVersion}\n" +
                     $"Latest: {updateInfo.Version}\n\n" +
                     $"Release Notes:\n{updateInfo.ReleaseNotes}\n\n" +
                     $"Would you like to update now?",
@@ -231,16 +300,46 @@ del ""%~f0""
     {
         public string Version { get; set; } = string.Empty;
         public string DownloadUrl { get; set; } = string.Empty;
+        public int PackageId { get; set; }
         public string ReleaseNotes { get; set; } = string.Empty;
         public DateTime ReleasedAt { get; set; }
         public long FileSizeBytes { get; set; }
         public bool IsCritical { get; set; }
     }
 
-    public class ApiResponse<T>
+    public class ApplicationDetailResponse
     {
-        public bool Success { get; set; }
-        public T? Data { get; set; }
-        public string? Message { get; set; }
+        public int Id { get; set; }
+        public int ManifestId { get; set; }
+        public string ManifestVersion { get; set; } = string.Empty;
+        public string ManifestBinaryVersion { get; set; } = string.Empty;
+        public string ManifestConfigVersion { get; set; } = string.Empty;
+        public string AppCode { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string IconUrl { get; set; } = string.Empty;
+        public int? CategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public bool IsActive { get; set; }
+        public string? Developer { get; set; }
+        public string? SupportEmail { get; set; }
+        public string? DocumentationUrl { get; set; }
+        public bool RequiresAdminRights { get; set; }
+        public string? MinimumOsVersion { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public string? LatestVersion { get; set; }
+        public DateTime? LatestVersionDate { get; set; }
+        public int TotalVersions { get; set; }
+        public int TotalInstalls { get; set; }
+        public long TotalStorageSize { get; set; }
+        public int? PackageId { get; set; }
+        public string? PackageFileName { get; set; }
+        public string? PackageType { get; set; }
+        public string? PackageVersion { get; set; }
+        public string? PackageUrl { get; set; }
+        public bool? IsStable { get; set; }
+        public string? ReleaseNotes { get; set; }
+        public string? MinimumClientVersion { get; set; }
     }
 }

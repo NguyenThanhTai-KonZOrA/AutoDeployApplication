@@ -246,7 +246,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Application not found" });
                 }
-                return Ok(new { success = true, data = result });
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -459,6 +459,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Manifest not found" });
                 }
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -481,6 +482,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Manifest not found" });
                 }
+
                 return Ok(result);
             }
             catch (Exception ex)
@@ -503,6 +505,7 @@ namespace ClientLauncherAPI.Controllers
                 {
                     return NotFound(new { success = false, message = "Manifest not found" });
                 }
+
                 return Ok(result);
             }
             catch (Exception ex)
