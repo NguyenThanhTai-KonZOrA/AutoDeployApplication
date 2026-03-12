@@ -9,5 +9,6 @@ namespace ClientLauncher.Implement.Services.Interface
         Task<InstallationLogPaginationResponse> GetInstallationLogByFilterAsync(InstallationLogFilterRequest request);
         Task<List<InstallationReportResponse>> GetInstallationReportByVersionAsync(InstallationReportRequest request);
         Task<List<InstallationLog>> GetSuccessfulByApplicationIdAsync(int applicationId);
+        Task<byte[]> ExportInstallationReportToExcelAsync(InstallationReportRequest request);
     }
 }

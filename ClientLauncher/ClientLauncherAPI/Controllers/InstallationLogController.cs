@@ -136,5 +136,31 @@ namespace ClientLauncherAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Export installation report to Excel file
+        /// Each application will be in a separate sheet
+        /// </summary>
+        [HttpPost("report/by-version/export")]
+        public async Task<IActionResult> ExportInstallationReportToExcel([FromBody] InstallationReportRequest request)
+        {
+            try
+            {
+                var excelData = await _installationLogService.ExportInstallationReportToExcelAsync(request);
+                var fileName = $"InstallationReport_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
+
+                return File(excelData, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting installation report to Excel");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Internal server error",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }

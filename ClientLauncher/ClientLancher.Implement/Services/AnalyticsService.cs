@@ -44,6 +44,12 @@ namespace ClientLauncher.Implement.Services
                 var recentActivities = await GetRecentActivitiesAsync(10);
                 var categories = allCategories.Select(MapToResponse).OrderBy(x => x.DisplayOrder).ToList();
 
+                // Calculate chart data
+                var installationTrends = GetInstallationTrends(allInstalls, allApps);
+                var topUpdateApps = GetTopUpdateApplications(allInstalls, allApps, allVersions);
+                var mostActiveApps = GetMostActiveApplications(allInstalls, allApps);
+                var monthlyComparison = GetMonthlyComparisonStats(allInstalls, allDownloads);
+
                 return new DashboardStatistics
                 {
                     TotalApplications = allApps.Count,
@@ -60,7 +66,11 @@ namespace ClientLauncher.Implement.Services
                     FailedInstallations = failedInstalls,
                     TopApplications = topApps.ToList(),
                     RecentActivities = recentActivities.ToList(),
-                    Categories = categories
+                    Categories = categories,
+                    InstallationTrends = installationTrends,
+                    TopUpdateApplications = topUpdateApps,
+                    MostActiveApplications = mostActiveApps,
+                    MonthlyComparison = monthlyComparison
                 };
             }
             catch (Exception ex)
@@ -191,6 +201,171 @@ namespace ClientLauncher.Implement.Services
                 DisplayOrder = category.DisplayOrder,
                 IsActive = category.IsActive,
                 ApplicationCount = category.Applications?.Count ?? 0
+            };
+        }
+
+        private List<ApplicationInstallationTrend> GetInstallationTrends(List<InstallationLog> allInstalls, List<Application> allApps)
+        {
+            var now = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(now.Year, now.Month, 1);
+            var previousMonthStart = currentMonthStart.AddMonths(-1);
+
+            var trends = allApps.Select(app =>
+            {
+                var appInstalls = allInstalls.Where(i => i.ApplicationId == app.Id && i.Action == "Install").ToList();
+                var currentMonth = appInstalls.Count(i => i.StartedAt >= currentMonthStart);
+                var previousMonth = appInstalls.Count(i => i.StartedAt >= previousMonthStart && i.StartedAt < currentMonthStart);
+
+                var growth = currentMonth - previousMonth;
+                var growthPercentage = previousMonth > 0 ? ((double)growth / previousMonth) * 100 : (currentMonth > 0 ? 100 : 0);
+
+                return new ApplicationInstallationTrend
+                {
+                    AppCode = app.AppCode,
+                    ApplicationName = app.Name,
+                    CurrentMonthInstallations = currentMonth,
+                    PreviousMonthInstallations = previousMonth,
+                    GrowthCount = growth,
+                    GrowthPercentage = Math.Round(growthPercentage, 2)
+                };
+            })
+            .OrderByDescending(t => t.CurrentMonthInstallations)
+            .Take(10)
+            .ToList();
+
+            return trends;
+        }
+
+        private List<ApplicationUpdateStats> GetTopUpdateApplications(List<InstallationLog> allInstalls, List<Application> allApps, List<PackageVersion> allVersions)
+        {
+            var now = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(now.Year, now.Month, 1);
+
+            var updateStats = allApps.Select(app =>
+            {
+                var appUpdates = allInstalls.Where(i => i.ApplicationId == app.Id && i.Action == "Update").ToList();
+                var totalUpdates = appUpdates.Count;
+                var updatesThisMonth = appUpdates.Count(i => i.StartedAt >= currentMonthStart);
+                var latestVersion = allVersions
+                    .Where(v => v.ApplicationId == app.Id)
+                    .OrderByDescending(v => v.UploadedAt)
+                    .FirstOrDefault();
+                var lastUpdate = appUpdates.OrderByDescending(i => i.StartedAt).FirstOrDefault();
+
+                return new ApplicationUpdateStats
+                {
+                    AppCode = app.AppCode,
+                    ApplicationName = app.Name,
+                    TotalUpdates = totalUpdates,
+                    UpdatesThisMonth = updatesThisMonth,
+                    LatestVersion = latestVersion?.Version ?? string.Empty,
+                    LastUpdateDate = lastUpdate?.StartedAt
+                };
+            })
+            .OrderByDescending(s => s.TotalUpdates)
+            .Take(10)
+            .ToList();
+
+            return updateStats;
+        }
+
+        private List<ApplicationActivityStats> GetMostActiveApplications(List<InstallationLog> allInstalls, List<Application> allApps)
+        {
+            var now = DateTime.UtcNow;
+            var today = now.Date;
+            var weekAgo = now.AddDays(-7);
+            var monthAgo = now.AddDays(-30);
+
+            var activityStats = allApps.Select(app =>
+            {
+                var appInstalls = allInstalls.Where(i => i.ApplicationId == app.Id).ToList();
+
+                // Count unique machines for each period
+                var allMachines = appInstalls
+                    .Select(i => string.IsNullOrEmpty(i.MachineId) ? i.MachineName : i.MachineId)
+                    .Distinct()
+                    .Count();
+
+                var todayMachines = appInstalls
+                    .Where(i => i.StartedAt.Date == today)
+                    .Select(i => string.IsNullOrEmpty(i.MachineId) ? i.MachineName : i.MachineId)
+                    .Distinct()
+                    .Count();
+
+                var weekMachines = appInstalls
+                    .Where(i => i.StartedAt >= weekAgo)
+                    .Select(i => string.IsNullOrEmpty(i.MachineId) ? i.MachineName : i.MachineId)
+                    .Distinct()
+                    .Count();
+
+                var monthMachines = appInstalls
+                    .Where(i => i.StartedAt >= monthAgo)
+                    .Select(i => string.IsNullOrEmpty(i.MachineId) ? i.MachineName : i.MachineId)
+                    .Distinct()
+                    .Count();
+
+                var lastActivity = appInstalls.OrderByDescending(i => i.StartedAt).FirstOrDefault();
+
+                return new ApplicationActivityStats
+                {
+                    AppCode = app.AppCode,
+                    ApplicationName = app.Name,
+                    TotalActiveMachines = allMachines,
+                    TodayActiveMachines = todayMachines,
+                    WeekActiveMachines = weekMachines,
+                    MonthActiveMachines = monthMachines,
+                    LastActivityDate = lastActivity?.StartedAt
+                };
+            })
+            .OrderByDescending(s => s.MonthActiveMachines)
+            .Take(10)
+            .ToList();
+
+            return activityStats;
+        }
+
+        private MonthlyComparisonStats GetMonthlyComparisonStats(List<InstallationLog> allInstalls, List<DownloadStatistic> allDownloads)
+        {
+            var now = DateTime.UtcNow;
+            var currentMonthStart = new DateTime(now.Year, now.Month, 1);
+            var previousMonthStart = currentMonthStart.AddMonths(-1);
+
+            var currentMonthInstalls = allInstalls.Count(i => i.StartedAt >= currentMonthStart && i.Action == "Install");
+            var previousMonthInstalls = allInstalls.Count(i => i.StartedAt >= previousMonthStart && i.StartedAt < currentMonthStart && i.Action == "Install");
+
+            var currentMonthDownloads = allDownloads.Count(d => d.DownloadedAt >= currentMonthStart && d.Success);
+            var previousMonthDownloads = allDownloads.Count(d => d.DownloadedAt >= previousMonthStart && d.DownloadedAt < currentMonthStart && d.Success);
+
+            var currentMonthActiveApps = allInstalls
+                .Where(i => i.StartedAt >= currentMonthStart)
+                .Select(i => i.ApplicationId)
+                .Distinct()
+                .Count();
+
+            var previousMonthActiveApps = allInstalls
+                .Where(i => i.StartedAt >= previousMonthStart && i.StartedAt < currentMonthStart)
+                .Select(i => i.ApplicationId)
+                .Distinct()
+                .Count();
+
+            var installGrowth = previousMonthInstalls > 0 
+                ? ((double)(currentMonthInstalls - previousMonthInstalls) / previousMonthInstalls) * 100 
+                : (currentMonthInstalls > 0 ? 100 : 0);
+
+            var downloadGrowth = previousMonthDownloads > 0 
+                ? ((double)(currentMonthDownloads - previousMonthDownloads) / previousMonthDownloads) * 100 
+                : (currentMonthDownloads > 0 ? 100 : 0);
+
+            return new MonthlyComparisonStats
+            {
+                CurrentMonthInstallations = currentMonthInstalls,
+                PreviousMonthInstallations = previousMonthInstalls,
+                CurrentMonthDownloads = currentMonthDownloads,
+                PreviousMonthDownloads = previousMonthDownloads,
+                CurrentMonthActiveApps = currentMonthActiveApps,
+                PreviousMonthActiveApps = previousMonthActiveApps,
+                InstallationGrowthPercentage = Math.Round(installGrowth, 2),
+                DownloadGrowthPercentage = Math.Round(downloadGrowth, 2)
             };
         }
     }
