@@ -100,7 +100,7 @@ export const authService = {
 
             // Use a lightweight endpoint to check if token is valid
             // Add special header to prevent auto-redirect on 401
-            await api.get('/api/QueueAdmin/ping', {
+            await api.get('/api/Auth/me', {
                 headers: {
                     'X-Token-Validation': 'true'
                 }

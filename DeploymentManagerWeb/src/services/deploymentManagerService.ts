@@ -167,6 +167,23 @@ export const installationService = {
     getReportByApplication: async (request: InstallationReportRequest): Promise<InstallationReportResponse[]> => {
         const response = await api.post(`/api/InstallationLog/report/by-version`, request);
         return unwrapApiEnvelope(response);
+    },
+
+    getReportExcelByApplication: async (request: InstallationReportRequest): Promise<void> => {
+        try {
+            const response = await api.post(`/api/InstallationLog/report/excel/by-version`, request, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `Installation_Report_FromDate_${request.FromDate}_ToDate_${request.ToDate}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+        } catch (error) {
+            console.error("Error downloading report:", error);
+            throw error;
+        }
     }
 };
 
