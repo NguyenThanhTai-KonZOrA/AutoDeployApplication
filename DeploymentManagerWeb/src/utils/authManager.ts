@@ -1,3 +1,4 @@
+import { AUTH_TIMEOUTS } from "../constants/timeouts";
 import { authAdminService } from "../services/authService";
 
 
@@ -15,10 +16,10 @@ class AuthManager {
     private lastActivity: number = Date.now();
 
     // Time refresh token before expiry (5 minutes)
-    private refreshBeforeExpiry = 5 * 60 * 1000;
+    private refreshBeforeExpiry = AUTH_TIMEOUTS.REFRESH_BEFORE_EXPIRY;
 
     // Time of inactivity before stopping auto-refresh (30 minutes)
-    private inactivityThreshold = 30 * 60 * 1000;
+    private inactivityThreshold = AUTH_TIMEOUTS.IDLE_TIMEOUT;
 
     private onLogoutCallback: (() => void) | null = null;
 

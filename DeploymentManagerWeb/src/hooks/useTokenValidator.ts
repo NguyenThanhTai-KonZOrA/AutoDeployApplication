@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { AUTH_TIMEOUTS } from '../constants/timeouts';
 
 /**
  * Hook to periodically validate token
@@ -29,7 +30,7 @@ export const useTokenValidator = () => {
             if (!isValid) {
                 console.log('❌ Token validation failed, user will be logged out');
             }
-        }, 1 * 60 * 1000); // 5 minutes
+        }, AUTH_TIMEOUTS.TOKEN_VALIDATION_INTERVAL); // 10 minutes
 
         // Cleanup on unmount
         return () => {
