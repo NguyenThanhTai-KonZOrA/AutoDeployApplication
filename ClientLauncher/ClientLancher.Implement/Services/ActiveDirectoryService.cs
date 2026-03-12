@@ -142,7 +142,7 @@ namespace ClientLauncher.Implement.Services
                 try
                 {
                     string ldapPath = $"LDAP://{GetDomainPath()}";
-
+                    ldapPath = "LDAP://DC=HTPVTG.local";
                     using var entry = new DirectoryEntry(ldapPath);
                     using var searcher = new DirectorySearcher(entry);
 
