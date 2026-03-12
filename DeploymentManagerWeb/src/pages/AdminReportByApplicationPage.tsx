@@ -39,7 +39,8 @@ import {
     ExpandMore as ExpandMoreIcon,
     Computer as ComputerIcon,
     PersonOutline as PersonIcon,
-    FilterList as FilterListIcon
+    FilterList as FilterListIcon,
+    FileDownload as FileDownloadIcon
 } from "@mui/icons-material";
 import { useState, useEffect, useMemo } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -200,6 +201,25 @@ export default function AdminReportByApplicationPage() {
         setCurrentPage(1);
     };
 
+    const handleExport = async () => {
+        setLoading(true);
+        try {
+            const request: InstallationReportRequest = {
+                ApplicationId: filterApplicationId || undefined,
+                MachineName: filterMachineName || undefined,
+                Status: filterStatus || undefined,
+                FromDate: filterFromDate || undefined,
+                ToDate: filterToDate || undefined,
+            };
+            await installationService.getReportExcelByApplication(request);
+        } catch (err) {
+            setError("Failed to export report. Please try again.");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <AdminLayout>
             <Box>
@@ -318,7 +338,7 @@ export default function AdminReportByApplicationPage() {
                                 </Select>
                             </FormControl>
 
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", mt: { xs: 2, md: 0 } }}>
                                 <Button
                                     variant="contained"
                                     startIcon={<RefreshIcon />}
@@ -329,29 +349,22 @@ export default function AdminReportByApplicationPage() {
                                 </Button>
 
                                 <Button
+                                    variant="contained"
+                                    color="success"
+                                    startIcon={<FileDownloadIcon />}
+                                    onClick={handleExport}
+                                    disabled={loading}
+                                >
+                                    Export Excel
+                                </Button>
+
+                                <Button
                                     variant="outlined"
                                     onClick={handleClearFilters}
                                     sx={{ minWidth: { xs: "100%", md: "auto" } }}
                                 >
                                     Clear Filters
                                 </Button>
-
-                                <FormControl size="small" sx={{ minWidth: 120 }}>
-                                    <InputLabel>Items per page</InputLabel>
-                                    <Select
-                                        value={itemsPerPage}
-                                        label="Items per page"
-                                        onChange={(e) => {
-                                            setItemsPerPage(Number(e.target.value));
-                                            setCurrentPage(1);
-                                        }}
-                                    >
-                                        <MenuItem value={5}>5</MenuItem>
-                                        <MenuItem value={10}>10</MenuItem>
-                                        <MenuItem value={25}>25</MenuItem>
-                                        <MenuItem value={50}>50</MenuItem>
-                                    </Select>
-                                </FormControl>
                             </Box>
                         </Box>
                     </CardContent>
@@ -360,6 +373,25 @@ export default function AdminReportByApplicationPage() {
                 {/* Table */}
                 <Card>
                     <CardContent>
+                        <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center", mb: 2 }}>
+                            <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <InputLabel>Items per page</InputLabel>
+                                <Select
+                                    value={itemsPerPage}
+                                    label="Items per page"
+                                    onChange={(e) => {
+                                        setItemsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <MenuItem value={5}>5</MenuItem>
+                                    <MenuItem value={10}>10</MenuItem>
+                                    <MenuItem value={25}>25</MenuItem>
+                                    <MenuItem value={50}>50</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+
                         {loading && <LinearProgress sx={{ mb: 2 }} />}
                         {error && (
                             <Alert severity="error" sx={{ mb: 2 }}>

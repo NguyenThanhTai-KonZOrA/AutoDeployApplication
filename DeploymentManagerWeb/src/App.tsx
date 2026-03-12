@@ -23,6 +23,7 @@ import AdminPackagesPage from './pages/AdminPackagesPage'
 import AdminReportByApplicationPage from './pages/AdminReportByApplicationPage'
 import AdminIconsPage from './pages/AdminIconsPage'
 import AdminSettingsPage from './pages/AdminSettingsPage'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function AppContent() {
   const networkStatus = useNetworkStatus();
@@ -197,15 +198,17 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <PageTitleProvider>
-        <AppLoadingProvider>
-          <SessionManager>
-            <AppContent />
-          </SessionManager>
-        </AppLoadingProvider>
-      </PageTitleProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <PageTitleProvider>
+          <AppLoadingProvider>
+            <SessionManager>
+              <AppContent />
+            </SessionManager>
+          </AppLoadingProvider>
+        </PageTitleProvider>
+      </Router>
+    </ErrorBoundary>
   )
 }
 

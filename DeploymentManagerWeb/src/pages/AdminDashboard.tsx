@@ -36,7 +36,11 @@ import {
     InstallMobile as InstallMobileIcon,
     Category as CategoryIcon,
     InstallDesktop as InstallDesktopIcon,
-    DoneAll as DoneAllIcon
+    DoneAll as DoneAllIcon,
+    TrendingDown as TrendingDownIcon,
+    ShowChart as ShowChartIcon,
+    HotelClass as HotelClassIcon,
+    BrowserUpdated as BrowserUpdatedIcon,
 } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import AdminLayout from "../components/layout/AdminLayout";
@@ -45,6 +49,7 @@ import type { AnalyticDashboardResponse } from "../type/dashboardType";
 import { FormatUtcTime } from "../utils/formatUtcTime";
 import { useSetPageTitle } from "../hooks/useSetPageTitle";
 import { PAGE_TITLES } from "../constants/pageTitles";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface StatCardProps {
     title: string;
@@ -248,7 +253,7 @@ export default function AdminDashboard() {
                                         <DoneAllIcon color="success" sx={{ mr: 1 }} />
                                         <Typography variant="h6" fontWeight={600}>Successful Installations</Typography>
                                     </Box>
-                                    <Typography variant="h3" fontWeight={700} color="success.main">
+                                    <Typography variant="h3" fontWeight={600} color="success.main">
                                         {dashboardData.successfulInstallations}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">Count installed successfully</Typography>
@@ -261,7 +266,7 @@ export default function AdminDashboard() {
                                         <ErrorIcon color="error" sx={{ mr: 1 }} />
                                         <Typography variant="h6" fontWeight={600}>Failed Installations</Typography>
                                     </Box>
-                                    <Typography variant="h3" fontWeight={700} color="error.main">
+                                    <Typography variant="h3" fontWeight={600} color="error.main">
                                         {dashboardData.failedInstallations}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">Require attention</Typography>
@@ -273,7 +278,7 @@ export default function AdminDashboard() {
                             <Card>
                                 <CardContent>
                                     <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                        <TrendingUpIcon color="primary" sx={{ mr: 1 }} />
+                                        <HotelClassIcon sx={{ mr: 1, verticalAlign: 'middle', color: 'gold' }} />
                                         <Typography variant="h6" fontWeight={600}>Top Applications</Typography>
                                     </Box>
                                     <TableContainer>
@@ -398,10 +403,372 @@ export default function AdminDashboard() {
                             </Card>
                         </Box>
 
+                        {/* Installation Trends Line Chart */}
+                        {dashboardData.installationTrends && dashboardData.installationTrends.length > 0 && (
+                            <>
+                                <Card sx={{ mb: 3 }}>
+                                    <CardContent>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                                                <TrendingUpIcon color="primary" sx={{ mr: 1, verticalAlign: 'middle', color: '#1976d2' }} />
+                                                Installation Trends
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Compare current month vs previous month installations by application
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ width: "100%", height: 400 }}>
+                                            <ResponsiveContainer>
+                                                <LineChart
+                                                    data={dashboardData.installationTrends}
+                                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis
+                                                        dataKey="applicationName"
+                                                        angle={-45}
+                                                        textAnchor="end"
+                                                        height={100}
+                                                    />
+                                                    <YAxis />
+                                                    <RechartsTooltip />
+                                                    <Legend />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="currentMonthInstallations"
+                                                        stroke="#1976d2"
+                                                        strokeWidth={2}
+                                                        name="Current Month"
+                                                        activeDot={{ r: 8 }}
+                                                    />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="previousMonthInstallations"
+                                                        stroke="#82ca9d"
+                                                        strokeWidth={2}
+                                                        name="Previous Month"
+                                                        activeDot={{ r: 8 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </Box>
+
+                                        {/* Growth details table */}
+                                        <Box sx={{ mt: 3 }}>
+                                            <Typography variant="h6" fontWeight={600} gutterBottom>
+                                                Growth Details
+                                            </Typography>
+                                            <TableContainer>
+                                                <Table size="small">
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Application</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Current</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Previous</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Growth</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>%</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {dashboardData.installationTrends.map((trend) => (
+                                                            <TableRow key={trend.appCode} hover>
+                                                                <TableCell>
+                                                                    <Typography variant="body2" fontWeight={600}>
+                                                                        {trend.applicationName}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {trend.appCode}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={trend.currentMonthInstallations} size="small" color="primary" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={trend.previousMonthInstallations} size="small" variant="outlined" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                                                                        {trend.growthCount >= 0 ? (
+                                                                            <TrendingUpIcon color="success" fontSize="small" sx={{ mr: 0.5 }} />
+                                                                        ) : (
+                                                                            <TrendingDownIcon color="error" fontSize="small" sx={{ mr: 0.5 }} />
+                                                                        )}
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            fontWeight={600}
+                                                                            color={trend.growthCount >= 0 ? "success.main" : "error.main"}
+                                                                        >
+                                                                            {trend.growthCount > 0 ? '+' : ''}{trend.growthCount}
+                                                                        </Typography>
+                                                                    </Box>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip
+                                                                        label={`${trend.growthPercentage > 0 ? '+' : ''}${trend.growthPercentage.toFixed(1)}%`}
+                                                                        size="small"
+                                                                        color={trend.growthPercentage >= 0 ? "success" : "error"}
+                                                                    />
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
+
+                        {/* Top Update Applications Bar Chart */}
+                        {dashboardData.topUpdateApplications && dashboardData.topUpdateApplications.length > 0 && (
+                            <>
+                                <Card sx={{ mb: 3 }}>
+                                    <CardContent>
+                                        <Box sx={{ mb: 2 }}>
+                                            <Typography variant="h5" fontWeight={700} gutterBottom>
+                                                <BrowserUpdatedIcon sx={{ mr: 1, verticalAlign: "middle", color: 'warning.main' }} />
+                                                Top Update Applications
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Applications with most updates and versions
+                                            </Typography>
+                                        </Box>
+                                        <Box sx={{ width: "100%", height: 400 }}>
+                                            <ResponsiveContainer>
+                                                <BarChart
+                                                    data={dashboardData.topUpdateApplications}
+                                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                                >
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis
+                                                        dataKey="applicationName"
+                                                        angle={-45}
+                                                        textAnchor="end"
+                                                        height={100}
+                                                    />
+                                                    <YAxis />
+                                                    <RechartsTooltip />
+                                                    <Legend />
+                                                    <Bar
+                                                        dataKey="totalUpdates"
+                                                        fill="#1976d2"
+                                                        name="Total Updates"
+                                                        radius={[8, 8, 0, 0]}
+                                                    />
+                                                    <Bar
+                                                        dataKey="updatesThisMonth"
+                                                        fill="#82ca9d"
+                                                        name="Updates This Month"
+                                                        radius={[8, 8, 0, 0]}
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </Box>
+
+                                        {/* Updates details table */}
+                                        <Box sx={{ mt: 3 }}>
+                                            <Typography variant="h6" fontWeight={600} gutterBottom>
+                                                Update Details
+                                            </Typography>
+                                            <TableContainer>
+                                                <Table size="small">
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Application</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Total Updates</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>This Month</TableCell>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Latest Version</TableCell>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Last Update</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {dashboardData.topUpdateApplications.map((app) => (
+                                                            <TableRow key={app.appCode} hover>
+                                                                <TableCell>
+                                                                    <Typography variant="body2" fontWeight={600}>
+                                                                        {app.applicationName}
+                                                                    </Typography>
+                                                                    <Typography variant="caption" color="text.secondary">
+                                                                        {app.appCode}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.totalUpdates} size="small" color="primary" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.updatesThisMonth} size="small" color="success" />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Chip label={app.latestVersion} size="small" color="info" variant="outlined" />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Typography variant="caption">
+                                                                        {app.lastUpdateDate ? FormatUtcTime.formatDateTime(app.lastUpdateDate) : 'Not updated yet'}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
+
+                        {/* Monthly Comparison Stats */}
+                        {dashboardData.monthlyComparison && (
+                            <>
+                                <Box sx={{ mt: 4, mb: 2 }}>
+                                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                                        Monthly Comparison
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Compare current month vs previous month performance
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 3, mb: 3 }}>
+                                    <Card>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography color="text.secondary" variant="body2" gutterBottom>
+                                                        Installations Growth
+                                                    </Typography>
+                                                    <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+                                                        {dashboardData.monthlyComparison.currentMonthInstallations}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Previous: {dashboardData.monthlyComparison.previousMonthInstallations}
+                                                    </Typography>
+                                                    <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                                                        {dashboardData.monthlyComparison.installationGrowthPercentage >= 0 ? (
+                                                            <TrendingUpIcon color="success" fontSize="small" />
+                                                        ) : (
+                                                            <TrendingDownIcon color="error" fontSize="small" />
+                                                        )}
+                                                        <Typography
+                                                            variant="body2"
+                                                            fontWeight={600}
+                                                            color={dashboardData.monthlyComparison.installationGrowthPercentage >= 0 ? "success.main" : "error.main"}
+                                                            sx={{ ml: 0.5 }}
+                                                        >
+                                                            {Math.abs(dashboardData.monthlyComparison.installationGrowthPercentage).toFixed(1)}%
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                                <Avatar
+                                                    sx={{
+                                                        bgcolor: "primary.main",
+                                                        width: 56,
+                                                        height: 56,
+                                                        boxShadow: 2,
+                                                    }}
+                                                >
+                                                    <InstallDesktopIcon />
+                                                </Avatar>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography color="text.secondary" variant="body2" gutterBottom>
+                                                        Downloads Growth
+                                                    </Typography>
+                                                    <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+                                                        {dashboardData.monthlyComparison.currentMonthDownloads}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Previous: {dashboardData.monthlyComparison.previousMonthDownloads}
+                                                    </Typography>
+                                                    <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                                                        {dashboardData.monthlyComparison.downloadGrowthPercentage >= 0 ? (
+                                                            <TrendingUpIcon color="success" fontSize="small" />
+                                                        ) : (
+                                                            <TrendingDownIcon color="error" fontSize="small" />
+                                                        )}
+                                                        <Typography
+                                                            variant="body2"
+                                                            fontWeight={600}
+                                                            color={dashboardData.monthlyComparison.downloadGrowthPercentage >= 0 ? "success.main" : "error.main"}
+                                                            sx={{ ml: 0.5 }}
+                                                        >
+                                                            {Math.abs(dashboardData.monthlyComparison.downloadGrowthPercentage).toFixed(1)}%
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                                <Avatar
+                                                    sx={{
+                                                        bgcolor: "success.main",
+                                                        width: 56,
+                                                        height: 56,
+                                                        boxShadow: 2,
+                                                    }}
+                                                >
+                                                    <DownloadIcon />
+                                                </Avatar>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+
+                                    <Card>
+                                        <CardContent>
+                                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography color="text.secondary" variant="body2" gutterBottom>
+                                                        Active Apps
+                                                    </Typography>
+                                                    <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+                                                        {dashboardData.monthlyComparison.currentMonthActiveApps}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Previous: {dashboardData.monthlyComparison.previousMonthActiveApps}
+                                                    </Typography>
+                                                    <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                                                        {dashboardData.monthlyComparison.currentMonthActiveApps >= dashboardData.monthlyComparison.previousMonthActiveApps ? (
+                                                            <TrendingUpIcon color="success" fontSize="small" />
+                                                        ) : (
+                                                            <TrendingDownIcon color="error" fontSize="small" />
+                                                        )}
+                                                        <Typography
+                                                            variant="body2"
+                                                            fontWeight={600}
+                                                            color={dashboardData.monthlyComparison.currentMonthActiveApps >= dashboardData.monthlyComparison.previousMonthActiveApps ? "success.main" : "error.main"}
+                                                            sx={{ ml: 0.5 }}
+                                                        >
+                                                            {dashboardData.monthlyComparison.currentMonthActiveApps - dashboardData.monthlyComparison.previousMonthActiveApps > 0 ? '+' : ''}
+                                                            {dashboardData.monthlyComparison.currentMonthActiveApps - dashboardData.monthlyComparison.previousMonthActiveApps}
+                                                        </Typography>
+                                                    </Box>
+                                                </Box>
+                                                <Avatar
+                                                    sx={{
+                                                        bgcolor: "info.main",
+                                                        width: 56,
+                                                        height: 56,
+                                                        boxShadow: 2,
+                                                    }}
+                                                >
+                                                    <AppsIcon />
+                                                </Avatar>
+                                            </Box>
+                                        </CardContent>
+                                    </Card>
+                                </Box>
+                            </>
+                        )}
+
+                        {/* Recent Activities Table */}
                         <Card>
                             <CardContent>
                                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                                    <UpdateIcon color="primary" sx={{ mr: 1 }} />
+                                    <UpdateIcon color="primary" sx={{ mr: 1, color: 'success.main' }} />
                                     <Typography variant="h6" fontWeight={600}>Recent Activities</Typography>
                                 </Box>
                                 <TableContainer>
@@ -463,6 +830,113 @@ export default function AdminDashboard() {
                                 </TableContainer>
                             </CardContent>
                         </Card>
+
+                        {/* Most Active Applications Pie Chart */}
+                        {dashboardData.mostActiveApplications && dashboardData.mostActiveApplications.length < 0 && (
+                            <>
+                                <Box sx={{ mt: 4, mb: 2 }}>
+                                    <Typography variant="h5" fontWeight={700} gutterBottom>
+                                        Most Active Applications
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Applications with the highest number of active machines
+                                    </Typography>
+                                </Box>
+
+                                <Card sx={{ mb: 3 }}>
+                                    <CardContent>
+                                        <Box sx={{ width: "100%", height: 400, display: "flex", justifyContent: "center" }}>
+                                            <ResponsiveContainer>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={dashboardData.mostActiveApplications}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        labelLine={false}
+                                                        label={({ name, value }) => `${name}: ${value}`}
+                                                        outerRadius={120}
+                                                        innerRadius={60}
+                                                        fill="#8884d8"
+                                                        dataKey="totalActiveMachines"
+                                                    >
+                                                        {dashboardData.mostActiveApplications.map((_entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={['#1976d2', '#82ca9d', '#ffc658', '#ff7c7c', '#a28ee8', '#ff9f40'][index % 6]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <RechartsTooltip />
+                                                    <Legend />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </Box>
+
+                                        {/* Active machines details table */}
+                                        <Box sx={{ mt: 3 }}>
+                                            <Typography variant="h6" fontWeight={600} gutterBottom>
+                                                Activity Details
+                                            </Typography>
+                                            <TableContainer>
+                                                <Table size="small">
+                                                    <TableHead>
+                                                        <TableRow>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Application</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Total Active</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>Today</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>This Week</TableCell>
+                                                            <TableCell align="right" sx={{ fontWeight: 600 }}>This Month</TableCell>
+                                                            <TableCell sx={{ fontWeight: 600 }}>Last Activity</TableCell>
+                                                        </TableRow>
+                                                    </TableHead>
+                                                    <TableBody>
+                                                        {dashboardData.mostActiveApplications.map((app, index) => (
+                                                            <TableRow key={app.appCode} hover>
+                                                                <TableCell>
+                                                                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                                                                        <Box
+                                                                            sx={{
+                                                                                width: 12,
+                                                                                height: 12,
+                                                                                borderRadius: "50%",
+                                                                                bgcolor: ['#1976d2', '#82ca9d', '#ffc658', '#ff7c7c', '#a28ee8', '#ff9f40'][index % 6],
+                                                                                mr: 1
+                                                                            }}
+                                                                        />
+                                                                        <Box>
+                                                                            <Typography variant="body2" fontWeight={600}>
+                                                                                {app.applicationName}
+                                                                            </Typography>
+                                                                            <Typography variant="caption" color="text.secondary">
+                                                                                {app.appCode}
+                                                                            </Typography>
+                                                                        </Box>
+                                                                    </Box>
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.totalActiveMachines} size="small" color="primary" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.todayActiveMachines} size="small" variant="outlined" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.weekActiveMachines} size="small" variant="outlined" />
+                                                                </TableCell>
+                                                                <TableCell align="right">
+                                                                    <Chip label={app.monthActiveMachines} size="small" variant="outlined" />
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <Typography variant="caption">
+                                                                        {app.lastActivityDate ? FormatUtcTime.formatDateTime(app.lastActivityDate) : ''}
+                                                                    </Typography>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </TableContainer>
+                                        </Box>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
                     </>
                 )}
 

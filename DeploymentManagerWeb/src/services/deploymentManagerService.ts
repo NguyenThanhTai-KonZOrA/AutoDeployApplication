@@ -171,7 +171,7 @@ export const installationService = {
 
     getReportExcelByApplication: async (request: InstallationReportRequest): Promise<void> => {
         try {
-            const response = await api.post(`/api/InstallationLog/report/excel/by-version`, request, {
+            const response = await api.post(`/api/InstallationLog/report/by-version/export`, request, {
                 responseType: 'blob'
             });
             const url = window.URL.createObjectURL(new Blob([response.data]));
